@@ -9,6 +9,7 @@ import { SectionSwitcher } from "../../components/SectionSwitcher";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { SkeletonCard } from "../../components/Skeleton";
 import { PickerModal, SelectRow, PickerOption } from "../../components/PickerModal";
+import { useKeyboardHeight } from "../../lib/useKeyboardHeight";
 
 type DisciplineCategory = "behavioral" | "academic" | "attendance";
 type DisciplineSeverity = "verbal" | "written" | "suspension";
@@ -49,6 +50,7 @@ const CATEGORY_ICONS: Record<DisciplineCategory, "person-outline" | "book-outlin
 export default function TeacherDiscipline() {
   const theme = useTheme();
   const { activeSection, userId, schoolId, ready } = useTeacherContext();
+  const kbHeight = useKeyboardHeight();
   const [records, setRecords] = useState<DisciplineRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -197,7 +199,7 @@ export default function TeacherDiscipline() {
       <Modal visible={showAdd} transparent animationType="slide" onRequestClose={() => setShowAdd(false)}>
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" }}>
           <TouchableOpacity activeOpacity={1} onPress={() => setShowAdd(false)} style={{ flex: 1 }} />
-          <View style={{ backgroundColor: theme.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, gap: 16, paddingBottom: 36 }}>
+          <ScrollView style={{ backgroundColor: theme.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "85%" }} contentContainerStyle={{ padding: 24, gap: 16, paddingBottom: 36 + kbHeight }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <Text style={{ fontSize: 18, fontFamily: "Inter_700Bold", color: theme.textPrimary }}>Log Incident</Text>
               <TouchableOpacity onPress={() => setShowAdd(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -222,7 +224,7 @@ export default function TeacherDiscipline() {
             </View>
 
             <PrimaryButton label="Log Incident" onPress={submitRecord} loading={saving} />
-          </View>
+          </ScrollView>
         </View>
       </Modal>
 
