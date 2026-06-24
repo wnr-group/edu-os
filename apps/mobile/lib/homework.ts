@@ -1,3 +1,4 @@
+import { File } from "expo-file-system";
 import { supabase, supabaseUrl } from "./supabase";
 
 export type HomeworkRating = "good" | "satisfactory" | "needs_improvement";
@@ -143,9 +144,9 @@ export async function uploadAttachment(
 ): Promise<{ error: string | null }> {
   if (file.size > 2 * 1024 * 1024) return { error: "File exceeds 2MB" };
   const path = `homework/${schoolId}/${homeworkId}/${Date.now()}-${file.name}`;
-  // RN: fetch the local file uri into an ArrayBuffer for upload.
-  const res = await fetch(file.uri);
-  const bytes = await res.arrayBuffer();
+  // RN: read the local file uri into a byte array for upload. fetch().arrayBuffer()
+  // is unreliable for file:// URIs in React Native, so use expo-file-system.
+  const bytes = await new File(file.uri).bytes();
   const up = await supabase.storage
     .from("homework-attachments")
     .upload(path, bytes, { contentType: file.mimeType, upsert: false });

@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Alert, TextInput, Image, Refr
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { File } from "expo-file-system";
 import { supabase, fixStorageUrl, SCHOOL_ID } from "../../lib/supabase";
 import { useActiveContext, clearActiveContext } from "../../lib/active-context";
 import { useTheme } from "../../lib/theme";
@@ -33,7 +34,7 @@ export default function ParentMore() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  useEffect(() => { loadProfile(); }, [activeStudentId]);
+  useEffect(() => { setUploadingPhoto(false); loadProfile(); }, [activeStudentId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -200,9 +201,8 @@ export default function ParentMore() {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"] as any,
-      allowsEditing: true,
-      aspect: [1, 1],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
       quality: 0.7,
     });
     if (result.canceled) return;
@@ -225,10 +225,10 @@ export default function ParentMore() {
         .maybeSingle();
       if (!sp) return;
 
-      const arrayBuffer = await fetch(uri).then((r) => r.arrayBuffer());
+      const byteArray = await new File(uri).bytes();
       const { error: uploadError } = await supabase.storage
         .from("student-photos")
-        .upload(`${sp.school_id}/${sp.id}/${fileName}`, arrayBuffer, {
+        .upload(`${sp.school_id}/${sp.id}/${fileName}`, byteArray, {
           contentType: `image/${ext}`,
           upsert: true,
         });
@@ -239,9 +239,12 @@ export default function ParentMore() {
         .from("student-photos")
         .getPublicUrl(`${sp.school_id}/${sp.id}/${fileName}`);
 
+      // Append a cache-buster so React Native's Image component doesn't serve a stale version
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
       const { error: updateError } = await supabase
         .from("student_profiles")
-        .update({ photo_url: urlData.publicUrl })
+        .update({ photo_url: publicUrl })
         .eq("id", sp.id);
 
       if (updateError) throw updateError;
@@ -390,7 +393,7 @@ export default function ParentMore() {
                     <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: theme.textMuted, letterSpacing: 0.5, textTransform: "uppercase" }}>Student</Text>
                   </View>
                   <View style={{ padding: 16, flexDirection: "row", alignItems: "center", gap: 14 }}>
-                    <TouchableOpacity onPress={handlePhotoUpload} disabled={uploadingPhoto} activeOpacity={0.8} style={{ position: "relative" }}>
+                    <View style={{ position: "relative" }}>
                       {student.photoUrl ? (
                         <Image source={{ uri: student.photoUrl }} style={{ width: 56, height: 56, borderRadius: 14 }} resizeMode="cover" />
                       ) : (
@@ -400,10 +403,16 @@ export default function ParentMore() {
                           </Text>
                         </View>
                       )}
-                      <View style={{ position: "absolute", bottom: -2, right: -2, backgroundColor: theme.surface, borderRadius: 10, padding: 3, borderWidth: 1, borderColor: theme.border }}>
-                        <Ionicons name={uploadingPhoto ? "hourglass-outline" : "camera-outline"} size={12} color={theme.textSecondary} />
-                      </View>
-                    </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={handlePhotoUpload}
+                        disabled={uploadingPhoto}
+                        activeOpacity={0.7}
+                        style={{ position: "absolute", bottom: -2, right: -2, backgroundColor: theme.surface, borderRadius: 10, padding: 5, borderWidth: 1, borderColor: theme.border }}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      >
+                        <Ionicons name={uploadingPhoto ? "hourglass-outline" : "camera-outline"} size={14} color={theme.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
                     <View style={{ flex: 1, gap: 3 }}>
                       <Text style={{ fontSize: 16, fontFamily: "Inter_700Bold", color: theme.textPrimary }}>{student.name}</Text>
                       <Text style={{ fontSize: 13, fontFamily: "Inter_500Medium", color: theme.primary }}>
