@@ -29,6 +29,19 @@
         "EXPO_PUBLIC_SCHOOL_NAME": "Demo School",
         "EXPO_PUBLIC_PRIMARY_COLOR": "#2563EB"
       }
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://zruldizyvdbxzkhvqvsq.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpydWxkaXp5dmRieHpraHZxdnNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxOTAzNjgsImV4cCI6MjA5MTc2NjM2OH0.k3fi3UUyVnXT71EZWPKo7verIxYZVPhjHShMjTkfcu0",
+        "EXPO_PUBLIC_RAZORPAY_KEY_ID": "rzp_test_SsQdiSBNbcVF5o",
+        "EXPO_PUBLIC_SCHOOL_ID": "aaaaaaaa-0000-0000-0000-000000000001",
+        "EXPO_PUBLIC_SCHOOL_NAME": "Demo School",
+        "EXPO_PUBLIC_PRIMARY_COLOR": "#2563EB"
+      }
     }
   }
 }
