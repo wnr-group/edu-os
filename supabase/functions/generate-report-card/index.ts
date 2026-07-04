@@ -21,22 +21,25 @@ serve(async (req) => {
     );
 
     const { data: student } = await supabase
-      .from("profiles")
-      .select("full_name, email")
-      .eq("id", studentId)
-      .single();
-
-    const { data: sp } = await supabase
       .from("student_profiles")
-      .select("roll_number, class:classes(name), section:sections(name)")
-      .eq("profile_id", studentId)
+      .select("full_name")
+      .eq("id", studentId)
       .single();
 
     const { data: exam } = await supabase
       .from("exams")
-      .select("name, school_id")
+      .select("name, school_id, academic_year_id")
       .eq("id", examId)
       .single();
+
+    // Match the enrollment to the exam's academic year so the report card shows
+    // the class/section/roll the student held *that* year, not the current one.
+    const { data: enrollment } = await supabase
+      .from("student_enrollments")
+      .select("roll_number, class:classes(name), section:sections(name)")
+      .eq("student_profile_id", studentId)
+      .eq("academic_year_id", exam?.academic_year_id ?? "")
+      .maybeSingle();
 
     const { data: results } = await supabase
       .from("exam_results")
@@ -79,17 +82,17 @@ serve(async (req) => {
       .join("");
 
     // Extract class/section names (handle Supabase join arrays)
-    const className = Array.isArray(sp?.class)
-      ? (sp.class[0] as { name: string })?.name ?? ""
-      : (sp?.class as { name: string } | null)?.name ?? "";
-    const sectionName = Array.isArray(sp?.section)
-      ? (sp.section[0] as { name: string })?.name ?? ""
-      : (sp?.section as { name: string } | null)?.name ?? "";
+    const className = Array.isArray(enrollment?.class)
+      ? (enrollment.class[0] as { name: string })?.name ?? ""
+      : (enrollment?.class as { name: string } | null)?.name ?? "";
+    const sectionName = Array.isArray(enrollment?.section)
+      ? (enrollment.section[0] as { name: string })?.name ?? ""
+      : (enrollment?.section as { name: string } | null)?.name ?? "";
 
     // Inject data into template
     const html = htmlTemplate
       .replace(/\{\{student_name\}\}/g, student?.full_name ?? "")
-      .replace(/\{\{roll_number\}\}/g, sp?.roll_number ?? "")
+      .replace(/\{\{roll_number\}\}/g, enrollment?.roll_number ?? "")
       .replace(/\{\{class\}\}/g, className)
       .replace(/\{\{section\}\}/g, sectionName)
       .replace(/\{\{exam_name\}\}/g, exam?.name ?? "")

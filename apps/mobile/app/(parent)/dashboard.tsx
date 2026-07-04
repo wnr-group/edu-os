@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Image, FlatList, Dimensions, RefreshControl, Modal, StatusBar } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import Animated, { FadeInDown, FadeInRight, useSharedValue, useAnimatedStyle, withTiming } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeInRight, useSharedValue, useAnimatedStyle, withTiming, runOnJS } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { supabase, fixStorageUrl, SCHOOL_ID } from "../../lib/supabase";
 import { useActiveContext } from "../../lib/active-context";
@@ -10,7 +10,7 @@ import { useTheme } from "../../lib/theme";
 import { Skeleton, SkeletonCard } from "../../components/Skeleton";
 import { Avatar } from "../../components/Avatar";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const CAROUSEL_HEIGHT = 180;
 
 interface GalleryItem { id: string; image_url: string; caption: string | null }
@@ -41,7 +41,7 @@ export default function ParentDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
-  const [viewerImage, setViewerImage] = useState<GalleryItem | null>(null);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const carouselRef = useRef<FlatList>(null);
 
   useEffect(() => { loadDashboard(); }, [activeStudentId]);
@@ -137,7 +137,7 @@ export default function ParentDashboard() {
     { icon: "wallet-outline" as const, label: "Pay Fees", route: "/(parent)/fees", color: "#4f46e5" },
     { icon: "trophy-outline" as const, label: "Results", route: "/(parent)/academics", color: "#059669" },
     { icon: "book-outline" as const, label: "Homework", route: "/(parent)/academics", color: "#d97706" },
-    { icon: "megaphone-outline" as const, label: "News", route: "/(parent)/more", color: "#dc2626" },
+    { icon: "megaphone-outline" as const, label: "News", route: "/(parent)/more?section=announcements", color: "#dc2626" },
   ];
 
   return (
@@ -255,8 +255,8 @@ export default function ParentDashboard() {
               onMomentumScrollEnd={(e) => {
                 setActiveSlide(Math.round(e.nativeEvent.contentOffset.x / (SCREEN_WIDTH - 40)));
               }}
-              renderItem={({ item }) => (
-                <TouchableOpacity activeOpacity={0.9} onPress={() => setViewerImage(item)} style={{ width: SCREEN_WIDTH - 40, height: CAROUSEL_HEIGHT, borderRadius: 16, overflow: "hidden", marginRight: 12 }}>
+              renderItem={({ item, index }) => (
+                <TouchableOpacity activeOpacity={0.9} onPress={() => setViewerIndex(index)} style={{ width: SCREEN_WIDTH - 40, height: CAROUSEL_HEIGHT, borderRadius: 16, overflow: "hidden", marginRight: 12 }}>
                   <Image source={{ uri: item.image_url }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
                   {item.caption && (
                     <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: "rgba(0,0,0,0.5)", borderBottomLeftRadius: 16, borderBottomRightRadius: 16 }}>
@@ -277,32 +277,21 @@ export default function ParentDashboard() {
         )}
 
         {/* ── Full-screen gallery viewer ── */}
-        <Modal visible={viewerImage !== null} transparent animationType="fade" onRequestClose={() => setViewerImage(null)} statusBarTranslucent>
-          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" }}>
-            <StatusBar barStyle="light-content" />
-            <TouchableOpacity
-              onPress={() => setViewerImage(null)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              style={{ position: "absolute", top: 56, right: 20, zIndex: 2, width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" }}
-            >
-              <Ionicons name="close" size={24} color="#fff" />
-            </TouchableOpacity>
-            {viewerImage && (
-              <ZoomableImage uri={viewerImage.image_url} />
-            )}
-            {viewerImage?.caption ? (
-              <View style={{ position: "absolute", bottom: 60, left: 20, right: 20 }}>
-                <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_500Medium", textAlign: "center" }}>{viewerImage.caption}</Text>
-              </View>
-            ) : null}
-          </View>
+        <Modal visible={viewerIndex !== null} transparent animationType="fade" onRequestClose={() => setViewerIndex(null)} statusBarTranslucent>
+          {viewerIndex !== null && data?.gallery && (
+            <GalleryViewer
+              items={data.gallery}
+              initialIndex={viewerIndex}
+              onClose={() => setViewerIndex(null)}
+            />
+          )}
         </Modal>
 
         {/* ── Latest news ── */}
         <Animated.View entering={FadeInDown.duration(500).delay(600)} style={{ paddingHorizontal: 20, marginTop: 24 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#111827" }}>Latest News</Text>
-            <TouchableOpacity onPress={() => router.push("/(parent)/more")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity onPress={() => router.push("/(parent)/more?section=announcements")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Text style={{ fontSize: 13, fontFamily: "Inter_500Medium", color: "#4f46e5" }}>See all</Text>
             </TouchableOpacity>
           </View>
@@ -314,7 +303,12 @@ export default function ParentDashboard() {
               <Text style={{ color: "#6b7280", fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 8 }}>No announcements yet</Text>
             </View>
           ) : data!.announcements.map((a) => (
-            <View key={a.id} style={{ backgroundColor: "#f9fafb", borderRadius: 12, padding: 14, marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <TouchableOpacity
+              key={a.id}
+              activeOpacity={0.6}
+              onPress={() => router.push("/(parent)/more?section=announcements")}
+              style={{ backgroundColor: "#f9fafb", borderRadius: 12, padding: 14, marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 12 }}
+            >
               <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#ede9fe", alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name="megaphone" size={16} color="#7c3aed" />
               </View>
@@ -325,7 +319,7 @@ export default function ParentDashboard() {
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
-            </View>
+            </TouchableOpacity>
           ))}
         </Animated.View>
       </ScrollView>
@@ -333,13 +327,80 @@ export default function ParentDashboard() {
   );
 }
 
-function ZoomableImage({ uri }: { uri: string }) {
+function GalleryViewer({
+  items,
+  initialIndex,
+  onClose,
+}: {
+  items: GalleryItem[];
+  initialIndex: number;
+  onClose: () => void;
+}) {
+  const listRef = useRef<FlatList>(null);
+  const [current, setCurrent] = useState(initialIndex);
+  // Paging is disabled while a page is zoomed in, so single-finger drags pan
+  // the image instead of swiping to the next photo.
+  const [pagingEnabled, setPagingEnabled] = useState(true);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.95)" }}>
+      <StatusBar barStyle="light-content" />
+      <FlatList
+        ref={listRef}
+        data={items}
+        horizontal
+        pagingEnabled
+        scrollEnabled={pagingEnabled}
+        showsHorizontalScrollIndicator={false}
+        initialScrollIndex={initialIndex}
+        getItemLayout={(_, index) => ({ length: SCREEN_WIDTH, offset: SCREEN_WIDTH * index, index })}
+        keyExtractor={(item) => item.id}
+        onMomentumScrollEnd={(e) => {
+          setCurrent(Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH));
+        }}
+        renderItem={({ item }) => (
+          <ZoomablePage uri={item.image_url} onZoomChange={(z) => setPagingEnabled(!z)} />
+        )}
+      />
+
+      <TouchableOpacity
+        onPress={onClose}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        style={{ position: "absolute", top: 56, right: 20, zIndex: 2, width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" }}
+      >
+        <Ionicons name="close" size={24} color="#fff" />
+      </TouchableOpacity>
+
+      {items.length > 1 && (
+        <View style={{ position: "absolute", top: 64, left: 0, right: 0, alignItems: "center" }}>
+          <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, fontFamily: "Inter_500Medium" }}>
+            {current + 1} / {items.length}
+          </Text>
+        </View>
+      )}
+
+      {items[current]?.caption ? (
+        <View style={{ position: "absolute", bottom: 60, left: 20, right: 20 }}>
+          <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_500Medium", textAlign: "center" }}>{items[current].caption}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function ZoomablePage({ uri, onZoomChange }: { uri: string; onZoomChange: (zoomed: boolean) => void }) {
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const savedX = useSharedValue(0);
   const savedY = useSharedValue(0);
+  const [zoomed, setZoomed] = useState(false);
+
+  const applyZoom = useCallback((z: boolean) => {
+    setZoomed(z);
+    onZoomChange(z);
+  }, [onZoomChange]);
 
   const reset = () => {
     "worklet";
@@ -357,14 +418,23 @@ function ZoomableImage({ uri }: { uri: string }) {
     })
     .onEnd(() => {
       savedScale.value = scale.value;
-      if (scale.value <= 1) reset();
+      if (scale.value <= 1) {
+        reset();
+        runOnJS(applyZoom)(false);
+      } else {
+        runOnJS(applyZoom)(true);
+      }
     });
 
+  // Pan is only active while zoomed; otherwise the FlatList handles the swipe
+  // to the next photo. Panning is clamped so the image can't drift off-screen.
   const pan = Gesture.Pan()
+    .enabled(zoomed)
     .onUpdate((e) => {
-      if (scale.value <= 1) return;
-      translateX.value = savedX.value + e.translationX;
-      translateY.value = savedY.value + e.translationY;
+      const maxX = (SCREEN_WIDTH * (scale.value - 1)) / 2;
+      const maxY = (SCREEN_HEIGHT * (scale.value - 1)) / 2;
+      translateX.value = Math.max(-maxX, Math.min(savedX.value + e.translationX, maxX));
+      translateY.value = Math.max(-maxY, Math.min(savedY.value + e.translationY, maxY));
     })
     .onEnd(() => {
       savedX.value = translateX.value;
@@ -376,9 +446,11 @@ function ZoomableImage({ uri }: { uri: string }) {
     .onEnd(() => {
       if (scale.value > 1) {
         reset();
+        runOnJS(applyZoom)(false);
       } else {
         scale.value = withTiming(2);
         savedScale.value = 2;
+        runOnJS(applyZoom)(true);
       }
     });
 
@@ -394,11 +466,13 @@ function ZoomableImage({ uri }: { uri: string }) {
 
   return (
     <GestureDetector gesture={composed}>
-      <Animated.Image
-        source={{ uri }}
-        style={[{ width: SCREEN_WIDTH, height: "70%" }, animatedStyle]}
-        resizeMode="contain"
-      />
+      <Animated.View style={{ width: SCREEN_WIDTH, height: "100%", justifyContent: "center", alignItems: "center" }}>
+        <Animated.Image
+          source={{ uri }}
+          style={[{ width: SCREEN_WIDTH, height: "70%" }, animatedStyle]}
+          resizeMode="contain"
+        />
+      </Animated.View>
     </GestureDetector>
   );
 }

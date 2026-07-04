@@ -154,6 +154,8 @@ interface FeeLineItem {
   outstanding: number;
   due_date: string;
   status: "paid" | "pending" | "partial";
+  yearName: string;
+  yearStart: string;
 }
 
 interface PaymentHistoryRow {
@@ -164,6 +166,22 @@ interface PaymentHistoryRow {
   mode: string;
   transaction_id: string | null;
   line_items_covered: { fee_type: string; amount_applied: number }[];
+  yearName: string;
+  yearStart: string;
+}
+
+// Group year-tagged rows, most recent academic year first; untagged rows last.
+function groupByYear<T extends { yearName: string; yearStart: string }>(rows: T[]) {
+  const map = new Map<string, { name: string; start: string; rows: T[] }>();
+  for (const r of rows) {
+    if (!map.has(r.yearName)) map.set(r.yearName, { name: r.yearName, start: r.yearStart, rows: [] });
+    map.get(r.yearName)!.rows.push(r);
+  }
+  return Array.from(map.values()).sort((a, b) => {
+    if (!a.start) return 1;
+    if (!b.start) return -1;
+    return b.start.localeCompare(a.start);
+  });
 }
 
 export default function ParentFees() {
@@ -201,12 +219,12 @@ export default function ParentFees() {
     const [{ data: lineItemsData }, { data: paymentsData }] = await Promise.all([
       supabase
         .from("fee_line_items")
-        .select("id, fee_type:fee_types(name), total_amount, due_date, status")
+        .select("id, fee_type:fee_types(name), total_amount, due_date, status, academic_year_id, academic_years(name, start_date)")
         .eq("student_id", sp.id)
         .order("due_date", { ascending: true, nullsFirst: false }),
       supabase
         .from("payments")
-        .select("id, payment_date, total_amount, payment_method, mode, transaction_id, razorpay_payment_id, line_item_payments(amount_applied, line_item_id, fee_line_items!line_item_id(fee_type:fee_types(name)))")
+        .select("id, payment_date, total_amount, payment_method, mode, transaction_id, razorpay_payment_id, line_item_payments(amount_applied, line_item_id, fee_line_items!line_item_id(fee_type:fee_types(name), academic_years(name, start_date)))")
         .eq("student_id", sp.id)
         .order("payment_date", { ascending: false }),
     ]);
@@ -230,23 +248,34 @@ export default function ParentFees() {
         outstanding,
         due_date: li.due_date ?? "",
         status: li.status ?? "pending",
+        yearName: (li.academic_years as { name?: string } | null)?.name ?? "Other",
+        yearStart: (li.academic_years as { start_date?: string } | null)?.start_date ?? "",
       };
     });
 
     setLineItems(items);
     setHistory(
-      (paymentsData ?? []).map((p: any) => ({
-        id: p.id,
-        total_amount: p.total_amount ?? 0,
-        paid_at: p.payment_date ?? null,
-        payment_method: p.payment_method ?? "",
-        mode: p.mode ?? "",
-        transaction_id: p.transaction_id ?? p.razorpay_payment_id ?? null,
-        line_items_covered: ((p.line_item_payments ?? []) as any[]).map((lip: any) => ({
-          fee_type: (lip.fee_line_items as { fee_type?: { name?: string } } | null)?.fee_type?.name ?? "—",
-          amount_applied: lip.amount_applied ?? 0,
-        })),
-      }))
+      (paymentsData ?? []).map((p: any) => {
+        // A payment inherits its year from the line items it covers (payments
+        // themselves aren't year-tagged). Use the first covered item's year.
+        const firstYear = ((p.line_item_payments ?? [])
+          .map((lip: any) => lip.fee_line_items?.academic_years)
+          .find(Boolean)) as { name?: string; start_date?: string } | undefined;
+        return {
+          id: p.id,
+          total_amount: p.total_amount ?? 0,
+          paid_at: p.payment_date ?? null,
+          payment_method: p.payment_method ?? "",
+          mode: p.mode ?? "",
+          transaction_id: p.transaction_id ?? p.razorpay_payment_id ?? null,
+          line_items_covered: ((p.line_item_payments ?? []) as any[]).map((lip: any) => ({
+            fee_type: (lip.fee_line_items as { fee_type?: { name?: string } } | null)?.fee_type?.name ?? "—",
+            amount_applied: lip.amount_applied ?? 0,
+          })),
+          yearName: firstYear?.name ?? "Other",
+          yearStart: firstYear?.start_date ?? "",
+        };
+      })
     );
     setLoading(false);
   }
@@ -255,6 +284,9 @@ export default function ParentFees() {
   const totalPaid = lineItems.reduce((s, li) => s + li.amount_paid, 0);
   const totalDue = lineItems.reduce((s, li) => s + li.outstanding, 0);
   const nextDue = lineItems.filter((li) => li.status !== "paid").sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())[0];
+
+  const unpaidByYear = groupByYear(lineItems.filter((li) => li.status !== "paid"));
+  const historyByYear = groupByYear(history);
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
@@ -357,7 +389,7 @@ export default function ParentFees() {
               </Text>
             )}
             {totalDue > 0 && (
-              <TouchableOpacity onPress={() => {
+              <TouchableOpacity activeOpacity={0.85} onPress={() => {
                 const pendingIds = lineItems.filter((li) => li.status !== "paid").map((li) => li.id);
                 setSelectedIds(new Set(pendingIds));
               }} style={{ backgroundColor: "#fff", borderRadius: 12, paddingVertical: 12, alignItems: "center", marginTop: 8 }}>
@@ -373,49 +405,55 @@ export default function ParentFees() {
           <SectionHeader title="Fee Breakdown" />
           {loading ? (
             <View style={{ gap: 8 }}><SkeletonCard /><SkeletonCard /></View>
-          ) : lineItems.filter((li) => li.status !== "paid").length === 0 ? (
+          ) : unpaidByYear.length === 0 ? (
             <Text style={{ textAlign: "center", color: theme.textMuted, fontFamily: "Inter_400Regular", paddingVertical: 20 }}>All fees paid!</Text>
-          ) : lineItems.filter((li) => li.status !== "paid").map((li) => (
-            <TouchableOpacity
-              key={li.id}
-              onPress={() => toggleSelect(li.id)}
-              activeOpacity={0.7}
-              style={{
-                backgroundColor: selectedIds.has(li.id) ? `${theme.primary}18` : theme.surface,
-                borderRadius: 16,
-                padding: 16,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 8,
-                borderWidth: 1.5,
-                borderColor: selectedIds.has(li.id) ? theme.primary : "transparent",
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={{
-                  width: 20, height: 20, borderRadius: 4, borderWidth: 1.5,
-                  borderColor: selectedIds.has(li.id) ? theme.primary : theme.border,
-                  backgroundColor: selectedIds.has(li.id) ? theme.primary : "transparent",
-                  alignItems: "center", justifyContent: "center",
-                }}>
-                  {selectedIds.has(li.id) && <Ionicons name="checkmark" size={13} color="#fff" />}
-                </View>
-                <View>
-                  <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: theme.textPrimary }}>{li.fee_type}</Text>
-                  <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary, marginTop: 2 }}>
-                    Due {li.due_date ? new Date(li.due_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—"}
-                  </Text>
-                </View>
-              </View>
-              <View style={{ alignItems: "flex-end", gap: 4 }}>
-                <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: theme.textPrimary }}>₹{li.outstanding.toLocaleString("en-IN")}</Text>
-              </View>
-            </TouchableOpacity>
+          ) : unpaidByYear.map((group) => (
+            <View key={group.name} style={{ marginBottom: 8 }}>
+              <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: theme.textMuted, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 8 }}>{group.name}</Text>
+              {group.rows.map((li) => (
+                <TouchableOpacity
+                  key={li.id}
+                  onPress={() => toggleSelect(li.id)}
+                  activeOpacity={0.7}
+                  style={{
+                    backgroundColor: selectedIds.has(li.id) ? `${theme.primary}18` : theme.surface,
+                    borderRadius: 16,
+                    padding: 16,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: 8,
+                    borderWidth: 1.5,
+                    borderColor: selectedIds.has(li.id) ? theme.primary : "transparent",
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                    <View style={{
+                      width: 20, height: 20, borderRadius: 4, borderWidth: 1.5,
+                      borderColor: selectedIds.has(li.id) ? theme.primary : theme.border,
+                      backgroundColor: selectedIds.has(li.id) ? theme.primary : "transparent",
+                      alignItems: "center", justifyContent: "center",
+                    }}>
+                      {selectedIds.has(li.id) && <Ionicons name="checkmark" size={13} color="#fff" />}
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: theme.textPrimary }}>{li.fee_type}</Text>
+                      <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary, marginTop: 2 }}>
+                        Due {li.due_date ? new Date(li.due_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—"}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={{ alignItems: "flex-end", gap: 4 }}>
+                    <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: theme.textPrimary }}>₹{li.outstanding.toLocaleString("en-IN")}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
           ))}
 
           {selectedIds.size > 0 && (
             <TouchableOpacity
+              activeOpacity={0.85}
               onPress={handlePaySelected}
               disabled={payingId === "selected"}
               style={{
@@ -439,23 +477,28 @@ export default function ParentFees() {
           <SectionHeader title="Payment History" />
           {loading ? (
             <View style={{ gap: 8 }}><SkeletonCard /><SkeletonCard /></View>
-          ) : history.length === 0 ? (
+          ) : historyByYear.length === 0 ? (
             <Text style={{ textAlign: "center", color: theme.textMuted, fontFamily: "Inter_400Regular", paddingVertical: 20 }}>No payments yet</Text>
-          ) : history.map((p) => (
-            <TouchableOpacity key={p.id} onPress={() => setReceipt(p)} style={{ backgroundColor: theme.surface, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }} activeOpacity={0.7}>
-              <View>
-                <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: theme.textPrimary }}>
-                  {p.line_items_covered.length > 0 ? p.line_items_covered.map((lic) => lic.fee_type).join(", ") : "Payment"}
-                </Text>
-                <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary, marginTop: 2 }}>
-                  {p.paid_at ? new Date(p.paid_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
-                </Text>
-              </View>
-              <View style={{ alignItems: "flex-end", gap: 6 }}>
-                <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: theme.success }}>₹{p.total_amount.toLocaleString("en-IN")}</Text>
-                <StatusBadge variant="paid" />
-              </View>
-            </TouchableOpacity>
+          ) : historyByYear.map((group) => (
+            <View key={group.name} style={{ marginBottom: 8 }}>
+              <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: theme.textMuted, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 8 }}>{group.name}</Text>
+              {group.rows.map((p) => (
+                <TouchableOpacity key={p.id} onPress={() => setReceipt(p)} style={{ backgroundColor: theme.surface, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }} activeOpacity={0.7}>
+                  <View>
+                    <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: theme.textPrimary }}>
+                      {p.line_items_covered.length > 0 ? p.line_items_covered.map((lic) => lic.fee_type).join(", ") : "Payment"}
+                    </Text>
+                    <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary, marginTop: 2 }}>
+                      {p.paid_at ? new Date(p.paid_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end", gap: 6 }}>
+                    <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: theme.success }}>₹{p.total_amount.toLocaleString("en-IN")}</Text>
+                    <StatusBadge variant="paid" />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
           ))}
         </View>
       </ScrollView>

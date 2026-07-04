@@ -101,6 +101,7 @@ export default function HomeworkDetail() {
               {RATING_OPTIONS.map((opt) => (
                 <TouchableOpacity
                   key={opt.value}
+                  activeOpacity={0.85}
                   onPress={() => setDraftRating(opt.value)}
                   style={{
                     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,

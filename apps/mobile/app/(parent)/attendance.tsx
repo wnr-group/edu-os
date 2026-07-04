@@ -13,20 +13,20 @@ interface AttendanceRecord { date: string; status: "present" | "absent" | "late"
 
 export default function ParentAttendance() {
   const theme = useTheme();
-  const { studentId: activeStudentId } = useActiveContext();
+  const { studentId: activeStudentId, activeYearId } = useActiveContext();
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const selectedYear = new Date().getFullYear();
 
-  useEffect(() => { loadAttendance(); }, [activeStudentId]);
+  useEffect(() => { loadAttendance(); }, [activeStudentId, activeYearId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadAttendance();
     setRefreshing(false);
-  }, [activeStudentId]);
+  }, [activeStudentId, activeYearId]);
 
   async function loadAttendance() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -36,7 +36,9 @@ export default function ParentAttendance() {
     const { data: sp } = await supabase.from("student_profiles").select("id").eq("id", activeStudentId).maybeSingle();
     const studentId = sp?.id;
     if (!studentId) { setRecords([]); setLoading(false); return; }
-    const { data } = await supabase.from("attendance_records").select("date, status, session").eq("student_id", studentId).order("date");
+    let query = supabase.from("attendance_records").select("date, status, session").eq("student_id", studentId);
+    if (activeYearId) query = query.eq("academic_year_id", activeYearId);
+    const { data } = await query.order("date");
     setRecords((data as AttendanceRecord[]) ?? []);
     setLoading(false);
   }
@@ -78,7 +80,7 @@ export default function ParentAttendance() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={{ flexDirection: "row", gap: 8 }}>
             {MONTHS.map((m, i) => (
-              <TouchableOpacity key={m} onPress={() => setSelectedMonth(i)} style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 100, backgroundColor: selectedMonth === i ? theme.primary : theme.surface, borderWidth: 1, borderColor: selectedMonth === i ? theme.primary : theme.border }}>
+              <TouchableOpacity key={m} activeOpacity={0.85} onPress={() => setSelectedMonth(i)} style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 100, backgroundColor: selectedMonth === i ? theme.primary : theme.surface, borderWidth: 1, borderColor: selectedMonth === i ? theme.primary : theme.border }}>
                 <Text style={{ fontSize: 13, fontFamily: "Inter_500Medium", color: selectedMonth === i ? "#fff" : theme.textSecondary }}>{m}</Text>
               </TouchableOpacity>
             ))}

@@ -16,6 +16,7 @@ interface ActiveContextValue {
   students: StudentRef[];
   role: MobileRole | null;
   studentId: string | null;
+  activeYearId: string | null;
   setRole: (r: MobileRole) => void;
   setStudent: (id: string) => void;
   hasAccess: boolean;
@@ -47,6 +48,7 @@ export function ActiveContextProvider({
   const [students, setStudents] = useState<StudentRef[]>([]);
   const [role, setRoleState] = useState<MobileRole | null>(null);
   const [studentId, setStudentId] = useState<string | null>(null);
+  const [activeYearId, setActiveYearId] = useState<string | null>(null);
 
   const persist = useCallback(async (r: MobileRole | null, s: string | null) => {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ role: r, studentId: s }));
@@ -71,6 +73,7 @@ export function ActiveContextProvider({
       setStudents([]);
       setRoleState(null);
       setStudentId(null);
+      setActiveYearId(null);
       setActiveRoleHeader("");
       setLoadedUserId(null);
       setLoading(false);
@@ -102,7 +105,16 @@ export function ActiveContextProvider({
         .eq("parent_profile_id", userId)
         .eq("school_id", SCHOOL_ID);
 
+      const { data: activeYear } = await supabase
+        .from("academic_years")
+        .select("id")
+        .eq("school_id", SCHOOL_ID)
+        .eq("status", "active")
+        .maybeSingle();
+
       if (cancelled) return;
+
+      setActiveYearId(activeYear?.id ?? null);
 
       const studentRefs: StudentRef[] = (kids ?? []).map((k) => ({
         id: k.id as string,
@@ -142,7 +154,7 @@ export function ActiveContextProvider({
 
   return (
     <Ctx.Provider
-      value={{ loading: effectiveLoading, roles, students, role, studentId, setRole, setStudent, hasAccess }}
+      value={{ loading: effectiveLoading, roles, students, role, studentId, activeYearId, setRole, setStudent, hasAccess }}
     >
       {children}
     </Ctx.Provider>

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Alert, TextInput, Image, RefreshControl } from "react-native";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -18,7 +19,9 @@ type Section = "menu" | "notifications" | "announcements" | "discipline" | "feed
 
 export default function ParentMore() {
   const theme = useTheme();
-  const { studentId: activeStudentId } = useActiveContext();
+  const router = useRouter();
+  const { studentId: activeStudentId, activeYearId } = useActiveContext();
+  const { section: sectionParam } = useLocalSearchParams<{ section?: string }>();
   const { unreadNotifications, unseenAnnouncements, refresh: refreshCounts } = useParentCounts();
   const [section, setSection] = useState<Section>("menu");
   const [notifications, setNotifications] = useState<{ id: string; title: string; body: string; created_at: string; is_read: boolean }[]>([]);
@@ -35,6 +38,22 @@ export default function ParentMore() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => { setUploadingPhoto(false); loadProfile(); }, [activeStudentId]);
+
+  // Reset any drilled-in sub-page back to the menu when leaving the tab, so
+  // revisiting "More" always lands on the top-level list rather than a stale page.
+  useFocusEffect(useCallback(() => () => setSection("menu"), []));
+
+  // Deep-link handling: when a `section` param is passed (e.g. from the dashboard
+  // "See all"/announcement rows), open that sub-page, then clear the param so it
+  // fires once. Kept separate from the blur-reset above — folding it into the
+  // focus effect made clearing the param re-run that effect's cleanup and snap
+  // straight back to the menu.
+  useEffect(() => {
+    if (sectionParam === "announcements") {
+      navigate("announcements");
+      router.setParams({ section: undefined });
+    }
+  }, [sectionParam]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -131,7 +150,9 @@ export default function ParentMore() {
     const { data: sp } = await supabase.from("student_profiles").select("id").eq("id", activeStudentId).maybeSingle();
     const studentId = sp?.id;
     if (!studentId) { setDiscipline([]); setLoading(false); return; }
-    const { data } = await supabase.from("discipline_records").select("id, created_at, description, severity").eq("student_id", studentId).order("created_at", { ascending: false });
+    let query = supabase.from("discipline_records").select("id, created_at, description, severity").eq("student_id", studentId);
+    if (activeYearId) query = query.eq("academic_year_id", activeYearId);
+    const { data } = await query.order("created_at", { ascending: false });
     setDiscipline((data ?? []).map((r: any) => ({
       id: r.id,
       incident_date: r.created_at,

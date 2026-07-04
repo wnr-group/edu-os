@@ -283,9 +283,10 @@ export default function ParentAcademics() {
   }
   if (markedDates[selectedDate]) {
     markedDates[selectedDate].selected = true;
-    markedDates[selectedDate].selectedColor = theme.primary + "30";
+    markedDates[selectedDate].selectedColor = theme.primary;
+    markedDates[selectedDate].selectedTextColor = "#fff";
   } else {
-    markedDates[selectedDate] = { selected: true, selectedColor: theme.primary + "30" };
+    markedDates[selectedDate] = { selected: true, selectedColor: theme.primary, selectedTextColor: "#fff" };
   }
 
   const HW_BADGE: Record<ParentHomeworkState, "hw_new" | "hw_viewed" | "hw_done" | "hw_reviewed"> = {
@@ -335,7 +336,7 @@ export default function ParentAcademics() {
         {/* Segmented control */}
         <View style={{ flexDirection: "row", backgroundColor: theme.surface, borderRadius: 12, padding: 4, borderWidth: 1, borderColor: theme.border }}>
           {(["homework", "results"] as const).map((t) => (
-            <TouchableOpacity key={t} onPress={() => setTab(t)} style={{ flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: tab === t ? theme.primary : "transparent", alignItems: "center" }}>
+            <TouchableOpacity key={t} activeOpacity={0.85} onPress={() => setTab(t)} style={{ flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: tab === t ? theme.primary : "transparent", alignItems: "center" }}>
               <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: tab === t ? "#fff" : theme.textSecondary, textTransform: "capitalize" }}>{t}</Text>
             </TouchableOpacity>
           ))}
@@ -422,7 +423,7 @@ export default function ParentAcademics() {
             {/* Calendar | List toggle */}
             <View style={{ flexDirection: "row", backgroundColor: theme.surface, borderRadius: 10, padding: 3, borderWidth: 1, borderColor: theme.border, alignSelf: "center" }}>
               {(["calendar", "list"] as const).map((v) => (
-                <TouchableOpacity key={v} onPress={() => setHWView(v)} style={{ paddingVertical: 7, paddingHorizontal: 22, borderRadius: 8, backgroundColor: hwView === v ? theme.primary : "transparent" }}>
+                <TouchableOpacity key={v} activeOpacity={0.85} onPress={() => setHWView(v)} style={{ paddingVertical: 7, paddingHorizontal: 22, borderRadius: 8, backgroundColor: hwView === v ? theme.primary : "transparent" }}>
                   <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: hwView === v ? "#fff" : theme.textSecondary, textTransform: "capitalize" }}>{v}</Text>
                 </TouchableOpacity>
               ))}
@@ -437,6 +438,59 @@ export default function ParentAcademics() {
                   onMonthChange={(month: { year: number; month: number }) =>
                     setCalendarMonth({ year: month.year, month: month.month })
                   }
+                  dayComponent={({ date, state, marking }: any) => {
+                    const selected = !!marking?.selected;
+                    const disabled = state === "disabled";
+                    const isToday = state === "today";
+                    const dots = marking?.dots ?? [];
+                    return (
+                      <TouchableOpacity
+                        activeOpacity={1}
+                        onPress={() => date && setSelectedDate(date.dateString)}
+                        style={{ alignItems: "center", justifyContent: "center", width: 34 }}
+                      >
+                        <View
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 17,
+                            alignItems: "center",
+                            justifyContent: "center",
+                            backgroundColor: selected ? theme.primary : "transparent",
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 15,
+                              fontFamily: "Inter_400Regular",
+                              color: selected
+                                ? "#fff"
+                                : disabled
+                                ? theme.textMuted
+                                : isToday
+                                ? theme.primary
+                                : theme.textPrimary,
+                            }}
+                          >
+                            {date?.day}
+                          </Text>
+                        </View>
+                        <View style={{ flexDirection: "row", gap: 2, height: 5, marginTop: 1 }}>
+                          {dots.slice(0, 3).map((d: { color: string }, i: number) => (
+                            <View
+                              key={i}
+                              style={{
+                                width: 4,
+                                height: 4,
+                                borderRadius: 2,
+                                backgroundColor: selected ? "#fff" : d.color,
+                              }}
+                            />
+                          ))}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  }}
                   theme={{
                     backgroundColor: theme.surface,
                     calendarBackground: theme.surface,
