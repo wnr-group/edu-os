@@ -14,14 +14,21 @@ export function AddClassDialog({ schoolId }: { schoolId: string }) {
 export function AddSectionDialog({
   schoolId,
   classes,
+  academicYearId,
 }: {
   schoolId: string;
   classes: { id: string; name: string }[];
+  academicYearId: string;
 }) {
   return (
     <ActionDialog trigger="+ Add Section" title="Add Section">
       {(onSuccess) => (
-        <AddSectionForm schoolId={schoolId} classes={classes} onSuccess={onSuccess} />
+        <AddSectionForm
+          schoolId={schoolId}
+          classes={classes}
+          academicYearId={academicYearId}
+          onSuccess={onSuccess}
+        />
       )}
     </ActionDialog>
   );

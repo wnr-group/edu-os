@@ -11,3 +11,10 @@ test-screenshots/
 .vercel
 apps/demo-video/
 .superpowers/
+
+# Mobile build artifacts (Android app bundles / packages — upload-only, huge)
+*.aab
+*.apk
+
+# Play Store listing assets (icons, graphics, screenshots — not source)
+play-assets/

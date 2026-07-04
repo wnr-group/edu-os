@@ -75,7 +75,7 @@ export default async function ClassesPage() {
         <PageHeader
           title="Sections"
           description="Assign sections to classes."
-          action={<AddSectionDialog schoolId={schoolId} classes={classes ?? []} />}
+          action={<AddSectionDialog schoolId={schoolId} classes={classes ?? []} academicYearId={academicYearId ?? ""} />}
         />
         <SectionsDataTable
           sectionRows={sectionRows}

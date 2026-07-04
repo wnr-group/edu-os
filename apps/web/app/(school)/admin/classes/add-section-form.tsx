@@ -17,10 +17,11 @@ interface ClassOption {
 interface AddSectionFormProps {
   schoolId: string;
   classes: ClassOption[];
+  academicYearId: string;
   onSuccess?: () => void;
 }
 
-export function AddSectionForm({ schoolId, classes, onSuccess }: AddSectionFormProps) {
+export function AddSectionForm({ schoolId, classes, academicYearId, onSuccess }: AddSectionFormProps) {
   const router = useRouter();
   const [classId, setClassId] = useState("");
   const [sectionName, setSectionName] = useState("");
@@ -29,13 +30,23 @@ export function AddSectionForm({ schoolId, classes, onSuccess }: AddSectionFormP
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!classId) return;
+    if (!academicYearId) {
+      toast.error("No active academic year. Set one up under Academics first.");
+      return;
+    }
     setLoading(true);
     const supabase = createClient();
-    await supabase.from("sections").insert({
+    const { error } = await supabase.from("sections").insert({
       school_id: schoolId,
       class_id: classId,
       name: sectionName,
+      academic_year_id: academicYearId,
     });
+    if (error) {
+      setLoading(false);
+      toast.error(error.message);
+      return;
+    }
     setClassId("");
     setSectionName("");
     setLoading(false);
