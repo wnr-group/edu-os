@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
+import { getAcademicYearId } from "@/lib/academic-year";
 import { TimetableForm } from "./timetable-form";
 import { TimetableTable } from "./timetable-table";
 
@@ -15,6 +16,7 @@ const DAY_NAMES: Record<number, string> = {
 export default async function TimetablePage() {
   const supabase = await createServerSupabaseClient();
   const schoolId = (await getSchoolId())!;
+  const academicYearId = await getAcademicYearId(schoolId);
 
   const [
     { data: teacherProfiles },
@@ -35,7 +37,8 @@ export default async function TimetablePage() {
     supabase
       .from("sections")
       .select("id, name, class_id")
-      .eq("school_id", schoolId),
+      .eq("school_id", schoolId)
+      .eq("academic_year_id", academicYearId ?? ""),
     supabase
       .from("subjects")
       .select("id, name, class_id")
@@ -46,6 +49,7 @@ export default async function TimetablePage() {
         "id, day_of_week, period, teacher_id, section:sections(name, class:classes(name, order)), subject:subjects(name)"
       )
       .eq("school_id", schoolId)
+      .eq("academic_year_id", academicYearId ?? "")
       .order("day_of_week")
       .order("period"),
   ]);
@@ -113,13 +117,20 @@ export default async function TimetablePage() {
 
       <div className="rounded-lg border border-border bg-card p-6">
         <h2 className="mb-4 text-lg font-medium text-foreground">Assign Teacher</h2>
-        <TimetableForm
-          schoolId={schoolId}
-          teachers={teacherOptions}
-          classes={classOptions}
-          sections={sectionOptions}
-          subjects={subjectOptions}
-        />
+        {academicYearId ? (
+          <TimetableForm
+            schoolId={schoolId}
+            academicYearId={academicYearId}
+            teachers={teacherOptions}
+            classes={classOptions}
+            sections={sectionOptions}
+            subjects={subjectOptions}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No active academic year. Set one up under Academics before assigning teachers.
+          </p>
+        )}
       </div>
 
       <div>

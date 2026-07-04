@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
@@ -22,7 +23,17 @@ interface SectionRow {
   id: string;
   class_name: string;
   section_name: string;
+  class_teacher_id: string;
 }
+
+interface TeacherOption {
+  value: string;
+  label: string;
+}
+
+// Sentinel value so the "clear class teacher" option is selectable
+// (NativeSelect disables its empty-string placeholder option).
+const UNASSIGNED = "__none__";
 
 // ─── Sortable Classes List ───
 
@@ -295,16 +306,60 @@ export function ClassesDataTable({
 export function SectionsDataTable({
   sectionRows,
   schoolId,
+  academicYearId,
+  teachers,
   classes,
 }: {
   sectionRows: SectionRow[];
   schoolId: string;
+  academicYearId: string;
+  teachers: TeacherOption[];
   classes: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const [editSection, setEditSection] = useState<SectionRow | null>(null);
   const [editSectionName, setEditSectionName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [assignments, setAssignments] = useState<Record<string, string>>(() =>
+    Object.fromEntries(sectionRows.map((s) => [s.id, s.class_teacher_id]))
+  );
+  const [savingTeacher, setSavingTeacher] = useState<string | null>(null);
+
+  async function handleClassTeacherChange(sectionId: string, teacherId: string) {
+    if (!academicYearId) {
+      toast.error("No active academic year. Set one up under Academics first.");
+      return;
+    }
+    const previous = assignments[sectionId] ?? "";
+    setAssignments((a) => ({ ...a, [sectionId]: teacherId }));
+    setSavingTeacher(sectionId);
+    const supabase = createClient();
+
+    const { error } = teacherId
+      ? await supabase.from("section_assignments").upsert(
+          {
+            section_id: sectionId,
+            academic_year_id: academicYearId,
+            class_teacher_id: teacherId,
+            school_id: schoolId,
+          },
+          { onConflict: "section_id,academic_year_id" }
+        )
+      : await supabase
+          .from("section_assignments")
+          .delete()
+          .eq("section_id", sectionId)
+          .eq("academic_year_id", academicYearId);
+
+    setSavingTeacher(null);
+    if (error) {
+      setAssignments((a) => ({ ...a, [sectionId]: previous }));
+      toast.error(error.message);
+      return;
+    }
+    toast.success(teacherId ? "Class teacher assigned." : "Class teacher cleared.");
+    router.refresh();
+  }
 
   function openEdit(row: SectionRow) {
     setEditSection(row);
@@ -348,6 +403,26 @@ export function SectionsDataTable({
         columns={[
           { header: "Class", accessor: "class_name" },
           { header: "Section", accessor: "section_name" },
+          {
+            header: "Class Teacher",
+            accessor: (row) => (
+              <NativeSelect
+                className="max-w-[200px]"
+                options={[
+                  { value: UNASSIGNED, label: "— No class teacher —" },
+                  ...teachers,
+                ]}
+                value={assignments[row.id] || UNASSIGNED}
+                disabled={savingTeacher === row.id}
+                onChange={(e) =>
+                  handleClassTeacherChange(
+                    row.id,
+                    e.target.value === UNASSIGNED ? "" : e.target.value
+                  )
+                }
+              />
+            ),
+          },
         ]}
         searchKeys={["class_name", "section_name"]}
         searchPlaceholder="Search sections..."

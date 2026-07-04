@@ -33,6 +33,7 @@ interface SubjectOption {
 
 interface TimetableFormProps {
   schoolId: string;
+  academicYearId: string;
   teachers: TeacherOption[];
   classes: ClassOption[];
   sections: SectionOption[];
@@ -55,6 +56,7 @@ const PERIOD_OPTIONS = Array.from({ length: 8 }, (_, i) => ({
 
 export function TimetableForm({
   schoolId,
+  academicYearId,
   teachers,
   classes,
   sections,
@@ -100,6 +102,7 @@ export function TimetableForm({
       .from("timetable")
       .select("day_of_week")
       .eq("school_id", schoolId)
+      .eq("academic_year_id", academicYearId)
       .eq("section_id", sectionId)
       .eq("period", periodNum)
       .in("day_of_week", days);
@@ -112,6 +115,7 @@ export function TimetableForm({
 
     const rows = days.map((d) => ({
       school_id: schoolId,
+      academic_year_id: academicYearId,
       section_id: sectionId,
       subject_id: subjectId,
       teacher_id: teacherId,
