@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient, createServiceSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { findOrCreateUserByPhone, attachRole } from "@/lib/provisioning/find-or-create-user";
+import { getActiveRoles, hasAnyRole } from "@/lib/auth/roles";
 
 interface TeacherInput {
   fullName: string;
@@ -19,14 +20,8 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: roleRow } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
-  if (!roleRow || !["school_admin", "super_admin"].includes(roleRow.role)) {
+  const roles = await getActiveRoles(supabase, user.id);
+  if (!hasAnyRole(roles, ["school_admin", "super_admin"], schoolId)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -2,20 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getAcademicYearId } from "@/lib/academic-year";
+import { getActiveRoles, hasAnyRole } from "@/lib/auth/roles";
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: roleRow } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .maybeSingle();
-
-  if (!roleRow || !["school_admin", "principal", "super_admin"].includes(roleRow.role)) {
+  const roles = await getActiveRoles(supabase, user.id);
+  if (!hasAnyRole(roles, ["school_admin", "principal", "super_admin"])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

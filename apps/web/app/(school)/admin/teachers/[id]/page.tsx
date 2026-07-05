@@ -4,7 +4,7 @@ import { getSchoolId } from "@/lib/school";
 import { getAcademicYearId } from "@/lib/academic-year";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
-import { ArrowLeft, Mail } from "lucide-react";
+import { ArrowLeft, Mail, Phone } from "lucide-react";
 
 export default async function TeacherDetailPage({
   params,
@@ -16,13 +16,13 @@ export default async function TeacherDetailPage({
 
   const { data: teacher } = await supabase
     .from("teacher_profiles")
-    .select("id, created_at, profile_id, school_id, profile:profiles(full_name, email)")
+    .select("id, created_at, profile_id, school_id, profile:profiles(full_name, email, phone)")
     .eq("id", id)
     .single();
 
   if (!teacher) notFound();
 
-  const profile = teacher.profile as unknown as { full_name: string; email: string } | null;
+  const profile = teacher.profile as unknown as { full_name: string; email: string; phone: string | null } | null;
 
   const initials = (profile?.full_name ?? "?")
     .split(" ")
@@ -87,9 +87,21 @@ export default async function TeacherDetailPage({
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-bold text-gray-900">{profile?.full_name ?? "—"}</h1>
             <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
-              <Mail className="h-3.5 w-3.5" />
-              {profile?.email ?? "—"}
+              <Phone className="h-3.5 w-3.5" />
+              {profile?.phone ? (
+                <a href={`tel:${profile.phone}`} className="hover:underline">
+                  {profile.phone}
+                </a>
+              ) : (
+                "—"
+              )}
             </div>
+            {profile?.email && (
+              <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
+                <Mail className="h-3.5 w-3.5" />
+                {profile.email}
+              </div>
+            )}
             <p className="mt-0.5 text-xs text-gray-400">
               Joined {new Date(teacher.created_at).toLocaleDateString()}
             </p>

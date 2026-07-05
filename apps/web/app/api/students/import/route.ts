@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { findOrCreateUserByPhone, attachRole } from "@/lib/provisioning/find-or-create-user";
 import { sendParentWelcomeSmsBatch, type WelcomeRecipient } from "@/lib/provisioning/send-welcome-sms";
+import { getActiveRoles, hasAnyRole } from "@/lib/auth/roles";
 
 interface ImportRow {
   full_name: string;
@@ -29,19 +30,13 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: roleRow } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .single();
-
-  if (!roleRow || roleRow.role !== "school_admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   const schoolId = await getSchoolId();
   if (!schoolId) return NextResponse.json({ error: "No school context" }, { status: 400 });
+
+  const roles = await getActiveRoles(supabase, user.id);
+  if (!hasAnyRole(roles, ["school_admin"], schoolId)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const adminClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

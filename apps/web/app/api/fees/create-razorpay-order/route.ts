@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Razorpay from "razorpay";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createClient } from "@supabase/supabase-js";
+import { getActiveRoles, hasAnyRole } from "@/lib/auth/roles";
 
 export async function POST(request: NextRequest) {
   // Support both cookie-based (web) and Bearer token (mobile) auth
@@ -21,14 +22,8 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Verify user is a parent
-  const { data: roleRow } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .single();
-
-  if (!roleRow || roleRow.role !== "parent") {
+  const roles = await getActiveRoles(supabase, user.id);
+  if (!hasAnyRole(roles, ["parent"])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

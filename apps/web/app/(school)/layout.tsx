@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
 import { createServerSupabaseClient } from "../../lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
+import { getActiveRoles, topRole } from "@/lib/auth/roles";
 import { Sidebar } from "@/components/sidebar";
 import { TopBar } from "@/components/top-bar";
 import { SectionSwitcher } from "@/components/section-switcher";
@@ -92,14 +93,8 @@ export default async function SchoolLayout({
 
   if (!user) redirect("/login");
 
-  const [{ data: roleRow }, { data: profile }] = await Promise.all([
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .limit(1)
-      .single(),
+  const [roles, { data: profile }] = await Promise.all([
+    getActiveRoles(supabase, user.id),
     supabase
       .from("profiles")
       .select("full_name")
@@ -107,14 +102,14 @@ export default async function SchoolLayout({
       .single(),
   ]);
 
+  // A user may hold several roles; use the most privileged for navigation/UI.
+  const realRole = topRole(roles);
   if (
-    !roleRow ||
-    !SCHOOL_ROLES.includes(roleRow.role as (typeof SCHOOL_ROLES)[number])
+    !realRole ||
+    !SCHOOL_ROLES.includes(realRole as (typeof SCHOOL_ROLES)[number])
   ) {
     redirect("/login");
   }
-
-  const realRole = roleRow.role as string;
   const userName = profile?.full_name || user.email || "User";
 
   let brandColor: string | undefined;

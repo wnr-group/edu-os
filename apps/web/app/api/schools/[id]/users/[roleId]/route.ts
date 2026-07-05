@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getActiveRoles, hasAnyRole } from "@/lib/auth/roles";
 
 async function getAdminClient() {
   return createClient(
@@ -16,14 +17,8 @@ async function requireSuperAdmin() {
   } = await supabase.auth.getUser();
   if (!user) return { user: null, error: "Unauthorized", status: 401 };
 
-  const { data: roleRow } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .single();
-
-  if (!roleRow || roleRow.role !== "super_admin") {
+  const roles = await getActiveRoles(supabase, user.id);
+  if (!hasAnyRole(roles, ["super_admin"])) {
     return { user: null, error: "Forbidden", status: 403 };
   }
 

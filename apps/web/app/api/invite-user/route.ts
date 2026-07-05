@@ -8,14 +8,22 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: roleRow } = await supabase
+  const { data: roleRows } = await supabase
     .from("user_roles")
     .select("role")
     .eq("user_id", user.id)
-    .eq("is_active", true)
-    .single();
+    .eq("is_active", true);
 
-  if (!roleRow) {
+  const activeRoles = (roleRows ?? []).map((r) => r.role);
+  // A user may hold several roles (e.g. school_admin + teacher). Pick the most
+  // privileged one that is allowed to invite others.
+  const callerRole = activeRoles.includes("super_admin")
+    ? "super_admin"
+    : activeRoles.includes("school_admin")
+      ? "school_admin"
+      : null;
+
+  if (!callerRole) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -34,7 +42,7 @@ export async function POST(request: NextRequest) {
   const { phone, fullName, schoolId, role, extraInserts } = body;
 
   // school_admin must belong to the target school
-  if (roleRow.role === "school_admin") {
+  if (callerRole === "school_admin") {
     const { data: schoolRoleRow } = await supabase
       .from("user_roles")
       .select("school_id")
@@ -42,16 +50,13 @@ export async function POST(request: NextRequest) {
       .eq("role", "school_admin")
       .eq("school_id", schoolId)
       .eq("is_active", true)
-      .single();
+      .maybeSingle();
     if (!schoolRoleRow) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-  } else if (roleRow.role !== "super_admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   // Restrict what roles each caller can assign
-  const callerRole = roleRow.role;
   const allowedRoles: Record<string, string[]> = {
     school_admin: ["teacher", "parent"],
     super_admin: ["school_admin", "principal", "teacher", "parent"],

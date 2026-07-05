@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
+import { getActiveRoles, hasAnyRole } from "@/lib/auth/roles";
 
 interface LineItemAllocation {
   line_item_id: string;
@@ -13,21 +14,11 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: roleRow } = await supabase
-    .from("user_roles")
-    .select("role, school_id")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .single();
-
-  if (!roleRow || !["school_admin", "teacher"].includes(roleRow.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   const schoolId = await getSchoolId();
   if (!schoolId) return NextResponse.json({ error: "No school context" }, { status: 400 });
 
-  if (roleRow.school_id !== schoolId) {
+  const roles = await getActiveRoles(supabase, user.id);
+  if (!hasAnyRole(roles, ["school_admin", "teacher"], schoolId)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

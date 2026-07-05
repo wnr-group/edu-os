@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
+import { getActiveRoles, topRole } from "@/lib/auth/roles";
 import { StatCard } from "@/components/stat-card";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
@@ -14,14 +15,9 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: roleRow } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .single();
-
-  const role = roleRow?.role ?? "teacher";
+  const roles = await getActiveRoles(supabase, user.id);
+  // A user may hold several roles; render the dashboard for the most privileged.
+  const role = topRole(roles) ?? "teacher";
   const schoolId = await getSchoolId();
 
   if (role === "school_admin" || role === "super_admin") {

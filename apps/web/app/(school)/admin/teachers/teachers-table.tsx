@@ -9,6 +9,7 @@ interface TeacherRow {
   id: string;
   name: string;
   email: string;
+  phone: string;
 }
 
 export function TeachersTable({
@@ -23,10 +24,25 @@ export function TeachersTable({
       data={rows}
       columns={[
         { header: "Name", accessor: "name" },
-        { header: "Email", accessor: "email" },
+        {
+          header: "Phone",
+          accessor: (row) =>
+            row.phone ? (
+              <a href={`tel:${row.phone}`} className="text-primary hover:underline">
+                {row.phone}
+              </a>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            ),
+        },
+        {
+          header: "Email",
+          accessor: (row) =>
+            row.email ? row.email : <span className="text-muted-foreground">—</span>,
+        },
       ]}
-      searchKeys={["name", "email"]}
-      searchPlaceholder="Search by name or email…"
+      searchKeys={["name", "email", "phone"]}
+      searchPlaceholder="Search by name, phone or email…"
       renderActions={(row) => (
         <Link
           href={`/admin/teachers/${row.id}`}

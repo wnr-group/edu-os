@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
+import { getActiveRoles, hasAnyRole } from "@/lib/auth/roles";
 import { WizardShell } from "./wizard-shell";
 
 export default async function OnboardingPage() {
@@ -11,14 +12,8 @@ export default async function OnboardingPage() {
   const schoolId = await getSchoolId();
   if (!schoolId) redirect("/login");
 
-  const { data: roleRow } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
-  if (!roleRow || !["school_admin", "super_admin"].includes(roleRow.role)) redirect("/login");
+  const roles = await getActiveRoles(supabase, user.id);
+  if (!hasAnyRole(roles, ["school_admin", "super_admin"], schoolId)) redirect("/login");
 
   const { data: school } = await supabase
     .from("schools")

@@ -10,15 +10,16 @@ export default async function TeachersPage() {
 
   const { data: teachers } = await supabase
     .from("teacher_profiles")
-    .select("id, profile:profiles(full_name, email)")
+    .select("id, profile:profiles(full_name, email, phone)")
     .eq("school_id", schoolId);
 
   const rows = (teachers ?? []).map((t) => {
-    const p = (t.profile as unknown as { full_name: string; email: string } | null);
+    const p = (t.profile as unknown as { full_name: string; email: string; phone: string | null } | null);
     return {
       id: t.id,
       name: p?.full_name ?? "",
       email: p?.email ?? "",
+      phone: p?.phone ?? "",
     };
   });
 

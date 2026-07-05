@@ -2,30 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
+import { getActiveRoles, hasAnyRole } from "@/lib/auth/roles";
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: roleRow } = await supabase
-    .from("user_roles")
-    .select("role, school_id")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .single();
-
-  if (!roleRow || roleRow.role !== "school_admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   // getSchoolId() resolves from middleware x-school-id header (domain-based) or host header.
-  // The host header can be influenced by the client, so we cross-check against the school_id
-  // bound to the authenticated user in user_roles to prevent cross-tenant data access.
+  // The host header can be influenced by the client, so hasAnyRole cross-checks the
+  // school_id bound to the caller's role to prevent cross-tenant data access.
   const schoolId = await getSchoolId();
   if (!schoolId) return NextResponse.json({ error: "No school context" }, { status: 400 });
 
-  if (roleRow.school_id !== schoolId) {
+  const roles = await getActiveRoles(supabase, user.id);
+  if (!hasAnyRole(roles, ["school_admin"], schoolId)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
