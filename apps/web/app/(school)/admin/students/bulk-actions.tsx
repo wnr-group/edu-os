@@ -15,6 +15,9 @@ interface StudentRow {
   section: string;
   email: string;
   parent_phone: string;
+  parent_name: string;
+  date_of_birth: string;
+  gender: string;
 }
 
 interface ImportResult {
@@ -36,9 +39,9 @@ export function BulkActions({ students }: BulkActionsProps) {
   const router = useRouter();
 
   function handleDownload() {
-    const headers = ["full_name", "email", "roll_number", "admission_number", "class_name", "section_name", "parent_phone"];
+    const headers = ["full_name", "email", "roll_number", "admission_number", "class_name", "section_name", "parent_phone", "parent_name", "date_of_birth", "gender"];
     const csvRows = students.map((s) =>
-      [s.name, s.email, s.roll, s.admission_number, s.class_name, s.section, s.parent_phone]
+      [s.name, s.email, s.roll, s.admission_number, s.class_name, s.section, s.parent_phone, s.parent_name, s.date_of_birth, s.gender]
         .map((v) => `"${(v ?? "").replace(/"/g, '""')}"`)
         .join(",")
     );
@@ -54,7 +57,7 @@ export function BulkActions({ students }: BulkActionsProps) {
   }
 
   function handleDownloadTemplate() {
-    const headers = "full_name,email,roll_number,admission_number,class_name,section_name,parent_phone\n";
+    const headers = "full_name,email,roll_number,admission_number,class_name,section_name,parent_phone,parent_name,date_of_birth,gender\n";
     const blob = new Blob([headers], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -83,6 +86,9 @@ export function BulkActions({ students }: BulkActionsProps) {
       class_name: r.class_name ?? "",
       section_name: r.section_name ?? "",
       parent_phone: r.parent_phone ?? "",
+      parent_name: r.parent_name ?? "",
+      date_of_birth: r.date_of_birth ?? "",
+      gender: r.gender ?? "",
     }));
 
     try {
@@ -119,7 +125,7 @@ export function BulkActions({ students }: BulkActionsProps) {
   }
 
   return (
-    <div className="relative">
+    <div className="relative z-50">
       <Button
         variant="outline"
         onClick={() => setOpen(!open)}
@@ -131,8 +137,8 @@ export function BulkActions({ students }: BulkActionsProps) {
 
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-20 mt-1 w-52 rounded-lg border border-border bg-background p-1 shadow-lg">
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-lg border border-border bg-background p-1 shadow-lg">
             <button
               onClick={handleDownload}
               className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
@@ -163,7 +169,7 @@ export function BulkActions({ students }: BulkActionsProps) {
       )}
 
       {result && (
-        <div className="absolute right-0 top-full z-20 mt-1 w-80 rounded-lg border border-border bg-background p-3 shadow-lg">
+        <div className="absolute right-0 top-full z-50 mt-1 w-80 rounded-lg border border-border bg-background p-3 shadow-lg">
           <p className="text-sm font-medium text-foreground">Import Complete</p>
           <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
             <li className="text-green-600">{result.created} created</li>

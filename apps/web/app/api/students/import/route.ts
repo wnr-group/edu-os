@@ -16,6 +16,32 @@ interface ImportRow {
   section_name?: string;
   parent_phone?: string;
   parent_name?: string;
+  date_of_birth?: string;
+  gender?: string;
+}
+
+// Accept common date formats and normalize to YYYY-MM-DD (Postgres date).
+// Returns null for empty/unparseable values so a bad date never fails the row.
+function normalizeDob(raw?: string): string | null {
+  const v = raw?.trim();
+  if (!v) return null;
+  // Already ISO (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  // DD/MM/YYYY or DD-MM-YYYY (the format the edit form displays)
+  const m = v.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (m) {
+    const [, d, mo, y] = m;
+    return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+  return null;
+}
+
+function normalizeGender(raw?: string): string | null {
+  const v = raw?.trim().toLowerCase();
+  if (v === "male" || v === "m") return "male";
+  if (v === "female" || v === "f") return "female";
+  if (v === "other" || v === "o") return "other";
+  return null;
 }
 
 interface RowResult {
@@ -116,6 +142,8 @@ export async function POST(request: NextRequest) {
         full_name: row.full_name.trim(),
         email: row.email?.trim() || null,
         admission_number: row.admission_number?.trim() || null,
+        date_of_birth: normalizeDob(row.date_of_birth),
+        gender: normalizeGender(row.gender),
         parent_profile_id: parentProfileId,
       };
 
