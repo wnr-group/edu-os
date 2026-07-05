@@ -5,6 +5,7 @@ import { getSchoolId } from "@/lib/school";
 import { findOrCreateUserByPhone, attachRole } from "@/lib/provisioning/find-or-create-user";
 import { sendParentWelcomeSmsBatch, type WelcomeRecipient } from "@/lib/provisioning/send-welcome-sms";
 import { getActiveRoles, hasAnyRole } from "@/lib/auth/roles";
+import { getAcademicYearId } from "@/lib/academic-year";
 
 interface ImportRow {
   full_name: string;
@@ -72,6 +73,9 @@ export async function POST(request: NextRequest) {
     sectionMap.set(`${sec.class_id}:${sec.name.toLowerCase().trim()}`, sec.id);
   }
 
+  // Class/section/roll live on student_enrollments, scoped to an academic year.
+  const academicYearId = await getAcademicYearId(schoolId);
+
   const results: RowResult[] = [];
   const welcomeRecipients: WelcomeRecipient[] = [];
 
@@ -105,46 +109,75 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Identity lives on student_profiles; class/section/roll live on
+      // student_enrollments (scoped to the active academic year).
       const record = {
         school_id: schoolId,
         full_name: row.full_name.trim(),
         email: row.email?.trim() || null,
-        roll_number: row.roll_number?.trim() || null,
         admission_number: row.admission_number?.trim() || null,
-        class_id: classId ?? null,
-        section_id: sectionId ?? null,
         parent_profile_id: parentProfileId,
       };
 
-      if (row.admission_number?.trim()) {
-        const { data: existing } = await adminClient
-          .from("student_profiles")
-          .select("id")
-          .eq("school_id", schoolId)
-          .eq("admission_number", row.admission_number.trim())
-          .maybeSingle();
+      let studentProfileId: string;
+      let status: "created" | "updated" = "created";
 
-        if (existing) {
-          const { error } = await adminClient
-            .from("student_profiles")
-            .update(record)
-            .eq("id", existing.id);
-          if (error) throw new Error(error.message);
-          results.push({ row: i, status: "updated" });
-        } else {
-          const { error } = await adminClient
-            .from("student_profiles")
-            .insert(record);
-          if (error) throw new Error(error.message);
-          results.push({ row: i, status: "created" });
-        }
-      } else {
+      const existingId = row.admission_number?.trim()
+        ? (
+            await adminClient
+              .from("student_profiles")
+              .select("id")
+              .eq("school_id", schoolId)
+              .eq("admission_number", row.admission_number.trim())
+              .maybeSingle()
+          ).data?.id ?? null
+        : null;
+
+      if (existingId) {
         const { error } = await adminClient
           .from("student_profiles")
-          .insert(record);
+          .update(record)
+          .eq("id", existingId);
         if (error) throw new Error(error.message);
-        results.push({ row: i, status: "created" });
+        studentProfileId = existingId;
+        status = "updated";
+      } else {
+        const { data: inserted, error } = await adminClient
+          .from("student_profiles")
+          .insert(record)
+          .select("id")
+          .single();
+        if (error) throw new Error(error.message);
+        studentProfileId = inserted.id;
       }
+
+      // Enroll into the active year's class/section when both resolve. Skip
+      // silently if the class/section names don't match or no active year —
+      // the student profile is still created, just unassigned.
+      if (classId && sectionId && academicYearId) {
+        const enrollment = {
+          student_profile_id: studentProfileId,
+          academic_year_id: academicYearId,
+          school_id: schoolId,
+          class_id: classId,
+          section_id: sectionId,
+          roll_number: row.roll_number?.trim() || null,
+          is_active: true,
+        };
+        const { data: existingEnroll } = await adminClient
+          .from("student_enrollments")
+          .select("id")
+          .eq("student_profile_id", studentProfileId)
+          .eq("academic_year_id", academicYearId)
+          .maybeSingle();
+
+        const { error: enrollErr } = existingEnroll
+          ? await adminClient.from("student_enrollments").update(enrollment).eq("id", existingEnroll.id)
+          : await adminClient.from("student_enrollments").insert(enrollment);
+        if (enrollErr) throw new Error(enrollErr.message);
+      }
+
+      results.push({ row: i, status });
     } catch (err) {
       results.push({
         row: i,
