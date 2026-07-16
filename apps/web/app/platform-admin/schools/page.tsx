@@ -1,7 +1,17 @@
 import Link from "next/link";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
-import { DataTable } from "@/components/data-table";
+import { Building2, CheckCircle2, XCircle, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { ListPageTemplate } from "@/components/list-page-template";
+
+interface SchoolRow {
+  id: string;
+  name: string;
+  contact_email: string | null;
+  is_active: boolean;
+  created_at: string;
+}
 
 export default async function SchoolsPage() {
   const supabase = createServiceSupabaseClient();
@@ -10,44 +20,84 @@ export default async function SchoolsPage() {
     .select("id, name, contact_email, is_active, created_at")
     .order("created_at", { ascending: false });
 
+  const rows = (schools ?? []) as SchoolRow[];
+  const activeCount = rows.filter((s) => s.is_active).length;
+  const inactiveCount = rows.length - activeCount;
+
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Schools</h1>
-        <Link
-          href="/platform-admin/schools/new"
-          className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/80"
-        >
-          + New School
+    <ListPageTemplate
+      title="Schools"
+      description="Manage every school on the platform."
+      headerAction={
+        <Link href="/platform-admin/schools/new" className={buttonVariants({ variant: "default", size: "sm" })}>
+          <Plus className="h-3.5 w-3.5" />
+          New School
         </Link>
-      </div>
-      <DataTable
-        data={schools ?? []}
-        columns={[
-          { header: "Name", accessor: "name" },
-          { header: "Email", accessor: "contact_email" },
-          {
-            header: "Status",
-            accessor: (row) => (
-              <Badge variant={row.is_active ? "default" : "secondary"}>
-                {row.is_active ? "Active" : "Inactive"}
-              </Badge>
-            ),
-          },
-          {
-            header: "",
-            accessor: (row) => (
-              <Link
-                href={`/platform-admin/schools/${row.id}`}
-                className="text-sm text-blue-600 hover:underline"
-              >
-                View
+      }
+      stats={[
+        { icon: Building2, label: "Total Schools", value: rows.length, iconBg: "bg-indigo-50", iconColor: "text-indigo-600" },
+        { icon: CheckCircle2, label: "Active", value: activeCount, iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
+        { icon: XCircle, label: "Inactive", value: inactiveCount, iconBg: "bg-rose-50", iconColor: "text-rose-600" },
+      ]}
+      data={rows}
+      columns={[
+        { header: "Name", accessor: "name" },
+        { header: "Email", accessor: (row) => row.contact_email || "—" },
+        {
+          header: "Status",
+          accessor: (row) => (
+            <Badge variant={row.is_active ? "default" : "secondary"}>
+              {row.is_active ? "Active" : "Inactive"}
+            </Badge>
+          ),
+        },
+      ]}
+      searchKeys={["name", "contact_email"]}
+      searchPlaceholder="Search by school name or email..."
+      filters={[
+        {
+          label: "All Status",
+          options: [
+            { label: "Active", value: "active" },
+            { label: "Inactive", value: "inactive" },
+          ],
+          filterFn: (row: SchoolRow, value: string) =>
+            value === "active" ? row.is_active : !row.is_active,
+        },
+      ]}
+      renderActions={(row) => (
+        <Link href={`/platform-admin/schools/${row.id}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
+          View
+        </Link>
+      )}
+      renderMobileCard={(row) => (
+        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <Link href={`/platform-admin/schools/${row.id}`} className="truncate text-sm font-semibold text-foreground hover:underline">
+                {row.name}
               </Link>
-            ),
-          },
-        ]}
-        emptyMessage="No schools yet. Create one to get started."
-      />
-    </div>
+              <p className="truncate text-xs text-muted-foreground">{row.contact_email || "—"}</p>
+            </div>
+            <Badge variant={row.is_active ? "default" : "secondary"} className="shrink-0">
+              {row.is_active ? "Active" : "Inactive"}
+            </Badge>
+          </div>
+        </div>
+      )}
+      emptyState={
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-white py-16 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+            <Building2 className="h-7 w-7 text-muted-foreground" />
+          </div>
+          <h3 className="mt-4 text-sm font-semibold text-foreground">No schools yet</h3>
+          <p className="mt-1 text-sm text-muted-foreground">Create one to get started.</p>
+          <Link href="/platform-admin/schools/new" className={buttonVariants({ variant: "default", size: "sm" }) + " mt-6"}>
+            <Plus className="h-3.5 w-3.5" />
+            New School
+          </Link>
+        </div>
+      }
+    />
   );
 }

@@ -1,6 +1,7 @@
+import { Megaphone, CalendarDays } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
-import { PageHeader } from "@/components/page-header";
+import { KpiCard, KpiGrid } from "@/components/kpi-card";
 import { CreateAnnouncementDialog } from "./create-announcement-dialog";
 import { AnnouncementsTable } from "./announcements-table";
 
@@ -29,18 +30,17 @@ export default async function AnnouncementsPage() {
   const thisMonthCount = rows.filter((r) => r.created_at >= thisMonthStart).length;
 
   return (
-    <div>
-      <PageHeader
-        title="Announcements"
-        description="Broadcast messages to students, teachers, or everyone."
-        action={<CreateAnnouncementDialog schoolId={schoolId} createdBy={user!.id} />}
-        stats={[
-          { label: "Total Sent", value: rows.length },
-          { label: "This Month", value: thisMonthCount },
-        ]}
-      />
-
-      <AnnouncementsTable rows={rows} schoolId={schoolId} userId={user!.id} />
-    </div>
+    <AnnouncementsTable
+      rows={rows}
+      schoolId={schoolId}
+      userId={user!.id}
+      headerAction={<CreateAnnouncementDialog schoolId={schoolId} createdBy={user!.id} />}
+      stats={
+        <KpiGrid>
+          <KpiCard icon={Megaphone} label="Total Sent" value={rows.length} />
+          <KpiCard icon={CalendarDays} label="This Month" value={thisMonthCount} />
+        </KpiGrid>
+      }
+    />
   );
 }

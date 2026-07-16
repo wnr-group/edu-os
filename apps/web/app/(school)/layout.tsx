@@ -6,6 +6,7 @@ import { getSchoolId } from "@/lib/school";
 import { getActiveRoles, topRole } from "@/lib/auth/roles";
 import { Sidebar } from "@/components/sidebar";
 import { TopBar } from "@/components/top-bar";
+import { MobileNav } from "@/components/mobile-nav";
 import { SectionSwitcher } from "@/components/section-switcher";
 import type { SectionOption } from "@/components/section-switcher";
 import { AcademicYearSwitcher } from "@/components/academic-year-switcher";
@@ -255,7 +256,15 @@ export default async function SchoolLayout({
             ) : undefined
           }
         />
-        <main className="flex-1 overflow-y-auto p-8">
+        <MobileNav
+          title={schoolName}
+          items={navItems}
+          brandColor={brandColor}
+          userName={sidebarUserName}
+          userRole={displayRole}
+          sectionSwitcher={sectionSwitcherEl}
+        />
+        <main className="flex-1 overflow-y-auto p-4 pb-24 lg:p-8 lg:pb-8">
           {years.find((y) => y.id === currentYearId)?.status === "draft" && (
             <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               <strong>Draft year:</strong> You are configuring a year that is not yet active. Changes here will not affect the live school until you activate this year from the{" "}

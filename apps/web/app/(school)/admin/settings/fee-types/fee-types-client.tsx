@@ -118,14 +118,14 @@ export function FeeTypesClient({ predefined, custom: initialCustom }: Props) {
       </div>
 
       <div>
-        <div className="mb-1 flex items-center justify-between">
+        <div className="mb-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Custom Fee Types</h2>
             <p className="mt-1 text-sm text-muted-foreground">Fee types specific to your school.</p>
           </div>
           <button
             onClick={() => { setAdding(!adding); setAddForm({ name: "", category: "core" }); }}
-            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+            className="self-start rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 sm:self-auto"
           >
             + Add Custom Type
           </button>
@@ -134,37 +134,39 @@ export function FeeTypesClient({ predefined, custom: initialCustom }: Props) {
         {adding && (
           <div className="my-4 rounded-lg border border-indigo-200 bg-indigo-50 p-4">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-indigo-600">New Custom Fee Type</p>
-            <div className="flex flex-wrap items-end gap-3">
-              <div>
+            <div className="flex flex-col flex-wrap gap-3 sm:flex-row sm:items-end">
+              <div className="w-full sm:w-auto">
                 <label className="text-xs text-muted-foreground">Name *</label>
                 <input
                   type="text"
                   value={addForm.name}
                   onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="e.g. Annual Day Fee"
-                  className="mt-0.5 block w-56 rounded-md border border-input bg-white px-3 py-1.5 text-sm"
+                  className="mt-0.5 block w-full rounded-md border border-input bg-white px-3 py-1.5 text-sm sm:w-56"
                 />
               </div>
-              <div>
+              <div className="w-full sm:w-auto">
                 <label className="text-xs text-muted-foreground">Category *</label>
                 <select
                   value={addForm.category}
                   onChange={(e) => setAddForm((f) => ({ ...f, category: e.target.value }))}
-                  className="mt-0.5 block rounded-md border border-input bg-white px-3 py-1.5 text-sm"
+                  className="mt-0.5 block w-full rounded-md border border-input bg-white px-3 py-1.5 text-sm sm:w-auto"
                 >
                   {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
               </div>
-              <button
-                onClick={handleAdd}
-                disabled={addLoading}
-                className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {addLoading ? "Saving…" : "Save"}
-              </button>
-              <button onClick={() => setAdding(false)} className="text-sm text-muted-foreground hover:text-foreground">
-                Cancel
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleAdd}
+                  disabled={addLoading}
+                  className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {addLoading ? "Saving…" : "Save"}
+                </button>
+                <button onClick={() => setAdding(false)} className="text-sm text-muted-foreground hover:text-foreground">
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
+import { PageHeader } from "@/components/page-header";
 import { FeedbackList } from "./feedback-list";
 
 export default async function TeacherFeedbackPage() {
@@ -39,7 +40,10 @@ export default async function TeacherFeedbackPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Feedback</h1>
+      <PageHeader
+        title="Feedback"
+        description="View and respond to feedback from parents."
+      />
       <FeedbackList items={items} />
     </div>
   );

@@ -3,9 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Shield, UserCheck, Users, GraduationCap, Contact } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { KpiCard, KpiGrid } from "@/components/kpi-card";
 
 interface School {
   id: string;
@@ -30,12 +33,12 @@ interface Props {
   roleCounts: RoleCounts;
 }
 
-const ROLE_LABELS: { key: keyof RoleCounts; label: string }[] = [
-  { key: "school_admin", label: "Admins" },
-  { key: "principal", label: "Principals" },
-  { key: "teacher", label: "Teachers" },
-  { key: "student", label: "Students" },
-  { key: "parent", label: "Parents" },
+const ROLE_LABELS: { key: keyof RoleCounts; label: string; icon: LucideIcon }[] = [
+  { key: "school_admin", label: "Admins", icon: Shield },
+  { key: "principal", label: "Principals", icon: UserCheck },
+  { key: "teacher", label: "Teachers", icon: Users },
+  { key: "student", label: "Students", icon: GraduationCap },
+  { key: "parent", label: "Parents", icon: Contact },
 ];
 
 export function OverviewTab({ school, roleCounts }: Props) {
@@ -79,17 +82,11 @@ export function OverviewTab({ school, roleCounts }: Props) {
   return (
     <div className="space-y-6">
       {/* Role count stats */}
-      <div className="grid grid-cols-5 gap-3">
-        {ROLE_LABELS.map(({ key, label }) => (
-          <div
-            key={key}
-            className="rounded-lg border bg-white px-4 py-3 text-center shadow-sm"
-          >
-            <p className="text-2xl font-bold text-gray-900">{roleCounts[key]}</p>
-            <p className="mt-0.5 text-xs text-gray-500">{label}</p>
-          </div>
+      <KpiGrid className="sm:grid-cols-3 lg:grid-cols-5">
+        {ROLE_LABELS.map(({ key, label, icon }) => (
+          <KpiCard key={key} icon={icon} label={label} value={roleCounts[key]} />
         ))}
-      </div>
+      </KpiGrid>
 
       {/* Editable form */}
       <div className="rounded-lg border bg-white p-6 shadow-sm">

@@ -4,21 +4,17 @@ import { useState, useMemo } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/data-table";
+import type { Column } from "@/components/data-table";
 
-interface FilterOption {
+export interface FilterOption {
   label: string;
   value: string;
 }
 
-interface FilterConfig {
+export interface FilterConfig {
   label: string;
   options: FilterOption[];
   filterFn: (row: any, value: string) => boolean;
-}
-
-interface Column<T> {
-  header: string;
-  accessor: keyof T | ((row: T) => React.ReactNode);
 }
 
 interface FilterableDataTableProps<T extends { id: string }> {

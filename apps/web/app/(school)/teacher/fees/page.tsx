@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getActiveSection } from "@/lib/section-context";
 import { NoSectionPrompt } from "../no-section-prompt";
+import { PageHeader } from "@/components/page-header";
 import { FeesTable, type FeeRow } from "./fees-table";
 
 export default async function TeacherFeesPage() {
@@ -76,10 +77,7 @@ export default async function TeacherFeesPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Fees</h1>
-        {sectionLabel && <p className="mt-1 text-sm text-gray-500">{sectionLabel}</p>}
-      </div>
+      <PageHeader title="Fees" description={sectionLabel || undefined} />
       <FeesTable rows={rows} schoolId={schoolId} />
     </div>
   );

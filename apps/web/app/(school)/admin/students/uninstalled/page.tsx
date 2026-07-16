@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { UninstalledStudentTable } from "./uninstalled-table";
 
 export default async function UninstalledStudentsPage({
@@ -47,22 +49,20 @@ export default async function UninstalledStudentsPage({
   const classes = (classesRes.data ?? []) as { id: string; name: string }[];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in-up">
       <Link
         href="/admin/students"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2")}
       >
-        <ArrowLeft className="h-3.5 w-3.5" />
+        <ArrowLeft className="mr-1.5 h-4 w-4" />
         Back to Students
       </Link>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">App Not Installed</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {filtered.length} student{filtered.length !== 1 ? "s" : ""} whose parents have not set up the app
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">App Not Installed</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {filtered.length} student{filtered.length !== 1 ? "s" : ""} whose parents have not set up the app
+        </p>
       </div>
 
       {/* Class filter */}

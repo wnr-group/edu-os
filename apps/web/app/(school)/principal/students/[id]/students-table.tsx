@@ -1,16 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { GraduationCap, MoreHorizontal, Phone } from "lucide-react";
+import { GraduationCap, Phone } from "lucide-react";
 import { ListPageTemplate } from "@/components/list-page-template";
 import { EmptyState } from "@/components/empty-state";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
 
 interface StudentRow {
   id: string;
@@ -39,48 +32,19 @@ function Avatar({ name }: { name: string }) {
   );
 }
 
-function ClassPill({ className }: { className: string }) {
-  if (!className) return <span className="text-muted-foreground">—</span>;
-  return (
-    <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
-      {className}
-    </span>
-  );
-}
-
-function RowActions({ row }: { row: StudentRow }) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={<Button variant="ghost" size="icon-sm" aria-label="Row actions" />}
-      >
-        <MoreHorizontal className="h-4 w-4" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem render={<Link href={`/admin/students/${row.id}`} />}>
-          View Profile
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-export function StudentsTable({
+export function PrincipalStudentsTable({
   rows,
   classFilterOptions,
-  headerAction,
   stats,
 }: {
   rows: StudentRow[];
   classFilterOptions: ClassOption[];
-  headerAction?: React.ReactNode;
   stats?: React.ReactNode;
 }) {
   return (
     <ListPageTemplate<StudentRow>
       title="Students"
-      description="Manage student enrollment and profiles."
-      headerAction={headerAction}
+      description="View student enrollment and profiles across your school."
       stats={stats}
       data={rows}
       columns={[
@@ -89,15 +53,15 @@ export function StudentsTable({
           accessor: (row) => (
             <div className="flex items-center gap-3">
               <Avatar name={row.name} />
-              <Link href={`/admin/students/${row.id}`} className="font-medium text-foreground hover:text-indigo-600 hover:underline">
+              <Link href={`/principal/students/${row.id}`} className="font-medium text-foreground hover:text-indigo-600 hover:underline">
                 {row.name || "—"}
               </Link>
             </div>
           ),
         },
         { header: "Roll No.", accessor: "roll" },
-        { header: "Class", accessor: (row) => <ClassPill className={row.class_name} /> },
-        { header: "Section", accessor: (row) => row.section || "—" },
+        { header: "Class", accessor: "class_name" },
+        { header: "Section", accessor: "section" },
         {
           header: "Parent Phone",
           accessor: (row) =>
@@ -124,28 +88,29 @@ export function StudentsTable({
             ]
           : []
       }
-      renderActions={(row) => <RowActions row={row} />}
+      renderActions={(row) => (
+        <Link
+          href={`/principal/students/${row.id}`}
+          className="text-sm font-medium text-indigo-600 hover:underline"
+        >
+          View Profile
+        </Link>
+      )}
       renderMobileCard={(row) => (
         <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <Avatar name={row.name} />
-              <div className="min-w-0">
-                <Link href={`/admin/students/${row.id}`} className="block truncate font-medium text-foreground">
-                  {row.name || "—"}
-                </Link>
-                <p className="text-xs text-muted-foreground">
-                  {row.roll || "—"} · {row.class_name || "—"}{row.section ? ` · ${row.section}` : ""}
-                </p>
-              </div>
+          <div className="flex items-center gap-3">
+            <Avatar name={row.name} />
+            <div className="min-w-0 flex-1">
+              <Link href={`/principal/students/${row.id}`} className="block truncate font-medium text-foreground">
+                {row.name || "—"}
+              </Link>
+              <p className="text-xs text-muted-foreground">
+                Roll {row.roll || "—"} · {row.class_name}{row.section ? ` · ${row.section}` : ""}
+              </p>
             </div>
-            <RowActions row={row} />
           </div>
           {row.parent_phone && (
-            <a
-              href={`tel:${row.parent_phone}`}
-              className="mt-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground"
-            >
+            <a href={`tel:${row.parent_phone}`} className="mt-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground">
               <Phone className="h-3.5 w-3.5" />
               {row.parent_phone}
             </a>
@@ -156,7 +121,7 @@ export function StudentsTable({
         <EmptyState
           icon={GraduationCap}
           title="No students yet"
-          description="Add your first student to get started with enrollment."
+          description="Students enrolled at your school will appear here."
         />
       }
     />

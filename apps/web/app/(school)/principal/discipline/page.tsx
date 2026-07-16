@@ -1,16 +1,8 @@
+import { AlertTriangle, FileText, MessageCircle, Clock } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
-import { DataTable } from "@/components/data-table";
-import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
-
-type SeverityVariant = "default" | "secondary" | "destructive" | "outline";
-
-function severityVariant(severity: string | null): SeverityVariant {
-  if (severity === "high" || severity === "severe") return "destructive";
-  if (severity === "medium") return "secondary";
-  return "outline";
-}
+import { KpiCard, KpiGrid } from "@/components/kpi-card";
+import { DisciplineTable, type DisciplineRow } from "./discipline-table";
 
 export default async function DisciplinePage() {
   const supabase = await createServerSupabaseClient();
@@ -24,7 +16,7 @@ export default async function DisciplinePage() {
     .eq("school_id", schoolId)
     .order("created_at", { ascending: false });
 
-  const rows = (records ?? []).map((r) => {
+  const rows: DisciplineRow[] = (records ?? []).map((r) => {
     const sp = r.student as unknown as { full_name: string; enrollments: { roll_number: string | null }[] | null } | null;
     const rollNumber = sp?.enrollments?.[0]?.roll_number ?? "—";
     return {
@@ -39,41 +31,31 @@ export default async function DisciplinePage() {
     };
   });
 
+  const total = rows.length;
+  // These counts use the real `severity` values written by CreateDisciplineForm
+  // ("written"/"verbal"/"suspension"), independent of this page's own
+  // severityVariant() badge-colour mapping, which is unchanged from before.
+  const writtenCount = rows.filter((r) => r.severity === "written").length;
+  const verbalCount = rows.filter((r) => r.severity === "verbal" || !r.severity).length;
+  const pct = (n: number) => (total > 0 ? `${((n / total) * 100).toFixed(1)}% of total` : undefined);
+
+  const categoryOptions = Array.from(new Set(rows.map((r) => r.category).filter((c) => c && c !== "—"))).map((c) => ({
+    label: c.charAt(0).toUpperCase() + c.slice(1),
+    value: c,
+  }));
+
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Discipline</h1>
-        <p className="mt-1 text-sm text-muted-foreground">All discipline incidents across the school.</p>
-      </div>
-      <DataTable
-        data={rows}
-        columns={[
-          {
-            header: "Student",
-            accessor: (row) => (
-              <Link
-                href={`/principal/students/${row.student_id}`}
-                className="font-medium text-indigo-600 hover:underline"
-              >
-                {row.student_name}
-              </Link>
-            ),
-          },
-          { header: "Roll No.", accessor: "roll_number" },
-          { header: "Category", accessor: "category" },
-          {
-            header: "Severity",
-            accessor: (row) => (
-              <Badge variant={severityVariant(row.severity)}>
-                {row.severity ?? "low"}
-              </Badge>
-            ),
-          },
-          { header: "Description", accessor: "description" },
-          { header: "Date", accessor: "date" },
-        ]}
-        emptyMessage="No discipline records found."
-      />
-    </div>
+    <DisciplineTable
+      rows={rows}
+      categoryOptions={categoryOptions}
+      stats={
+        <KpiGrid>
+          <KpiCard icon={AlertTriangle} label="Total Incidents" value={total} sublabel="This Academic Year" />
+          <KpiCard icon={FileText} label="Written" value={writtenCount} sublabel={pct(writtenCount)} />
+          <KpiCard icon={MessageCircle} label="Verbal" value={verbalCount} sublabel={pct(verbalCount)} />
+          <KpiCard icon={Clock} label="Pending Review" value="—" sublabel="Not tracked yet" />
+        </KpiGrid>
+      }
+    />
   );
 }

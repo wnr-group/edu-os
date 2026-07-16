@@ -12,7 +12,7 @@ import {
 import { createClient } from "@/lib/supabase";
 import type { LucideIcon } from "lucide-react";
 
-const ICON_MAP: Record<string, LucideIcon> = {
+export const ICON_MAP: Record<string, LucideIcon> = {
   Dashboard: LayoutDashboard,
   Schools: Building2,
   Classes: School,
@@ -36,7 +36,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Gallery: Image,
 };
 
-interface NavItem {
+export interface NavItem {
   label: string;
   href: string;
 }
@@ -50,7 +50,7 @@ interface SidebarProps {
   sectionSwitcher?: React.ReactNode;
 }
 
-const ROLE_LABELS: Record<string, string> = {
+export const ROLE_LABELS: Record<string, string> = {
   school_admin: "School Admin",
   teacher: "Teacher",
   principal: "Principal",
@@ -61,7 +61,7 @@ const ROLE_LABELS: Record<string, string> = {
  * Darken a hex color by mixing with black.
  * factor: 0 = original, 1 = pure black
  */
-function darken(hex: string, factor: number): string {
+export function darken(hex: string, factor: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
@@ -84,7 +84,7 @@ export function Sidebar({ title, items, brandColor, userName, userRole, sectionS
 
   return (
     <aside
-      className="flex h-full w-60 flex-col text-white"
+      className="hidden h-full w-60 shrink-0 flex-col text-white lg:flex"
       style={{ backgroundColor: sidebarBg }}
     >
       <div className="flex items-center gap-2.5 px-5 py-5">

@@ -1,6 +1,7 @@
+import { BookOpen, Layers } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
-import { PageHeader } from "@/components/page-header";
+import { KpiCard, KpiGrid } from "@/components/kpi-card";
 import { AddSubjectDialog } from "./add-subject-dialog";
 import { SubjectsTable } from "./subjects-table";
 import { SubjectsQuickSetup } from "./subjects-quick-setup";
@@ -51,24 +52,19 @@ export default async function SubjectsPage() {
     <div className="space-y-10">
       <SubjectsQuickSetup schoolId={schoolId} classes={classesData} />
 
-      <PageHeader
-        title="Subjects"
-        description="Manage subjects taught in each class."
-        stats={[
-          { label: "Total Subjects", value: totalSubjects },
-          { label: "Classes Covered", value: classesCovered },
-        ]}
-        action={<AddSubjectDialog schoolId={schoolId} classes={classesData} />}
+      <SubjectsTable
+        rows={rows}
+        classFilterOptions={classFilterOptions}
+        schoolId={schoolId}
+        classesData={classesData}
+        headerAction={<AddSubjectDialog schoolId={schoolId} classes={classesData} />}
+        stats={
+          <KpiGrid>
+            <KpiCard icon={BookOpen} label="Total Subjects" value={totalSubjects} />
+            <KpiCard icon={Layers} label="Classes Covered" value={classesCovered} />
+          </KpiGrid>
+        }
       />
-
-      <div>
-        <SubjectsTable
-          rows={rows}
-          classFilterOptions={classFilterOptions}
-          schoolId={schoolId}
-          classesData={classesData}
-        />
-      </div>
     </div>
   );
 }

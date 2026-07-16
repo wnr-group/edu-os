@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { BookOpen, Pencil, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
-import { FilterableDataTable } from "@/components/filterable-data-table";
+import { ListPageTemplate } from "@/components/list-page-template";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,11 +35,15 @@ export function SubjectsTable({
   classFilterOptions,
   schoolId,
   classesData,
+  headerAction,
+  stats,
 }: {
   rows: SubjectRow[];
   classFilterOptions: ClassFilterOption[];
   schoolId: string;
   classesData: ClassItem[];
+  headerAction?: React.ReactNode;
+  stats?: React.ReactNode;
 }) {
   const router = useRouter();
   const [editSubject, setEditSubject] = useState<SubjectRow | null>(null);
@@ -85,7 +89,11 @@ export function SubjectsTable({
 
   return (
     <>
-      <FilterableDataTable
+      <ListPageTemplate<SubjectRow>
+        title="Subjects"
+        description="Manage subjects taught in each class."
+        headerAction={headerAction}
+        stats={stats}
         data={rows}
         columns={[
           { header: "Subject", accessor: "name" },
@@ -94,15 +102,17 @@ export function SubjectsTable({
         ]}
         searchKeys={["name", "code"]}
         searchPlaceholder="Search subjects..."
-        filter={
+        filters={
           classFilterOptions.length > 0
-            ? {
-                label: "All Classes",
-                options: classFilterOptions,
-                filterFn: (row: SubjectRow, value: string) =>
-                  row.class_name === value,
-              }
-            : undefined
+            ? [
+                {
+                  label: "All Classes",
+                  options: classFilterOptions,
+                  filterFn: (row: SubjectRow, value: string) =>
+                    row.class_name === value,
+                },
+              ]
+            : []
         }
         renderActions={(row) => (
           <div className="flex items-center gap-1">
@@ -120,6 +130,34 @@ export function SubjectsTable({
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
+          </div>
+        )}
+        renderMobileCard={(row) => (
+          <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate font-medium text-foreground">{row.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {row.code !== "—" ? `${row.code} · ` : ""}{row.class_name}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  onClick={() => openEdit(row)}
+                  className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-blue-600"
+                  title="Edit"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => deleteSubject(row)}
+                  className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-red-600"
+                  title="Delete"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
           </div>
         )}
         emptyState={

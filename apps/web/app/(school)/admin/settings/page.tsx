@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
+import { PageHeader } from "@/components/page-header";
 import { SettingsForm } from "./settings-form";
 
 export default async function SettingsPage() {
@@ -16,10 +17,7 @@ export default async function SettingsPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">School Settings</h1>
-        <p className="mt-1 text-sm text-gray-500">Update your school's information.</p>
-      </div>
+      <PageHeader title="School Settings" description="Update your school's information." />
       <SettingsForm
         schoolId={schoolId}
         initialName={school?.name ?? ""}

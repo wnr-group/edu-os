@@ -1,6 +1,7 @@
+import { Users } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
-import { PageHeader } from "@/components/page-header";
+import { KpiCard, KpiGrid } from "@/components/kpi-card";
 import { InviteTeacherDialog } from "./invite-teacher-dialog";
 import { TeachersTable } from "./teachers-table";
 
@@ -24,15 +25,15 @@ export default async function TeachersPage() {
   });
 
   return (
-    <div>
-      <PageHeader
-        title="Teachers"
-        description="Manage your school's teaching staff."
-        action={<InviteTeacherDialog schoolId={schoolId} />}
-        stats={[{ label: "Total Teachers", value: rows.length }]}
-      />
-
-      <TeachersTable rows={rows} schoolId={schoolId} />
-    </div>
+    <TeachersTable
+      rows={rows}
+      schoolId={schoolId}
+      headerAction={<InviteTeacherDialog schoolId={schoolId} />}
+      stats={
+        <KpiGrid>
+          <KpiCard icon={Users} label="Total Teachers" value={rows.length} />
+        </KpiGrid>
+      }
+    />
   );
 }

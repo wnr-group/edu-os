@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { Users, School } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getAcademicYearId } from "@/lib/academic-year";
-import { PageHeader } from "@/components/page-header";
+import { KpiCard, KpiGrid } from "@/components/kpi-card";
 import { AddStudentDialog } from "./add-student-dialog";
 import { BulkActions } from "./bulk-actions";
 import { StudentsTable } from "./students-table";
@@ -54,30 +55,28 @@ export default async function StudentsPage() {
   }));
 
   return (
-    <div>
-      <PageHeader
-        title="Students"
-        description="Manage student enrollment and profiles."
-        action={
-          <div className="flex items-center gap-2">
-            <Link
-              href="/admin/students/uninstalled"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-sm font-medium text-muted-foreground shadow-sm hover:bg-muted"
-            >
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-700">!</span>
-              App Not Installed
-            </Link>
-            <BulkActions students={rows} />
-            <AddStudentDialog schoolId={schoolId} academicYearId={academicYearId ?? ""} classes={classes ?? []} />
-          </div>
-        }
-        stats={[
-          { label: "Total Students", value: rows.length },
-          { label: "Classes", value: (classes ?? []).length },
-        ]}
-      />
-
-      <StudentsTable rows={rows} classFilterOptions={classFilterOptions} />
-    </div>
+    <StudentsTable
+      rows={rows}
+      classFilterOptions={classFilterOptions}
+      headerAction={
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/admin/students/uninstalled"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-sm font-medium text-muted-foreground shadow-sm hover:bg-muted"
+          >
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-700">!</span>
+            App Not Installed
+          </Link>
+          <BulkActions students={rows} />
+          <AddStudentDialog schoolId={schoolId} academicYearId={academicYearId ?? ""} classes={classes ?? []} />
+        </div>
+      }
+      stats={
+        <KpiGrid>
+          <KpiCard icon={Users} label="Total Students" value={rows.length} sublabel="All enrolled students" />
+          <KpiCard icon={School} label="Total Classes" value={(classes ?? []).length} sublabel="Active classes" />
+        </KpiGrid>
+      }
+    />
   );
 }

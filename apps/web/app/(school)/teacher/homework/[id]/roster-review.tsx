@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   loadRoster, loadAttachments, getSignedUrl, reviewStudent, notifyReviewed,
   RosterRow, AttachmentRow, HomeworkRating,
@@ -58,20 +59,26 @@ export function RosterReview({ homeworkId, sectionId }: { homeworkId: string; se
     if (url) window.open(url, "_blank"); else toast.error("Could not open attachment");
   }
 
-  if (loading) return <p className="text-sm text-gray-500">Loading roster…</p>;
+  if (loading) return <p className="text-sm text-muted-foreground">Loading roster…</p>;
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-6 rounded-lg bg-white p-4 shadow-sm">
-        <Stat label="Done" value={`${done.length}/${roster.length}`} />
-        <Stat label="Viewed" value={`${viewed.length}`} />
-        <Stat label="Not started" value={`${notStarted.length}`} />
-      </div>
+      <Card>
+        <CardContent className="flex gap-6 pt-6">
+          <Stat label="Done" value={`${done.length}/${roster.length}`} />
+          <Stat label="Viewed" value={`${viewed.length}`} />
+          <Stat label="Not started" value={`${notStarted.length}`} />
+        </CardContent>
+      </Card>
 
       {attachments.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {attachments.map((a) => (
-            <button key={a.id} onClick={() => open(a.fileUrl)} className="rounded border px-3 py-1 text-sm text-primary hover:underline">
+            <button
+              key={a.id}
+              onClick={() => open(a.fileUrl)}
+              className="rounded border border-border px-3 py-1 text-sm text-primary hover:underline"
+            >
               {a.fileName}
             </button>
           ))}
@@ -80,27 +87,44 @@ export function RosterReview({ homeworkId, sectionId }: { homeworkId: string; se
 
       <Group title={`Done — review (${done.length})`}>
         {done.map((r) => (
-          <div key={r.studentId} className="rounded-lg bg-white p-3 shadow-sm">
+          <div key={r.studentId} className="rounded-lg border border-border bg-card p-3 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="font-medium">{r.fullName}</span>
-              {r.reviewedAt
-                ? <span className="text-sm font-semibold text-green-600">{ratingLabel(r.rating)}</span>
-                : <Button variant="outline" size="sm" onClick={() => openReview(r)}>{openId === r.studentId ? "Close" : "Review"}</Button>}
+              <span className="font-medium text-foreground">{r.fullName}</span>
+              {r.reviewedAt ? (
+                <span className="text-sm font-semibold text-emerald-600">{ratingLabel(r.rating)}</span>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => openReview(r)}>
+                  {openId === r.studentId ? "Close" : "Review"}
+                </Button>
+              )}
             </div>
             {openId === r.studentId && !r.reviewedAt && (
               <div className="mt-3 space-y-2">
                 <div className="flex gap-2">
                   {RATINGS.map((opt) => (
-                    <button key={opt.value} onClick={() => setRating(opt.value)}
-                      className={`rounded border px-3 py-1 text-sm ${rating === opt.value ? "bg-primary text-white" : "text-gray-600"}`}>
+                    <button
+                      key={opt.value}
+                      onClick={() => setRating(opt.value)}
+                      className={`rounded border px-3 py-1 text-sm ${
+                        rating === opt.value
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border text-muted-foreground"
+                      }`}
+                    >
                       {opt.label}
                     </button>
                   ))}
                 </div>
-                <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2}
+                <textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  rows={2}
                   placeholder="Comment (optional)…"
-                  className="w-full rounded-md border px-3 py-2 text-sm" />
-                <Button size="sm" disabled={saving} onClick={() => save(r)}>{saving ? "Saving…" : "Save Review"}</Button>
+                  className="w-full rounded-md border border-border px-3 py-2 text-sm"
+                />
+                <Button size="sm" disabled={saving} onClick={() => save(r)}>
+                  {saving ? "Saving…" : "Save Review"}
+                </Button>
               </div>
             )}
           </div>
@@ -118,11 +142,21 @@ export function RosterReview({ homeworkId, sectionId }: { homeworkId: string; se
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
-  return <div><div className="text-xl font-bold">{value}</div><div className="text-xs text-gray-500">{label}</div></div>;
+  return (
+    <div>
+      <div className="text-xl font-bold text-foreground">{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+    </div>
+  );
 }
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
-  return <div className="space-y-2"><h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">{title}</h2>{children}</div>;
+  return (
+    <div className="space-y-2">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</h2>
+      {children}
+    </div>
+  );
 }
 function Row({ name }: { name: string }) {
-  return <div className="rounded-lg bg-white p-3 text-sm shadow-sm">{name}</div>;
+  return <div className="rounded-lg border border-border bg-card p-3 text-sm shadow-sm">{name}</div>;
 }

@@ -1,6 +1,10 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getActiveSection } from "@/lib/section-context";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { AttendanceMarkForm } from "./attendance-mark-form";
 
 export default async function AttendanceMarkPage({
@@ -15,8 +19,8 @@ export default async function AttendanceMarkPage({
 
   if (!sectionId || !date) {
     return (
-      <div className="rounded-lg bg-white p-8 text-center shadow-sm">
-        <p className="text-gray-400">Missing section or date.</p>
+      <div className="rounded-lg border border-dashed border-border bg-card p-8 text-center shadow-sm">
+        <p className="text-muted-foreground">Missing section or date.</p>
       </div>
     );
   }
@@ -79,11 +83,21 @@ export default async function AttendanceMarkPage({
   const lockedToFullDay = hasFullDay; // full-day exists → FN/AN disabled
 
   return (
-    <div>
-      <h1 className="mb-1 text-2xl font-bold text-gray-900">Mark Attendance</h1>
-      <p className="mb-4 text-sm text-gray-500">{sectionLabel} &nbsp;·&nbsp; {date}</p>
+    <div className="space-y-6 animate-fade-in-up">
+      <Link
+        href={`/teacher/attendance`}
+        className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2")}
+      >
+        <ArrowLeft className="mr-1.5 h-4 w-4" />
+        Back to Attendance
+      </Link>
 
-      <div className="mb-4 flex gap-2">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Mark Attendance</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{sectionLabel}  ·  {date}</p>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
         {sessions.map((s) => {
           const disabled =
             (s.key === "FULL_DAY" && lockedToSession) ||
@@ -91,14 +105,14 @@ export default async function AttendanceMarkPage({
           const active = s.key === session;
           const href = `/teacher/attendance/mark?sectionId=${sectionId}&date=${date}&session=${s.key}`;
           return disabled ? (
-            <span key={s.key} className="cursor-not-allowed rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-300">
+            <span key={s.key} className="cursor-not-allowed rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground/40">
               {s.label}
             </span>
           ) : (
             <a
               key={s.key}
               href={href}
-              className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${active ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+              className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${active ? "border-indigo-600 bg-indigo-600 text-white" : "border-border text-muted-foreground hover:bg-muted"}`}
             >
               {s.label}
             </a>
@@ -106,12 +120,12 @@ export default async function AttendanceMarkPage({
         })}
       </div>
       {(lockedToSession || lockedToFullDay) && (
-        <p className="mb-4 text-xs text-amber-600">
+        <p className="-mt-2 text-xs text-amber-600">
           {lockedToFullDay ? "Marked as full-day for this date." : "Marked by session (FN/AN) for this date."}
         </p>
       )}
 
-      <div className="rounded-lg bg-white p-6 shadow-sm">
+      <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
         <AttendanceMarkForm
           students={studentRows}
           sectionId={sectionId}

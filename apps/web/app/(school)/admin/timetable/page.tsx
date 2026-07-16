@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getAcademicYearId } from "@/lib/academic-year";
+import { PageHeader } from "@/components/page-header";
 import { TimetableForm } from "./timetable-form";
 import { TimetableTable } from "./timetable-table";
 
@@ -108,15 +109,13 @@ export default async function TimetablePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Timetable</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Assign teachers to class sections, subjects, and periods.
-        </p>
-      </div>
+      <PageHeader
+        title="Timetable"
+        description="Assign teachers to class sections, subjects, and periods."
+      />
 
-      <div className="rounded-lg border border-border bg-card p-6">
-        <h2 className="mb-4 text-lg font-medium text-foreground">Assign Teacher</h2>
+      <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Assign Teacher</h2>
         {academicYearId ? (
           <TimetableForm
             schoolId={schoolId}
@@ -134,7 +133,7 @@ export default async function TimetablePage() {
       </div>
 
       <div>
-        <h2 className="mb-4 text-lg font-medium text-foreground">Current Assignments</h2>
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Current Assignments</h2>
         <TimetableTable rows={tableRows} schoolId={schoolId} />
       </div>
     </div>
