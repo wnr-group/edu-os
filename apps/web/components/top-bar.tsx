@@ -9,6 +9,11 @@ interface TopBarProps {
   userRole: string;
   brandColor?: string;
   yearSwitcher?: React.ReactNode;
+  /** CommandSearch queries school-scoped data and defaults its route
+   * prefix to /admin — neither applies outside a school context (e.g.
+   * Platform Admin). Set to false there instead of showing a search box
+   * that returns nothing meaningful. */
+  showSearch?: boolean;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -18,7 +23,7 @@ const ROLE_LABELS: Record<string, string> = {
   super_admin: "Platform Admin",
 };
 
-function formatSegment(segment: string): string {
+export function formatSegment(segment: string): string {
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(segment)) {
     return "Detail";
   }
@@ -28,7 +33,7 @@ function formatSegment(segment: string): string {
     .join(" ");
 }
 
-export function TopBar({ userName, userRole, brandColor, yearSwitcher }: TopBarProps) {
+export function TopBar({ userName, userRole, brandColor, yearSwitcher, showSearch = true }: TopBarProps) {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
 
@@ -42,7 +47,7 @@ export function TopBar({ userName, userRole, brandColor, yearSwitcher }: TopBarP
   const avatarBg = brandColor ?? "#4f46e5";
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b bg-white px-6">
+    <header className="hidden h-14 shrink-0 items-center justify-between border-b bg-white px-6 lg:flex">
       <nav className="flex items-center gap-1.5 text-sm">
         {segments.length === 0 ? (
           <span className="font-semibold text-foreground">Dashboard</span>
@@ -67,7 +72,7 @@ export function TopBar({ userName, userRole, brandColor, yearSwitcher }: TopBarP
         <div className="flex items-center">{yearSwitcher}</div>
       )}
       <div className="flex items-center gap-4">
-        <CommandSearch userRole={userRole} />
+        {showSearch && <CommandSearch userRole={userRole} />}
         <button className="relative rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
           <Bell className="h-4 w-4" />
         </button>

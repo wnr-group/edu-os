@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { ArrowLeft, Download } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 interface SubjectResult {
   subject: string;
@@ -74,14 +75,17 @@ export function ReportCardView({ data }: { data: ReportData }) {
   }
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
-        <Link href="/admin/report-cards" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
+    <div className="space-y-6 animate-fade-in-up">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Link
+          href="/admin/report-cards"
+          className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2")}
+        >
+          <ArrowLeft className="mr-1.5 h-4 w-4" />
           Back to Report Cards
         </Link>
-        <Button onClick={handlePrint} variant="outline" className="gap-2">
-          <Download className="h-4 w-4" />
+        <Button onClick={handlePrint} variant="outline">
+          <Download className="mr-1.5 h-4 w-4" />
           Download PDF
         </Button>
       </div>

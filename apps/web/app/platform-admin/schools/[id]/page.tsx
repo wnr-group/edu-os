@@ -1,8 +1,8 @@
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
+import { DetailPageTemplate } from "@/components/detail-page-template";
 import { ToggleActiveButton } from "./toggle-active-button";
 import { ViewAsButton } from "./view-as-button";
-import { SchoolTabs } from "./school-tabs";
 import { OverviewTab } from "./overview-tab";
 import { UsersTab } from "./users-tab";
 import { ImportTab } from "./import-tab";
@@ -63,29 +63,25 @@ export default async function SchoolDetailPage({
   };
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{school.name}</h1>
-          <p className="text-sm text-gray-500">{school.contact_email} · {school.domain}</p>
-        </div>
-        <div className="flex gap-2">
+    <DetailPageTemplate
+      backHref="/platform-admin/schools"
+      backLabel="Back to Schools"
+      title={school.name}
+      subtitle={`${school.contact_email ?? "No contact email"} · ${school.domain ?? "—"}`}
+      badge={{ label: school.is_active ? "Active" : "Inactive", variant: school.is_active ? "default" : "secondary" }}
+      actions={
+        <>
           <ToggleActiveButton schoolId={school.id} isActive={school.is_active} />
           <ViewAsButton schoolDomain={school.domain ?? ""} />
-        </div>
-      </div>
-
-      <SchoolTabs schoolId={school.id} />
-
-      {activeTab === "overview" && (
-        <OverviewTab school={school} roleCounts={roleCounts} />
-      )}
-      {activeTab === "users" && (
-        <UsersTab schoolId={school.id} users={users} />
-      )}
-      {activeTab === "import" && (
-        <ImportTab schoolId={school.id} />
-      )}
-    </div>
+        </>
+      }
+      basePath={`/platform-admin/schools/${school.id}`}
+      activeTab={activeTab}
+      tabs={[
+        { key: "overview", label: "Overview", content: <OverviewTab school={school} roleCounts={roleCounts} /> },
+        { key: "users", label: "Users", content: <UsersTab schoolId={school.id} users={users} /> },
+        { key: "import", label: "Bulk Import", content: <ImportTab schoolId={school.id} /> },
+      ]}
+    />
   );
 }

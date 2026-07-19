@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getAcademicYearId } from "@/lib/academic-year";
-import { Users, GraduationCap, BookOpen, IndianRupee } from "lucide-react";
+import { Users, GraduationCap, BookOpen, IndianRupee, UserPlus, Megaphone, Wallet, BarChart3 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { buttonVariants } from "@/components/ui/button";
+import { DashboardTemplate, DashboardWidget } from "@/components/dashboard-template";
 import { FeeCollectionChart } from "./fee-collection-chart";
 import { AttendanceChart } from "./attendance-chart";
 import { StudentsByClassChart } from "./students-by-class-chart";
@@ -140,74 +142,78 @@ export default async function AdminDashboard() {
     type: announcementType(a.title),
   }));
 
-  const stats: { label: string; value: string | number; icon: LucideIcon; iconBg: string; iconColor: string }[] = [
-    { label: "Students",     value: studentCount ?? 0,                                             icon: GraduationCap, iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
-    { label: "Teachers",     value: teacherCount ?? 0,                                             icon: Users,         iconBg: "bg-indigo-50",  iconColor: "text-indigo-600"  },
-    { label: "Classes",      value: sectionCount ?? 0,                                             icon: BookOpen,      iconBg: "bg-violet-50",  iconColor: "text-violet-600"  },
-    { label: "Fee Collected", value: `₹${(totalCollected / 100000).toFixed(1)}L`,                 icon: IndianRupee,   iconBg: "bg-amber-50",   iconColor: "text-amber-600"   },
+  const stats: { label: string; value: string | number; icon: LucideIcon; iconBg: string; iconColor: string; href?: string }[] = [
+    { label: "Students",      value: studentCount ?? 0,                             icon: GraduationCap, iconBg: "bg-emerald-50", iconColor: "text-emerald-600", href: "/admin/students" },
+    { label: "Teachers",      value: teacherCount ?? 0,                             icon: Users,         iconBg: "bg-indigo-50",  iconColor: "text-indigo-600",  href: "/admin/teachers" },
+    { label: "Classes",       value: sectionCount ?? 0,                             icon: BookOpen,      iconBg: "bg-violet-50",  iconColor: "text-violet-600",  href: "/admin/classes" },
+    { label: "Fee Collected", value: `₹${(totalCollected / 100000).toFixed(1)}L`,   icon: IndianRupee,   iconBg: "bg-amber-50",   iconColor: "text-amber-600",   href: "/admin/fees" },
   ];
 
   return (
     <div className="space-y-6">
       <PostOnboardingBanner />
-      <h1 className="text-2xl font-semibold text-foreground">School Overview</h1>
-
-      {/* Row 1 — Stat Cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {stats.map((s, index) => {
-          const Icon = s.icon;
-          return (
-            <div key={s.label} className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-sm transition-all duration-200 hover:shadow-md animate-fade-in-up" style={{ animationDelay: `${index * 60}ms` }}>
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${s.iconBg} ${s.iconColor}`}>
-                <Icon className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xl font-bold text-foreground truncate">{s.value}</p>
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{s.label}</p>
-              </div>
+      <DashboardTemplate
+        title="School Overview"
+        stats={stats}
+        chart={
+          <DashboardWidget title="Monthly Fee Collection">
+            <FeeCollectionChart data={feeChartData} />
+          </DashboardWidget>
+        }
+        overview={
+          <DashboardWidget title="Students by Class">
+            <StudentsByClassChart data={studentsByClass} />
+          </DashboardWidget>
+        }
+        alerts={
+          <DashboardWidget title="Attendance Today">
+            <div className="flex justify-center"><AttendanceChart data={attendanceData} /></div>
+          </DashboardWidget>
+        }
+        activity={
+          <DashboardWidget title="Recent Announcements">
+            {formattedAnnouncements.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">No announcements yet.</p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {formattedAnnouncements.map((a) => (
+                  <li key={a.title} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{a.title}</p>
+                      <p className="text-xs text-muted-foreground">{a.date}</p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${BADGE_COLORS[a.type] ?? BADGE_COLORS.General}`}>
+                      {a.type}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </DashboardWidget>
+        }
+        quickActions={
+          <DashboardWidget title="Quick Actions">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Link href="/admin/students" className={buttonVariants({ variant: "outline", size: "sm" }) + " justify-center"}>
+                <UserPlus className="h-3.5 w-3.5" />
+                Add Student
+              </Link>
+              <Link href="/admin/announcements" className={buttonVariants({ variant: "outline", size: "sm" }) + " justify-center"}>
+                <Megaphone className="h-3.5 w-3.5" />
+                New Announcement
+              </Link>
+              <Link href="/admin/fees" className={buttonVariants({ variant: "outline", size: "sm" }) + " justify-center"}>
+                <Wallet className="h-3.5 w-3.5" />
+                Collect Fees
+              </Link>
+              <Link href="/admin/reports" className={buttonVariants({ variant: "outline", size: "sm" }) + " justify-center"}>
+                <BarChart3 className="h-3.5 w-3.5" />
+                View Reports
+              </Link>
             </div>
-          );
-        })}
-      </div>
-
-      {/* Row 2 — Fee Collection + Attendance */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2 transition-shadow duration-200 hover:shadow-md animate-fade-in-up" style={{ animationDelay: "240ms" }}>
-          <CardHeader><CardTitle>Monthly Fee Collection</CardTitle></CardHeader>
-          <CardContent><FeeCollectionChart data={feeChartData} /></CardContent>
-        </Card>
-        <Card className="transition-shadow duration-200 hover:shadow-md animate-fade-in-up" style={{ animationDelay: "300ms" }}>
-          <CardHeader><CardTitle>Attendance</CardTitle></CardHeader>
-          <CardContent className="flex justify-center"><AttendanceChart data={attendanceData} /></CardContent>
-        </Card>
-      </div>
-
-      {/* Row 3 — Students by Class + Announcements */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card className="transition-shadow duration-200 hover:shadow-md animate-fade-in-up" style={{ animationDelay: "360ms" }}>
-          <CardHeader><CardTitle>Students by Class</CardTitle></CardHeader>
-          <CardContent><StudentsByClassChart data={studentsByClass} /></CardContent>
-        </Card>
-        <Card className="transition-shadow duration-200 hover:shadow-md animate-fade-in-up" style={{ animationDelay: "420ms" }}>
-          <CardHeader><CardTitle>Recent Announcements</CardTitle></CardHeader>
-          <CardContent>
-            <ul className="divide-y divide-border">
-              {formattedAnnouncements.map((a) => (
-                <li key={a.title} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">{a.title}</p>
-                    <p className="text-xs text-muted-foreground">{a.date}</p>
-                  </div>
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${BADGE_COLORS[a.type] ?? BADGE_COLORS.General}`}>
-                    {a.type}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-
+          </DashboardWidget>
+        }
+      />
     </div>
   );
 }

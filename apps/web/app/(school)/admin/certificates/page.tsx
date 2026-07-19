@@ -1,9 +1,10 @@
 export const dynamic = "force-dynamic";
 
+import { Users } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getAcademicYearId } from "@/lib/academic-year";
-import { PageHeader } from "@/components/page-header";
+import { KpiCard, KpiGrid } from "@/components/kpi-card";
 import { CertificatesTable } from "./certificates-table";
 
 export default async function CertificatesPage() {
@@ -69,18 +70,16 @@ export default async function CertificatesPage() {
   const classOptions = (classes ?? []).map((c) => ({ label: c.name, value: c.name }));
 
   return (
-    <div>
-      <PageHeader
-        title="Certificates"
-        description="Generate bonafide certificates for students."
-        stats={[{ label: "Total Students", value: students.length }]}
-      />
-      <CertificatesTable
-        students={students}
-        history={historyRows}
-        classOptions={classOptions}
-        baseHref="/admin/certificates"
-      />
-    </div>
+    <CertificatesTable
+      students={students}
+      history={historyRows}
+      classOptions={classOptions}
+      baseHref="/admin/certificates"
+      stats={
+        <KpiGrid>
+          <KpiCard icon={Users} label="Total Students" value={students.length} />
+        </KpiGrid>
+      }
+    />
   );
 }

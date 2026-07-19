@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation";
+import { Mail, Phone } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getAcademicYearId } from "@/lib/academic-year";
-import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
-import { ArrowLeft, Mail, Phone } from "lucide-react";
+import { DetailPageTemplate } from "@/components/detail-page-template";
 
 export default async function TeacherDetailPage({
   params,
@@ -73,75 +72,76 @@ export default async function TeacherDetailPage({
   }
 
   return (
-    <div className="space-y-6">
-      <Link href="/admin/teachers" className={buttonVariants({ variant: "ghost", size: "sm" }) + " -ml-2"}>
-        <ArrowLeft className="mr-1.5 h-4 w-4" />
-        Back to Teachers
-      </Link>
-
-      <div className="rounded-lg border bg-white p-6 shadow-sm">
-        <div className="flex items-start gap-5">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xl font-bold text-indigo-600">
-            {initials}
+    <DetailPageTemplate
+      backHref="/admin/teachers"
+      backLabel="Back to Teachers"
+      title={profile?.full_name ?? "—"}
+      subtitle={`Joined ${new Date(teacher.created_at).toLocaleDateString()}`}
+      activeTab=""
+      tabs={[]}
+      header={
+        <div className="space-y-6">
+          <div className="rounded-lg border bg-white p-6 shadow-sm">
+            <div className="flex items-start gap-5">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xl font-bold text-indigo-600">
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <Phone className="h-3.5 w-3.5" />
+                  {profile?.phone ? (
+                    <a href={`tel:${profile.phone}`} className="hover:underline">
+                      {profile.phone}
+                    </a>
+                  ) : (
+                    "—"
+                  )}
+                </div>
+                {profile?.email && (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Mail className="h-3.5 w-3.5" />
+                    {profile.email}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-bold text-gray-900">{profile?.full_name ?? "—"}</h1>
-            <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
-              <Phone className="h-3.5 w-3.5" />
-              {profile?.phone ? (
-                <a href={`tel:${profile.phone}`} className="hover:underline">
-                  {profile.phone}
-                </a>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="rounded-lg border bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">Assigned Classes</h2>
+              {assignedSections.length === 0 ? (
+                <p className="text-sm italic text-gray-400">No classes assigned for this academic year.</p>
               ) : (
-                "—"
+                <div className="space-y-2">
+                  {assignedSections.map((sec) => (
+                    <div key={sec.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                      <span className="font-medium text-gray-800">Class {sec.className}</span>
+                      <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">Section {sec.name}</span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-            {profile?.email && (
-              <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
-                <Mail className="h-3.5 w-3.5" />
-                {profile.email}
-              </div>
-            )}
-            <p className="mt-0.5 text-xs text-gray-400">
-              Joined {new Date(teacher.created_at).toLocaleDateString()}
-            </p>
+
+            <div className="rounded-lg border bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">Subjects Taught</h2>
+              {subjectsTaught.length === 0 ? (
+                <p className="text-sm italic text-gray-400">No subjects assigned for this academic year.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {subjectsTaught.map((sub) => (
+                    <span key={sub.id} className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-700">
+                      {sub.name}
+                      {sub.className && <span className="ml-1 text-xs text-indigo-400">· {sub.className}</span>}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-lg border bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">Assigned Classes</h2>
-          {assignedSections.length === 0 ? (
-            <p className="text-sm italic text-gray-400">No classes assigned for this academic year.</p>
-          ) : (
-            <div className="space-y-2">
-              {assignedSections.map((sec) => (
-                <div key={sec.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span className="font-medium text-gray-800">Class {sec.className}</span>
-                  <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">Section {sec.name}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-lg border bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">Subjects Taught</h2>
-          {subjectsTaught.length === 0 ? (
-            <p className="text-sm italic text-gray-400">No subjects assigned for this academic year.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {subjectsTaught.map((sub) => (
-                <span key={sub.id} className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-700">
-                  {sub.name}
-                  {sub.className && <span className="ml-1 text-xs text-indigo-400">· {sub.className}</span>}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+      }
+    />
   );
 }

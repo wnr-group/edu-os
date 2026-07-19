@@ -1,8 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
-import { DataTable } from "@/components/data-table";
-import { Badge } from "@/components/ui/badge";
 import { PushFeeForm } from "./push-fee-form";
+import { FeeLineItemsTable } from "./fee-line-items-table";
 import type { FeeType } from "@/components/fee-type-select";
 
 export default async function FeesPage() {
@@ -51,27 +50,9 @@ export default async function FeesPage() {
         />
       </div>
 
-      <h2 className="mb-4 mt-10 text-xl font-semibold text-gray-800">Fee Line Items (Recent 100)</h2>
-      <DataTable
-        data={lineItemRows}
-        columns={[
-          { header: "Student", accessor: "student" },
-          { header: "Fee Type", accessor: "fee_type" },
-          { header: "Amount", accessor: "amount" },
-          { header: "Class", accessor: "class_name" },
-          { header: "Academic Year", accessor: "academic_year" },
-          { header: "Due Date", accessor: "due_date" },
-          {
-            header: "Status",
-            accessor: (row) => (
-              <Badge variant={row.status === "paid" ? "default" : row.status === "partial" ? "secondary" : "destructive"}>
-                {row.status || "pending"}
-              </Badge>
-            ),
-          },
-        ]}
-        emptyMessage="No fee line items yet. Push a fee to a class to get started."
-      />
+      <div className="mt-10">
+        <FeeLineItemsTable rows={lineItemRows} />
+      </div>
     </div>
   );
 }

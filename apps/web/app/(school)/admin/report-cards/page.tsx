@@ -1,6 +1,7 @@
+import { Users } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
-import { PageHeader } from "@/components/page-header";
+import { KpiCard, KpiGrid } from "@/components/kpi-card";
 import { ReportCardTable } from "./report-card-table";
 
 export default async function ReportCardsPage() {
@@ -43,13 +44,15 @@ export default async function ReportCardsPage() {
   const examOptions = (exams ?? []).map((e) => ({ label: e.name, value: e.id }));
 
   return (
-    <div>
-      <PageHeader
-        title="Report Cards"
-        description="View and download student report cards."
-        stats={[{ label: "Total Students", value: rows.length }]}
-      />
-      <ReportCardTable rows={rows} classOptions={classOptions} examOptions={examOptions} />
-    </div>
+    <ReportCardTable
+      rows={rows}
+      classOptions={classOptions}
+      examOptions={examOptions}
+      stats={
+        <KpiGrid>
+          <KpiCard icon={Users} label="Total Students" value={rows.length} />
+        </KpiGrid>
+      }
+    />
   );
 }

@@ -6,6 +6,7 @@ import { getSchoolId } from "@/lib/school";
 import { getActiveRoles, topRole } from "@/lib/auth/roles";
 import { Sidebar } from "@/components/sidebar";
 import { TopBar } from "@/components/top-bar";
+import { MobileNav } from "@/components/mobile-nav";
 import { SectionSwitcher } from "@/components/section-switcher";
 import type { SectionOption } from "@/components/section-switcher";
 import { AcademicYearSwitcher } from "@/components/academic-year-switcher";
@@ -225,26 +226,27 @@ export default async function SchoolLayout({
   }
 
   const exitUrl = EXIT_URLS[realRole];
-  const sectionSwitcherEl = sections.length > 0 || realRole === "teacher" ? (
-    <SectionSwitcher
-      sections={sections}
-      activeSectionId={activeSectionId}
-      userRole={realRole}
-      exitUrl={realRole !== "teacher" ? exitUrl : undefined}
-    />
-  ) : null;
+  const showSectionSwitcher = sections.length > 0 || realRole === "teacher";
+  const sectionSwitcherProps = {
+    sections,
+    activeSectionId,
+    userRole: realRole,
+    exitUrl: realRole !== "teacher" ? exitUrl : undefined,
+  };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-muted">
+    <div className="flex h-screen overflow-hidden bg-muted lg:gap-[14px] lg:bg-[#eceef2] lg:p-[14px]">
       <Sidebar
         title={schoolName}
         items={navItems}
         brandColor={brandColor}
         userName={sidebarUserName}
         userRole={displayRole}
-        sectionSwitcher={sectionSwitcherEl}
+        sectionSwitcher={
+          showSectionSwitcher ? <SectionSwitcher {...sectionSwitcherProps} variant="light" /> : null
+        }
       />
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden lg:rounded-[20px] lg:bg-white lg:shadow-[0_4px_20px_rgba(15,23,42,.06)]">
         <TopBar
           userName={sidebarUserName}
           userRole={displayRole}
@@ -255,7 +257,17 @@ export default async function SchoolLayout({
             ) : undefined
           }
         />
-        <main className="flex-1 overflow-y-auto p-8">
+        <MobileNav
+          title={schoolName}
+          items={navItems}
+          brandColor={brandColor}
+          userName={sidebarUserName}
+          userRole={displayRole}
+          sectionSwitcher={
+            showSectionSwitcher ? <SectionSwitcher {...sectionSwitcherProps} variant="light" /> : null
+          }
+        />
+        <main className="flex-1 overflow-y-auto p-4 pb-24 lg:p-8 lg:pb-8">
           {years.find((y) => y.id === currentYearId)?.status === "draft" && (
             <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               <strong>Draft year:</strong> You are configuring a year that is not yet active. Changes here will not affect the live school until you activate this year from the{" "}

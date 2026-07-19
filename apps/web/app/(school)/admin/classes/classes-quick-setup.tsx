@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Info } from "lucide-react";
 
 const PRESET_CLASSES = [
   "LKG", "UKG",
@@ -158,112 +158,122 @@ export function ClassesQuickSetup({ schoolId, academicYearId, onAfterCreate }: {
   }
 
   return (
-    <div className="space-y-6 rounded-lg border bg-white p-6">
+    <div className="space-y-5">
       <div>
-        <h2 className="text-base font-semibold text-gray-900">Quick Setup</h2>
-        <p className="mt-1 text-sm text-gray-500">Select classes and sections to create them all at once.</p>
+        <h2 className="text-base font-semibold text-foreground">Quick Setup</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Create classes and sections in a few clicks.</p>
       </div>
 
-      {/* Classes */}
-      <div>
-        <p className="mb-2 text-sm font-medium text-gray-700">Classes</p>
-        <div className="flex flex-wrap gap-2">
-          {PRESET_CLASSES.map((name) => (
-            <button
-              key={name}
-              type="button"
-              onClick={() => toggleClass(name)}
-              className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
-                selectedClasses.has(name)
-                  ? "border-indigo-600 bg-indigo-600 text-white"
-                  : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              {name}
-            </button>
-          ))}
-          {customClasses.map((name) => (
-            <button
-              key={name}
-              type="button"
-              onClick={() => removeCustomClass(name)}
-              className="flex items-center gap-1 rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white"
-            >
-              {name} <X className="h-3 w-3" />
-            </button>
-          ))}
+      {/* Classes | Sections per Class — two individually-boxed cards, side by side on desktop */}
+      <div className="grid gap-5 lg:grid-cols-2">
+        {/* Classes box */}
+        <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+          <p className="mb-1 text-sm font-semibold text-foreground">Classes</p>
+          <p className="mb-3 text-xs text-muted-foreground">Select or add classes</p>
+          <div className="flex flex-wrap gap-2">
+            {PRESET_CLASSES.map((name) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => toggleClass(name)}
+                className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+                  selectedClasses.has(name)
+                    ? "border-indigo-600 bg-indigo-600 text-white"
+                    : "border-border bg-white text-foreground hover:border-muted-foreground/40"
+                }`}
+              >
+                {name}
+              </button>
+            ))}
+            {customClasses.map((name) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => removeCustomClass(name)}
+                className="flex items-center gap-1 rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white"
+              >
+                {name} <X className="h-3 w-3" />
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <Input
+              value={customClassInput}
+              onChange={(e) => setCustomClassInput(e.target.value)}
+              placeholder="Custom class name..."
+              className="flex-1"
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomClass(); } }}
+            />
+            <Button type="button" variant="outline" size="sm" onClick={addCustomClass}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> Add
+            </Button>
+          </div>
         </div>
-        <div className="mt-2 flex items-center gap-2">
-          <Input
-            value={customClassInput}
-            onChange={(e) => setCustomClassInput(e.target.value)}
-            placeholder="Custom class name..."
-            className="max-w-48"
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomClass(); } }}
-          />
-          <Button type="button" variant="outline" size="sm" onClick={addCustomClass}>
-            <Plus className="mr-1 h-3.5 w-3.5" /> Add
-          </Button>
+
+        {/* Sections per Class box */}
+        <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+          <p className="mb-1 text-sm font-semibold text-foreground">Sections per Class</p>
+          <p className="mb-3 text-xs text-muted-foreground">Select or add sections</p>
+          <div className="flex flex-wrap gap-2">
+            {PRESET_SECTIONS.map((name) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => toggleSection(name)}
+                className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+                  selectedSections.has(name)
+                    ? "border-indigo-600 bg-indigo-600 text-white"
+                    : "border-border bg-white text-foreground hover:border-muted-foreground/40"
+                }`}
+              >
+                {name}
+              </button>
+            ))}
+            {customSections.map((name) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => removeCustomSection(name)}
+                className="flex items-center gap-1 rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white"
+              >
+                {name} <X className="h-3 w-3" />
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <Input
+              value={customSectionInput}
+              onChange={(e) => setCustomSectionInput(e.target.value)}
+              placeholder="Custom section name..."
+              className="flex-1"
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomSection(); } }}
+            />
+            <Button type="button" variant="outline" size="sm" onClick={addCustomSection}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> Add
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Sections */}
-      <div>
-        <p className="mb-2 text-sm font-medium text-gray-700">Sections per class</p>
-        <div className="flex flex-wrap gap-2">
-          {PRESET_SECTIONS.map((name) => (
-            <button
-              key={name}
-              type="button"
-              onClick={() => toggleSection(name)}
-              className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
-                selectedSections.has(name)
-                  ? "border-indigo-600 bg-indigo-600 text-white"
-                  : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              {name}
-            </button>
-          ))}
-          {customSections.map((name) => (
-            <button
-              key={name}
-              type="button"
-              onClick={() => removeCustomSection(name)}
-              className="flex items-center gap-1 rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white"
-            >
-              {name} <X className="h-3 w-3" />
-            </button>
-          ))}
-        </div>
-        <div className="mt-2 flex items-center gap-2">
-          <Input
-            value={customSectionInput}
-            onChange={(e) => setCustomSectionInput(e.target.value)}
-            placeholder="Custom section name..."
-            className="max-w-48"
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomSection(); } }}
-          />
-          <Button type="button" variant="outline" size="sm" onClick={addCustomSection}>
-            <Plus className="mr-1 h-3.5 w-3.5" /> Add
-          </Button>
-        </div>
-      </div>
-
-      {/* Preview + Create */}
-      <div className="flex items-center justify-between rounded-md bg-gray-50 px-4 py-3">
-        <p className="text-sm text-gray-600">
+      {/* Info banner + Create */}
+      <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Info className="h-4 w-4 shrink-0 text-indigo-500" />
           {allClasses.length > 0 && allSections.length > 0 ? (
-            <>
-              <span className="font-semibold text-gray-900">{allClasses.length}</span> classes ×{" "}
-              <span className="font-semibold text-gray-900">{allSections.length}</span> sections ={" "}
-              <span className="font-semibold text-gray-900">{totalCombinations}</span> total
-            </>
+            <span>
+              <span className="font-semibold text-foreground">{allClasses.length}</span> classes ×{" "}
+              <span className="font-semibold text-foreground">{allSections.length}</span> sections ={" "}
+              <span className="font-semibold text-foreground">{totalCombinations}</span> total
+            </span>
           ) : (
-            "Select classes and sections above"
+            "Select classes and sections above to create them all at once"
           )}
         </p>
-        <Button onClick={handleCreate} disabled={loading || allClasses.length === 0 || allSections.length === 0}>
+        <Button
+          onClick={handleCreate}
+          disabled={loading || allClasses.length === 0 || allSections.length === 0}
+          className="shrink-0"
+        >
           {loading ? "Creating…" : "Create All"}
         </Button>
       </div>

@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-interface Column<T> {
+export interface Column<T> {
   header: string;
   accessor: keyof T | ((row: T) => React.ReactNode);
 }
@@ -26,7 +26,7 @@ export function DataTable<T extends { id: string }>({
   renderActions,
 }: DataTableProps<T>) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm animate-fade-in-up">
+   <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm animate-fade-in-up">
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/50 hover:bg-muted/50">

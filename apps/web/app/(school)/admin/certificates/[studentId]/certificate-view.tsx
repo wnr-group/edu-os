@@ -3,7 +3,8 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Printer } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export interface CertificateData {
   schoolName: string;
@@ -113,21 +114,24 @@ export function CertificateView({ data }: { data: CertificateData }) {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 p-6">
-      <div className="mx-auto max-w-3xl">
-        <div className="mb-6 flex items-center justify-between">
-          <Link href={data.backHref} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
+    <div className="min-h-screen bg-muted/30 p-6 animate-fade-in-up">
+      <div className="mx-auto max-w-3xl space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Link
+            href={data.backHref}
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2")}
+          >
+            <ArrowLeft className="mr-1.5 h-4 w-4" />
             Back to Certificates
           </Link>
-          <Button onClick={handlePrint} disabled={logging} className="gap-2">
-            <Printer className="h-4 w-4" />
+          <Button onClick={handlePrint} disabled={logging}>
+            <Printer className="mr-1.5 h-4 w-4" />
             {logging ? "Preparing…" : "Print / Download PDF"}
           </Button>
         </div>
 
         {hasWarning && (
-          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             Some student details are missing (
             {[!data.dateOfBirth && "date of birth", !data.parentName && "parent name", !data.gender && "gender"].filter(Boolean).join(", ")}
             ). <Link href={`/admin/students/${data.studentProfileId}`} className="font-medium underline">Edit the student profile</Link> to fill them in before printing.
