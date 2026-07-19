@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Bell, LayoutGrid, LayoutDashboard, LogOut } from "lucide-react";
-import { ICON_MAP, ROLE_LABELS, darken } from "@/components/sidebar";
+import { Menu, X, Bell, LayoutGrid, LayoutDashboard, GraduationCap, LogOut } from "lucide-react";
+import { ICON_MAP, ROLE_LABELS, lighten } from "@/components/sidebar";
 import type { NavItem } from "@/components/sidebar";
 import { formatSegment } from "@/components/top-bar";
 import { createClient } from "@/lib/supabase";
@@ -44,10 +44,11 @@ export function MobileNav({
   const pageTitle = segments.length > 0 ? formatSegment(segments[segments.length - 1]) : "Dashboard";
 
   const isValidHex = brandColor && /^#[0-9a-fA-F]{6}$/.test(brandColor);
-  const sidebarBg = isValidHex ? darken(brandColor, 0.8) : "#1e1b4b";
-  const logoBg = isValidHex ? brandColor : "#4f46e5";
-  const dividerColor = isValidHex ? "rgba(255,255,255,0.12)" : "#3730a380";
-  const inactiveText = "rgba(255,255,255,0.6)";
+  const accent = isValidHex ? brandColor : "#1d4ed8";
+  const activeBg = isValidHex ? lighten(brandColor, 0.93) : "#eff4ff";
+  const dividerColor = "#eef0f3";
+  const inactiveText = "#475569";
+  const inactiveIcon = "#94a3b8";
 
   const bottomItems = items.slice(0, 3);
 
@@ -86,25 +87,22 @@ export function MobileNav({
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <div
-            className="absolute left-0 top-0 flex h-full w-64 flex-col text-white shadow-xl"
-            style={{ backgroundColor: sidebarBg }}
-          >
+          <div className="absolute left-0 top-0 flex h-full w-64 flex-col rounded-r-[20px] bg-white shadow-xl">
             <div className="flex items-center justify-between px-5 py-5">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: logoBg }}>
-                  <LayoutDashboard className="h-[18px] w-[18px] text-white" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: accent }}>
+                  <GraduationCap className="h-[18px] w-[18px] text-white" />
                 </div>
-                <span className="text-sm font-semibold tracking-wide text-white/90">{title}</span>
+                <span className="text-sm font-bold tracking-[-0.2px] text-slate-900">{title}</span>
               </div>
               <button type="button" aria-label="Close menu" onClick={() => setOpen(false)}>
-                <X className="h-5 w-5 text-white/70" />
+                <X className="h-5 w-5 text-slate-400" />
               </button>
             </div>
             <div className="mx-4 border-t" style={{ borderColor: dividerColor }} />
             {sectionSwitcher}
             {sectionSwitcher && <div className="mx-4 border-t" style={{ borderColor: dividerColor }} />}
-            <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
+            <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-3">
               {items.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                 const Icon = ICON_MAP[item.label] ?? LayoutDashboard;
@@ -113,13 +111,20 @@ export function MobileNav({
                     key={item.href}
                     href={item.href}
                     onClick={() => setOpen(false)}
-                    className={
-                      "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-200 " +
-                      (isActive ? "bg-white/15 text-white" : "hover:bg-white/[0.08] hover:text-white")
-                    }
-                    style={!isActive ? { color: inactiveText } : undefined}
+                    className={"relative flex items-center gap-[14px] rounded-[14px] px-[15px] py-2.5 text-[14.5px] transition-colors " + (!isActive ? "hover:bg-slate-50" : "")}
+                    style={{
+                      backgroundColor: isActive ? activeBg : "transparent",
+                      color: isActive ? accent : inactiveText,
+                      fontWeight: isActive ? 600 : 500,
+                    }}
                   >
-                    <Icon className="h-4 w-4 shrink-0" />
+                    {isActive && (
+                      <span
+                        className="absolute left-0 top-[9px] bottom-[9px] w-[3px] rounded-full"
+                        style={{ backgroundColor: accent }}
+                      />
+                    )}
+                    <Icon className="h-[21px] w-[21px] shrink-0" style={{ color: isActive ? accent : inactiveIcon }} />
                     {item.label}
                   </Link>
                 );
@@ -131,13 +136,13 @@ export function MobileNav({
                 <div className="flex items-center gap-2.5 px-3 py-2">
                   <div
                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
-                    style={{ backgroundColor: logoBg }}
+                    style={{ backgroundColor: accent }}
                   >
                     {userName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-medium text-white/90">{userName}</p>
-                    <p className="truncate text-[11px] text-white/50">{ROLE_LABELS[userRole ?? ""] ?? userRole}</p>
+                    <p className="truncate text-xs font-medium text-slate-900">{userName}</p>
+                    <p className="truncate text-[11px] text-slate-400">{ROLE_LABELS[userRole ?? ""] ?? userRole}</p>
                   </div>
                 </div>
               )}
@@ -147,10 +152,9 @@ export function MobileNav({
                   await supabase.auth.signOut();
                   window.location.href = "/login";
                 }}
-                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors hover:bg-white/[0.08] hover:text-white"
-                style={{ color: "rgba(255,255,255,0.6)" }}
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-slate-600 transition-colors hover:bg-slate-50"
               >
-                <LogOut className="h-4 w-4 shrink-0" />
+                <LogOut className="h-4 w-4 shrink-0" style={{ color: inactiveIcon }} />
                 Logout
               </button>
             </div>
@@ -167,9 +171,8 @@ export function MobileNav({
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] ${
-                isActive ? "text-primary" : "text-muted-foreground"
-              }`}
+              className="flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px]"
+              style={{ color: isActive ? accent : inactiveIcon }}
             >
               <Icon className="h-5 w-5" />
               {item.label}
@@ -179,7 +182,8 @@ export function MobileNav({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] text-muted-foreground"
+          className="flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px]"
+          style={{ color: inactiveIcon }}
         >
           <LayoutGrid className="h-5 w-5" />
           More

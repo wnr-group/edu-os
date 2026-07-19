@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { Building2, CheckCircle2, XCircle, Plus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
-import { ListPageTemplate } from "@/components/list-page-template";
+import { KpiCard, KpiGrid } from "@/components/kpi-card";
+import { SchoolsTable } from "./schools-table";
 
 interface SchoolRow {
   id: string;
@@ -25,78 +25,20 @@ export default async function SchoolsPage() {
   const inactiveCount = rows.length - activeCount;
 
   return (
-    <ListPageTemplate
-      title="Schools"
-      description="Manage every school on the platform."
+    <SchoolsTable
+      rows={rows}
       headerAction={
         <Link href="/platform-admin/schools/new" className={buttonVariants({ variant: "default", size: "sm" })}>
           <Plus className="h-3.5 w-3.5" />
           New School
         </Link>
       }
-      stats={[
-        { icon: Building2, label: "Total Schools", value: rows.length, iconBg: "bg-indigo-50", iconColor: "text-indigo-600" },
-        { icon: CheckCircle2, label: "Active", value: activeCount, iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
-        { icon: XCircle, label: "Inactive", value: inactiveCount, iconBg: "bg-rose-50", iconColor: "text-rose-600" },
-      ]}
-      data={rows}
-      columns={[
-        { header: "Name", accessor: "name" },
-        { header: "Email", accessor: (row) => row.contact_email || "—" },
-        {
-          header: "Status",
-          accessor: (row) => (
-            <Badge variant={row.is_active ? "default" : "secondary"}>
-              {row.is_active ? "Active" : "Inactive"}
-            </Badge>
-          ),
-        },
-      ]}
-      searchKeys={["name", "contact_email"]}
-      searchPlaceholder="Search by school name or email..."
-      filters={[
-        {
-          label: "All Status",
-          options: [
-            { label: "Active", value: "active" },
-            { label: "Inactive", value: "inactive" },
-          ],
-          filterFn: (row: SchoolRow, value: string) =>
-            value === "active" ? row.is_active : !row.is_active,
-        },
-      ]}
-      renderActions={(row) => (
-        <Link href={`/platform-admin/schools/${row.id}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
-          View
-        </Link>
-      )}
-      renderMobileCard={(row) => (
-        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <Link href={`/platform-admin/schools/${row.id}`} className="truncate text-sm font-semibold text-foreground hover:underline">
-                {row.name}
-              </Link>
-              <p className="truncate text-xs text-muted-foreground">{row.contact_email || "—"}</p>
-            </div>
-            <Badge variant={row.is_active ? "default" : "secondary"} className="shrink-0">
-              {row.is_active ? "Active" : "Inactive"}
-            </Badge>
-          </div>
-        </div>
-      )}
-      emptyState={
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-white py-16 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-            <Building2 className="h-7 w-7 text-muted-foreground" />
-          </div>
-          <h3 className="mt-4 text-sm font-semibold text-foreground">No schools yet</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Create one to get started.</p>
-          <Link href="/platform-admin/schools/new" className={buttonVariants({ variant: "default", size: "sm" }) + " mt-6"}>
-            <Plus className="h-3.5 w-3.5" />
-            New School
-          </Link>
-        </div>
+      stats={
+        <KpiGrid>
+          <KpiCard icon={Building2} label="Total Schools" value={rows.length} iconBg="bg-indigo-50" iconColor="text-indigo-600" />
+          <KpiCard icon={CheckCircle2} label="Active" value={activeCount} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
+          <KpiCard icon={XCircle} label="Inactive" value={inactiveCount} iconBg="bg-rose-50" iconColor="text-rose-600" />
+        </KpiGrid>
       }
     />
   );

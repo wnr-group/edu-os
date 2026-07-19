@@ -1,12 +1,7 @@
-import Link from "next/link";
-import { Users, School } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getAcademicYearId } from "@/lib/academic-year";
-import { KpiCard, KpiGrid } from "@/components/kpi-card";
-import { AddStudentDialog } from "./add-student-dialog";
-import { BulkActions } from "./bulk-actions";
-import { StudentsTable } from "./students-table";
+import { StudentsBoard } from "./students-board";
 
 export default async function StudentsPage() {
   const supabase = await createServerSupabaseClient();
@@ -17,10 +12,11 @@ export default async function StudentsPage() {
     supabase
       .from("student_enrollments")
       .select(
-        "id, roll_number, is_active, student_profile:student_profiles(id, full_name, email, admission_number, date_of_birth, gender, profile:profiles!profile_id(full_name, email), parent:profiles!parent_profile_id(full_name, phone)), class:classes(name), section:sections(name)"
+        "id, roll_number, is_active, student_profile:student_profiles(id, full_name, email, admission_number, date_of_birth, gender, profile:profiles!profile_id(full_name, email), parent:profiles!parent_profile_id(full_name, phone)), class:classes(id, name), section:sections(id, name)"
       )
       .eq("school_id", schoolId)
       .eq("academic_year_id", academicYearId ?? "")
+      .eq("is_active", true)
       .limit(5000),
     supabase
       .from("classes")
@@ -31,8 +27,8 @@ export default async function StudentsPage() {
 
   const rows = (enrollments ?? []).map((e) => {
     const sp = e.student_profile as unknown as { id: string; full_name: string | null; email: string | null; admission_number: string | null; date_of_birth: string | null; gender: string | null; profile: { full_name: string; email: string } | null; parent: { full_name: string | null; phone: string | null } | null } | null;
-    const c = e.class as unknown as { name: string } | null;
-    const sec = e.section as unknown as { name: string } | null;
+    const c = e.class as unknown as { id: string; name: string } | null;
+    const sec = e.section as unknown as { id: string; name: string } | null;
     return {
       id: sp?.id ?? e.id,
       enrollmentId: e.id,
@@ -40,7 +36,9 @@ export default async function StudentsPage() {
       email: sp?.profile?.email ?? sp?.email ?? "",
       roll: e.roll_number ?? "",
       admission_number: sp?.admission_number ?? "",
+      class_id: c?.id ?? "",
       class_name: c?.name ?? "",
+      section_id: sec?.id ?? "",
       section: sec?.name ?? "",
       parent_phone: sp?.parent?.phone ?? "",
       parent_name: sp?.parent?.full_name ?? "",
@@ -49,34 +47,12 @@ export default async function StudentsPage() {
     };
   });
 
-  const classFilterOptions = (classes ?? []).map((c) => ({
-    label: c.name,
-    value: c.name,
-  }));
-
   return (
-    <StudentsTable
+    <StudentsBoard
+      schoolId={schoolId}
+      academicYearId={academicYearId ?? ""}
       rows={rows}
-      classFilterOptions={classFilterOptions}
-      headerAction={
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href="/admin/students/uninstalled"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-sm font-medium text-muted-foreground shadow-sm hover:bg-muted"
-          >
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-700">!</span>
-            App Not Installed
-          </Link>
-          <BulkActions students={rows} />
-          <AddStudentDialog schoolId={schoolId} academicYearId={academicYearId ?? ""} classes={classes ?? []} />
-        </div>
-      }
-      stats={
-        <KpiGrid>
-          <KpiCard icon={Users} label="Total Students" value={rows.length} sublabel="All enrolled students" />
-          <KpiCard icon={School} label="Total Classes" value={(classes ?? []).length} sublabel="Active classes" />
-        </KpiGrid>
-      }
+      classes={classes ?? []}
     />
   );
 }

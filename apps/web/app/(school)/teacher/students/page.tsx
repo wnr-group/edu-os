@@ -5,7 +5,7 @@ import { getSchoolId } from "@/lib/school";
 import { getAcademicYearId } from "@/lib/academic-year";
 import { getActiveSection } from "@/lib/section-context";
 import { NoSectionPrompt } from "../no-section-prompt";
-import { TeacherStudentsTable, type TeacherStudentRow } from "./students-table";
+import { TeacherStudentsBoard, type TeacherStudentRow } from "./students-board";
 
 export default async function TeacherStudentsPage() {
   const sectionId = await getActiveSection();
@@ -23,7 +23,7 @@ export default async function TeacherStudentsPage() {
       .single(),
     supabase
       .from("student_enrollments")
-      .select("roll_number, student_profile:student_profiles(id, full_name, admission_number, photo_url, parent:profiles!parent_profile_id(phone))")
+      .select("roll_number, student_profile:student_profiles(id, full_name, admission_number, photo_url, gender, parent:profiles!parent_profile_id(phone))")
       .eq("section_id", sectionId)
       .eq("school_id", schoolId)
       .eq("academic_year_id", academicYearId ?? "")
@@ -32,13 +32,14 @@ export default async function TeacherStudentsPage() {
   ]);
 
   const students: TeacherStudentRow[] = (enrollments ?? []).map((e) => {
-    const sp = e.student_profile as unknown as { id: string; full_name: string | null; admission_number: string | null; photo_url: string | null; parent: { phone: string | null } | null } | null;
+    const sp = e.student_profile as unknown as { id: string; full_name: string | null; admission_number: string | null; photo_url: string | null; gender: string | null; parent: { phone: string | null } | null } | null;
     return {
       id: sp?.id ?? "",
       full_name: sp?.full_name ?? null,
       roll_number: e.roll_number ?? null,
       admission_number: sp?.admission_number ?? null,
       photo_url: sp?.photo_url ?? null,
+      gender: sp?.gender ?? null,
       parent_phone: sp?.parent?.phone ?? null,
     };
   });
@@ -47,7 +48,7 @@ export default async function TeacherStudentsPage() {
   const sectionLabel = cls ? `${cls.name} – Section ${sectionRow?.name}` : sectionRow?.name ?? "";
 
   return (
-    <TeacherStudentsTable
+    <TeacherStudentsBoard
       title="Students"
       description={`${sectionLabel} · ${students.length} student${students.length !== 1 ? "s" : ""}`}
       rows={students}
