@@ -1,51 +1,42 @@
 export default function SubjectsLoading() {
   return (
-    <div className="animate-pulse">
+    <div className="animate-pulse space-y-5">
       {/* Page header */}
-      <div className="mb-8">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="h-8 w-28 rounded bg-muted-foreground/20" />
-            <div className="mt-2 h-4 w-56 rounded bg-muted-foreground/20" />
-          </div>
-          <div className="h-8 w-28 rounded bg-muted-foreground/20" />
-        </div>
-        {/* Stats */}
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {[1, 2].map((i) => (
-            <div key={i} className="rounded-lg border bg-white p-4">
-              <div className="h-3 w-24 rounded bg-muted-foreground/20" />
-              <div className="mt-2 h-6 w-12 rounded bg-muted-foreground/20" />
-            </div>
-          ))}
-        </div>
+      <div>
+        <div className="h-8 w-28 rounded bg-muted-foreground/20" />
+        <div className="mt-2 h-4 w-96 max-w-full rounded bg-muted-foreground/20" />
       </div>
 
-      {/* Search bar + filter */}
-      <div className="mb-4 flex items-center gap-3">
-        <div className="h-9 flex-1 rounded bg-muted-foreground/20" />
-        <div className="h-9 w-32 rounded bg-muted-foreground/20" />
-      </div>
-
-      {/* Table rows */}
-      <div className="overflow-hidden rounded-lg border bg-white">
-        {/* Header */}
-        <div className="grid grid-cols-3 border-b bg-gray-50 px-4 py-3">
-          {["Subject", "Code", "Class"].map((col) => (
-            <div key={col} className="h-3 w-16 rounded bg-muted-foreground/20" />
+      {/* Quick setup card */}
+      <div className="rounded-2xl border bg-white p-5">
+        <div className="h-5 w-28 rounded bg-muted-foreground/20" />
+        <div className="mt-2 h-4 w-64 rounded bg-muted-foreground/20" />
+        <div className="mt-4 flex flex-wrap gap-2">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-9 w-24 rounded-lg bg-muted-foreground/20" />
           ))}
         </div>
-        {/* Rows */}
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="grid grid-cols-3 items-center border-b px-4 py-3 last:border-0"
-          >
-            <div className="h-4 w-32 rounded bg-muted-foreground/20" />
-            <div className="h-4 w-16 rounded bg-muted-foreground/20" />
-            <div className="h-4 w-20 rounded bg-muted-foreground/20" />
-          </div>
+        <div className="mt-5 h-14 rounded-xl bg-muted-foreground/10" />
+      </div>
+
+      {/* Stat chips */}
+      <div className="flex flex-wrap gap-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-11 w-40 rounded-xl border bg-white" />
         ))}
+      </div>
+
+      {/* Matrix card */}
+      <div className="overflow-hidden rounded-2xl border bg-white">
+        <div className="border-b px-5 py-4">
+          <div className="h-3 w-32 rounded bg-muted-foreground/20" />
+          <div className="mt-2 h-5 w-48 rounded bg-muted-foreground/20" />
+        </div>
+        <div className="space-y-1.5 p-3.5">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className="h-11 rounded-lg bg-muted-foreground/10" />
+          ))}
+        </div>
       </div>
     </div>
   );

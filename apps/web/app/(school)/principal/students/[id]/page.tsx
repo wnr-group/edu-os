@@ -2,15 +2,17 @@ export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { Mail, Phone, Cake, VenetianMask } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
-import { buttonVariants } from "@/components/ui/button";
-import { StudentAttendanceTab } from "../../../admin/students/[id]/student-attendance-tab";
-import { StudentAcademicsTab } from "../../../admin/students/[id]/student-academics-tab";
-import { StudentFeesTab } from "../../../admin/students/[id]/student-fees-tab";
+import { getAcademicYearId } from "@/lib/academic-year";
+import { DetailPageTemplate } from "@/components/detail-page-template";
+import { StudentAttendanceTab } from "@/app/(school)/admin/students/[id]/student-attendance-tab";
+import { StudentAcademicsTab } from "@/app/(school)/admin/students/[id]/student-academics-tab";
+import { StudentFeesTab } from "@/app/(school)/admin/students/[id]/student-fees-tab";
+import { avatarColor, initialsOf } from "@/lib/student-avatar";
 
-type Tab = "attendance" | "academics" | "fees" | "discipline";
+type Tab = "attendance" | "academics" | "fees";
 
 export default async function PrincipalStudentDetailPage({
   params,
@@ -28,20 +30,14 @@ export default async function PrincipalStudentDetailPage({
 
   const supabase = await createServerSupabaseClient();
   const schoolId = (await getSchoolId())!;
+  const academicYearId = await getAcademicYearId(schoolId);
 
-  const [{ data: student }, { data: disciplineRecords }] = await Promise.all([
-    supabase
-      .from("student_profiles")
-      .select("id, full_name, admission_number, photo_url, parent:profiles!parent_profile_id(phone)")
-      .eq("id", id)
-      .single(),
-    supabase
-      .from("discipline_records")
-      .select("id, category, severity, description, created_at")
-      .eq("student_id", id)
-      .eq("school_id", schoolId)
-      .order("created_at", { ascending: false }),
-  ]);
+  const { data: student } = await supabase
+    .from("student_profiles")
+    .select("id, full_name, email, admission_number, date_of_birth, gender, profile:profiles!profile_id(full_name, email, avatar_url), parent:profiles!parent_profile_id(full_name, phone)")
+    .eq("id", id)
+    .eq("school_id", schoolId)
+    .single();
 
   if (!student) notFound();
 
@@ -50,106 +46,104 @@ export default async function PrincipalStudentDetailPage({
     .select("roll_number, class:classes(name), section:sections(name)")
     .eq("student_profile_id", id)
     .eq("school_id", schoolId)
-    .eq("is_active", true)
+    .eq("academic_year_id", academicYearId ?? "")
     .maybeSingle();
 
+  const profile = student.profile as unknown as { full_name: string; email: string; avatar_url: string | null } | null;
+  const parent = student.parent as unknown as { full_name: string | null; phone: string | null } | null;
+  const displayName = profile?.full_name ?? (student as unknown as { full_name: string | null }).full_name ?? "Student";
+  const displayEmail = profile?.email ?? (student as unknown as { email: string | null }).email ?? "";
   const cls = enrollment?.class as unknown as { name: string } | null;
   const sec = enrollment?.section as unknown as { name: string } | null;
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: "attendance", label: "Attendance" },
-    { key: "academics", label: "Academics" },
-    { key: "fees", label: "Fees" },
-    { key: "discipline", label: "Discipline" },
-  ];
-
+  const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const prevDate = new Date(year, month - 1);
   const nextDate = new Date(year, month + 1);
   const prevHref = `?tab=attendance&month=${prevDate.getMonth()}&year=${prevDate.getFullYear()}`;
   const nextHref = `?tab=attendance&month=${nextDate.getMonth()}&year=${nextDate.getFullYear()}`;
-  const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  const subtitleParts = [
+    cls?.name ? `${cls.name}${sec?.name ? ` · Section ${sec.name}` : ""}` : null,
+    enrollment?.roll_number ? `Roll No: ${enrollment.roll_number}` : null,
+    student.admission_number ? `Adm: ${student.admission_number}` : null,
+  ].filter(Boolean);
+
+  const gender = (student as unknown as { gender: string | null }).gender;
+  const dob = (student as unknown as { date_of_birth: string | null }).date_of_birth;
+  const av = avatarColor(displayName);
+
+  const attendanceContent = (
+    <>
+      <div className="mb-4 flex items-center gap-3">
+        <Link href={prevHref} className="rounded-md border px-3 py-1.5 text-sm hover:bg-muted">←</Link>
+        <span className="text-sm font-medium">{MONTH_NAMES[month]} {year}</span>
+        <Link href={nextHref} className="rounded-md border px-3 py-1.5 text-sm hover:bg-muted">→</Link>
+      </div>
+      <StudentAttendanceTab studentId={id} month={month} year={year} />
+    </>
+  );
 
   return (
-    <div className="space-y-6">
-      <Link href="/principal/discipline" className={buttonVariants({ variant: "ghost", size: "sm" }) + " -ml-2"}>
-        <ArrowLeft className="mr-1.5 h-4 w-4" />
-        Back to Discipline
-      </Link>
-
-      {/* Student card */}
-      <div className="rounded-lg border bg-white p-6 shadow-sm">
-        <div className="flex items-start gap-5">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100 text-xl font-bold text-indigo-600">
-            {(student.full_name ?? "S").charAt(0)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-bold text-gray-900">{student.full_name ?? "—"}</h1>
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500">
-              {cls?.name && <span>{cls.name}{sec?.name ? ` · Section ${sec.name}` : ""}</span>}
-              {enrollment?.roll_number && <span>Roll No: {enrollment.roll_number}</span>}
-              {student.admission_number && <span>Adm: {student.admission_number}</span>}
-              {(student.parent as unknown as { phone: string | null } | null)?.phone && <span>Phone: {(student.parent as unknown as { phone: string | null }).phone}</span>}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div>
-        <div className="flex gap-1 border-b border-border">
-          {tabs.map((t) => (
-            <Link
-              key={t.key}
-              href={`?tab=${t.key}`}
-              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                activeTab === t.key
-                  ? "border-indigo-600 text-indigo-600"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t.label}
-            </Link>
-          ))}
-        </div>
-        <div className="pt-6">
-          {activeTab === "attendance" && (
-            <>
-              <div className="mb-4 flex items-center gap-3">
-                <Link href={prevHref} className="rounded-md border px-3 py-1.5 text-sm hover:bg-muted">←</Link>
-                <span className="text-sm font-medium">{MONTH_NAMES[month]} {year}</span>
-                <Link href={nextHref} className="rounded-md border px-3 py-1.5 text-sm hover:bg-muted">→</Link>
+    <DetailPageTemplate
+      backHref="/principal/students"
+      backLabel="Back to Students"
+      title={displayName}
+      subtitle={subtitleParts.length > 0 ? subtitleParts.join("  ·  ") : undefined}
+      basePath={`/principal/students/${id}`}
+      activeTab={activeTab}
+      header={
+        <div className="rounded-lg border bg-white p-6 shadow-sm">
+          <div className="flex items-start gap-5">
+            {profile?.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={profile.avatar_url} alt={displayName} className="h-20 w-20 shrink-0 rounded-full object-cover" />
+            ) : (
+              <span
+                className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full text-2xl font-bold"
+                style={{ background: av.bg, color: av.fg }}
+              >
+                {initialsOf(displayName)}
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Profile</h2>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-gray-600">
+                {cls?.name && <span>{cls.name}{sec?.name ? ` · Section ${sec.name}` : ""}</span>}
+                {enrollment?.roll_number && <span>Roll No: {enrollment.roll_number}</span>}
+                {student.admission_number && <span>Adm: {student.admission_number}</span>}
               </div>
-              <StudentAttendanceTab studentId={id} month={month} year={year} />
-            </>
-          )}
-          {activeTab === "academics" && <StudentAcademicsTab studentId={id} />}
-          {activeTab === "fees" && <StudentFeesTab studentId={id} studentName={student.full_name ?? "Student"} />}
-          {activeTab === "discipline" && (
-            <div className="grid gap-3">
-              {(disciplineRecords ?? []).length === 0 ? (
-                <p className="py-8 text-center text-gray-400">No discipline records for this student.</p>
-              ) : (disciplineRecords ?? []).map((r) => (
-                <div key={r.id} className="rounded-lg border bg-white p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${
-                        r.severity === "written" ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-700"
-                      }`}>
-                        {r.severity}
-                      </span>
-                      <span className="text-sm font-medium text-gray-600 capitalize">{r.category}</span>
-                    </div>
-                    <span className="text-xs text-gray-400">
-                      {r.created_at ? new Date(r.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm text-gray-700">{r.description}</p>
-                </div>
-              ))}
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-gray-600">
+                {displayEmail && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Mail className="h-3.5 w-3.5 text-muted-foreground" /> {displayEmail}
+                  </span>
+                )}
+                {parent?.phone && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5 text-muted-foreground" /> {parent.phone}
+                    {parent.full_name ? ` (${parent.full_name})` : ""}
+                  </span>
+                )}
+                {dob && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Cake className="h-3.5 w-3.5 text-muted-foreground" /> {dob}
+                  </span>
+                )}
+                {gender && (
+                  <span className="inline-flex items-center gap-1.5 capitalize">
+                    <VenetianMask className="h-3.5 w-3.5 text-muted-foreground" /> {gender}
+                  </span>
+                )}
+              </div>
             </div>
-          )}
+          </div>
         </div>
-      </div>
-    </div>
+      }
+      tabs={[
+        { key: "attendance", label: "Attendance", content: attendanceContent },
+        { key: "academics", label: "Academics", content: <StudentAcademicsTab studentId={id} /> },
+        { key: "fees", label: "Fees", content: <StudentFeesTab studentId={id} studentName={displayName} /> },
+      ]}
+    />
   );
 }

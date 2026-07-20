@@ -12,7 +12,7 @@ import {
 import { createClient } from "@/lib/supabase";
 import type { LucideIcon } from "lucide-react";
 
-const ICON_MAP: Record<string, LucideIcon> = {
+export const ICON_MAP: Record<string, LucideIcon> = {
   Dashboard: LayoutDashboard,
   Schools: Building2,
   Classes: School,
@@ -36,7 +36,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Gallery: Image,
 };
 
-interface NavItem {
+export interface NavItem {
   label: string;
   href: string;
 }
@@ -50,7 +50,7 @@ interface SidebarProps {
   sectionSwitcher?: React.ReactNode;
 }
 
-const ROLE_LABELS: Record<string, string> = {
+export const ROLE_LABELS: Record<string, string> = {
   school_admin: "School Admin",
   teacher: "Teacher",
   principal: "Principal",
@@ -61,7 +61,7 @@ const ROLE_LABELS: Record<string, string> = {
  * Darken a hex color by mixing with black.
  * factor: 0 = original, 1 = pure black
  */
-function darken(hex: string, factor: number): string {
+export function darken(hex: string, factor: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
@@ -71,91 +71,131 @@ function darken(hex: string, factor: number): string {
   return `#${dr.toString(16).padStart(2, "0")}${dg.toString(16).padStart(2, "0")}${db.toString(16).padStart(2, "0")}`;
 }
 
+/**
+ * Lighten a hex color by mixing with white.
+ * factor: 0 = original, 1 = pure white
+ */
+export function lighten(hex: string, factor: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const lr = Math.round(r + (255 - r) * factor);
+  const lg = Math.round(g + (255 - g) * factor);
+  const lb = Math.round(b + (255 - b) * factor);
+  return `#${lr.toString(16).padStart(2, "0")}${lg.toString(16).padStart(2, "0")}${lb.toString(16).padStart(2, "0")}`;
+}
+
+const RLABEL =
+  "whitespace-nowrap opacity-0 -translate-x-1 transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0 group-has-[:focus-visible]:opacity-100 group-has-[:focus-visible]:translate-x-0";
+
+/**
+ * Collapsed 78px icon rail that expands to 240px on hover/focus to reveal
+ * labels. Renders as an absolutely-positioned overlay inside a fixed-width
+ * slot so expansion never reflows the page content.
+ */
 export function Sidebar({ title, items, brandColor, userName, userRole, sectionSwitcher }: SidebarProps) {
   const pathname = usePathname();
 
-  // Generate sidebar colors from brand color, or fall back to indigo
   const isValidHex = brandColor && /^#[0-9a-fA-F]{6}$/.test(brandColor);
-  const sidebarBg = isValidHex ? darken(brandColor, 0.8) : "#1e1b4b";
-  const logoBg = isValidHex ? brandColor : "#4f46e5";
-  const dividerColor = isValidHex ? "rgba(255,255,255,0.12)" : "#3730a380";
-  // Inactive text: use white with good opacity for readability on any dark bg
-  const inactiveText = "rgba(255,255,255,0.6)";
+  const accent = isValidHex ? brandColor : "#1d4ed8";
+  const activeBg = isValidHex ? lighten(brandColor, 0.93) : "#eff4ff";
 
   return (
-    <aside
-      className="flex h-full w-60 flex-col text-white"
-      style={{ backgroundColor: sidebarBg }}
-    >
-      <div className="flex items-center gap-2.5 px-5 py-5">
-        <div
-          className="flex h-8 w-8 items-center justify-center rounded-lg"
-          style={{ backgroundColor: logoBg }}
-        >
-          <GraduationCap className="h-[18px] w-[18px] text-white" />
+    <div className="relative hidden h-full w-[78px] shrink-0 lg:block">
+      <aside
+        className="group absolute inset-y-0 left-0 z-40 flex w-[78px] flex-col overflow-hidden rounded-[20px] bg-white py-4 shadow-[0_4px_20px_rgba(29,78,216,.09)] transition-[width,box-shadow] duration-200 ease-in-out hover:w-60 hover:shadow-[0_12px_40px_rgba(29,78,216,.18)] has-[:focus-visible]:w-60 has-[:focus-visible]:shadow-[0_12px_40px_rgba(29,78,216,.18)]"
+      >
+        <div className="mx-[13px] mb-2 flex items-center gap-[13px] pb-1.5 pl-[5px] pr-[15px] transition-[padding-left] duration-200 ease-in-out group-hover:pl-[15px] group-has-[:focus-visible]:pl-[15px]">
+          <div
+            className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[13px]"
+            style={{ backgroundColor: accent }}
+          >
+            <GraduationCap className="h-[18px] w-[18px] text-white" />
+          </div>
+          <span className={cn(RLABEL, "text-base font-bold tracking-[-0.3px] text-slate-900")}>
+            {title}
+          </span>
         </div>
-        <span className="text-sm font-semibold tracking-wide text-white/90">
-          {title}
-        </span>
-      </div>
-      <div className="mx-4 border-t" style={{ borderColor: dividerColor }} />
-      {sectionSwitcher}
-      {sectionSwitcher && (
-        <div className="mx-4 border-t" style={{ borderColor: dividerColor }} />
-      )}
-      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
-        {items.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-          const Icon = ICON_MAP[item.label] ?? LayoutDashboard;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-200",
-                isActive
-                  ? "bg-white/15 text-white"
-                  : "hover:bg-white/[0.08] hover:text-white"
-              )}
-              style={!isActive ? { color: inactiveText } : undefined}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-      <div className="mx-4 border-t" style={{ borderColor: dividerColor }} />
-      <div className="px-3 py-3 space-y-0.5">
+
+        {sectionSwitcher && (
+          <>
+            <div className="mx-[13px] border-t border-[#eef0f3]" />
+            <div className={cn(RLABEL, "shrink-0")}>{sectionSwitcher}</div>
+            <div className="mx-[13px] border-t border-[#eef0f3]" />
+          </>
+        )}
+
+        <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden py-2">
+          {items.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            const Icon = ICON_MAP[item.label] ?? LayoutDashboard;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={item.label}
+                aria-label={item.label}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "relative mx-[13px] flex h-[46px] items-center gap-[14px] rounded-[14px] px-[15px] transition-colors",
+                  !isActive && "hover:bg-slate-50"
+                )}
+                style={{ backgroundColor: isActive ? activeBg : "transparent" }}
+              >
+                {isActive && (
+                  <span
+                    className="absolute left-0 top-[11px] bottom-[11px] w-[3px] rounded-full"
+                    style={{ backgroundColor: accent }}
+                  />
+                )}
+                <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center">
+                  <Icon className="h-[21px] w-[21px]" style={{ color: isActive ? accent : "#94a3b8" }} />
+                </span>
+                <span
+                  className={cn(RLABEL, "text-[14.5px]")}
+                  style={{ color: isActive ? accent : "#475569", fontWeight: isActive ? 600 : 500 }}
+                >
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+
         {userName && (
-          <div className="flex items-center gap-2.5 px-3 py-2">
+          <div className="mx-[13px] flex items-center gap-[13px] border-t border-[#eef0f3] pl-[7px] pr-[15px] pt-3 transition-[padding-left] duration-200 ease-in-out group-hover:pl-[15px] group-has-[:focus-visible]:pl-[15px]">
             <div
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
-              style={{ backgroundColor: logoBg }}
+              className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white"
+              style={{ backgroundColor: accent }}
             >
               {userName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-medium text-white/90">{userName}</p>
-              <p className="truncate text-[11px] text-white/50">
+            <div className={cn(RLABEL, "min-w-0 flex-1 leading-tight")}>
+              <p className="truncate text-[13.5px] font-semibold text-slate-900">{userName}</p>
+              <p className="truncate text-xs text-slate-400">
                 {ROLE_LABELS[userRole ?? ""] ?? userRole}
               </p>
             </div>
           </div>
         )}
-        <button
-          onClick={async () => {
-            const supabase = createClient();
-            await supabase.auth.signOut();
-            window.location.href = "/login";
-          }}
-          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors hover:bg-white/[0.08] hover:text-white"
-          style={{ color: "rgba(255,255,255,0.6)" }}
-        >
-          <LogOut className="h-4 w-4 shrink-0" />
-          Logout
-        </button>
-      </div>
-    </aside>
+        <div className="mx-[13px] mt-1">
+          <button
+            onClick={async () => {
+              const supabase = createClient();
+              await supabase.auth.signOut();
+              window.location.href = "/login";
+            }}
+            title="Logout"
+            aria-label="Logout"
+            className="flex h-[46px] w-full items-center gap-[14px] rounded-[14px] px-[15px] text-[#94a3b8] transition-colors hover:bg-slate-50"
+          >
+            <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center">
+              <LogOut className="h-[21px] w-[21px]" />
+            </span>
+            <span className={cn(RLABEL, "text-[14.5px] font-medium text-[#475569]")}>Logout</span>
+          </button>
+        </div>
+      </aside>
+    </div>
   );
 }

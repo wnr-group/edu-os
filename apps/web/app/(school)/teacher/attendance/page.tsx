@@ -1,7 +1,20 @@
+import Link from "next/link";
+import { CalendarCheck } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getActiveSection } from "@/lib/section-context";
 import { NoSectionPrompt } from "../no-section-prompt";
-import Link from "next/link";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default async function AttendancePage() {
   const sectionId = await getActiveSection();
@@ -77,71 +90,78 @@ export default async function AttendancePage() {
     late: "bg-amber-100 text-amber-700",
   };
 
+  function StatusPill({ status }: { status: string }) {
+    const badge = statusBadge[status] ?? "bg-gray-100 text-gray-600";
+    return (
+      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${badge}`}>
+        {status}
+      </span>
+    );
+  }
+
   return (
     <div>
-      {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            {sectionLabel}&nbsp;&nbsp;·&nbsp;&nbsp;{today}
-          </p>
-          {isMarked && <p className="mt-1 text-xs font-medium text-emerald-600">{markedSummary}</p>}
-        </div>
-        <Link
-          href={markHref}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
-        >
-          {isMarked ? "Edit Attendance" : "Mark Attendance"}
-        </Link>
-      </div>
+      <PageHeader
+        title="Attendance"
+        description={`${sectionLabel}  ·  ${today}${isMarked ? `  ·  ${markedSummary}` : ""}`}
+        action={
+          <Link href={markHref} className={cn(buttonVariants({ variant: "default", size: "lg" }))}>
+            {isMarked ? "Edit Attendance" : "Mark Attendance"}
+          </Link>
+        }
+      />
 
-      {/* Content */}
       {!isMarked ? (
-        <div className="rounded-lg border border-dashed border-gray-200 bg-white p-12 text-center shadow-sm">
-          <p className="text-base font-medium text-gray-500">
-            Attendance not marked yet for today
-          </p>
-          <p className="mt-1 text-sm text-gray-400">
-            Click &ldquo;Mark Attendance&rdquo; to record today&apos;s attendance.
-          </p>
-        </div>
+        <EmptyState
+          icon={CalendarCheck}
+          title="Attendance not marked yet for today"
+          description="Record today's attendance to see the roster and status here."
+          action={
+            <Link href={markHref} className={cn(buttonVariants({ variant: "default", size: "lg" }))}>
+              Mark Attendance
+            </Link>
+          }
+        />
       ) : (
-        <div className="rounded-lg bg-white shadow-sm overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-100">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Student
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {(students ?? []).map((s) => {
-                const status = existingMap[s.id] ?? "present";
-                const badge =
-                  statusBadge[status] ?? "bg-gray-100 text-gray-600";
-                return (
-                  <tr key={s.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-3 text-sm text-gray-900">
-                      {s.full_name ?? "—"}
-                    </td>
-                    <td className="px-6 py-3">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${badge}`}
-                      >
-                        {status}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {/* Desktop table */}
+          <div className="hidden overflow-hidden rounded-lg border border-border bg-card shadow-sm md:block">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="h-10 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Student</TableHead>
+                  <TableHead className="h-10 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {students.map((s, i) => (
+                  <TableRow
+                    key={s.id}
+                    className={`transition-colors hover:bg-muted/30 ${i % 2 === 0 ? "" : "bg-muted/10"}`}
+                  >
+                    <TableCell className="px-4 py-3 text-sm text-foreground">{s.full_name ?? "—"}</TableCell>
+                    <TableCell className="px-4 py-3">
+                      <StatusPill status={existingMap[s.id] ?? "present"} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="space-y-3 md:hidden">
+            {students.map((s) => (
+              <div
+                key={s.id}
+                className="flex items-center justify-between rounded-lg border border-border bg-card p-4 shadow-sm"
+              >
+                <span className="text-sm font-medium text-foreground">{s.full_name ?? "—"}</span>
+                <StatusPill status={existingMap[s.id] ?? "present"} />
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

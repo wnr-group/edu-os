@@ -48,6 +48,7 @@ interface RowResult {
   row: number;
   status: "created" | "updated" | "error";
   error?: string;
+  warning?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -104,6 +105,10 @@ export async function POST(request: NextRequest) {
 
   const results: RowResult[] = [];
   const welcomeRecipients: WelcomeRecipient[] = [];
+  // Tracks admission_number -> first row index seen in this upload, so a
+  // later row that collides with an earlier row (rather than an existing DB
+  // record) can be flagged instead of silently overwriting it.
+  const admissionNumberSeenAt = new Map<string, number>();
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
@@ -112,12 +117,30 @@ export async function POST(request: NextRequest) {
         throw new Error("Missing full_name");
       }
 
+      const warnings: string[] = [];
+
+      const admissionNumber = row.admission_number?.trim() || null;
+      if (admissionNumber) {
+        const firstSeenRow = admissionNumberSeenAt.get(admissionNumber);
+        if (firstSeenRow !== undefined) {
+          warnings.push(`Duplicate admission_number "${admissionNumber}" (also on row ${firstSeenRow + 2}) — this row updated that student instead of creating a new one`);
+        } else {
+          admissionNumberSeenAt.set(admissionNumber, i);
+        }
+      }
+
       const className = row.class_name?.toLowerCase().trim() ?? "";
       const sectionName = row.section_name?.toLowerCase().trim() ?? "";
       const classId = className ? classMap.get(className) : undefined;
       const sectionId = classId && sectionName
         ? sectionMap.get(`${classId}:${sectionName}`)
         : undefined;
+
+      if (className && !classId) {
+        warnings.push(`Class "${row.class_name}" not found — student left unassigned`);
+      } else if (sectionName && classId && !sectionId) {
+        warnings.push(`Section "${row.section_name}" not found in class "${row.class_name}" — student left unassigned`);
+      }
 
       // Resolve the parent identity by phone and link via parent_profile_id.
       let parentProfileId: string | null = null;
@@ -141,7 +164,7 @@ export async function POST(request: NextRequest) {
         school_id: schoolId,
         full_name: row.full_name.trim(),
         email: row.email?.trim() || null,
-        admission_number: row.admission_number?.trim() || null,
+        admission_number: admissionNumber,
         date_of_birth: normalizeDob(row.date_of_birth),
         gender: normalizeGender(row.gender),
         parent_profile_id: parentProfileId,
@@ -150,13 +173,13 @@ export async function POST(request: NextRequest) {
       let studentProfileId: string;
       let status: "created" | "updated" = "created";
 
-      const existingId = row.admission_number?.trim()
+      const existingId = admissionNumber
         ? (
             await adminClient
               .from("student_profiles")
               .select("id")
               .eq("school_id", schoolId)
-              .eq("admission_number", row.admission_number.trim())
+              .eq("admission_number", admissionNumber)
               .maybeSingle()
           ).data?.id ?? null
         : null;
@@ -179,9 +202,7 @@ export async function POST(request: NextRequest) {
         studentProfileId = inserted.id;
       }
 
-      // Enroll into the active year's class/section when both resolve. Skip
-      // silently if the class/section names don't match or no active year —
-      // the student profile is still created, just unassigned.
+      // Enroll into the active year's class/section when both resolve.
       if (classId && sectionId && academicYearId) {
         const enrollment = {
           student_profile_id: studentProfileId,
@@ -203,9 +224,11 @@ export async function POST(request: NextRequest) {
           ? await adminClient.from("student_enrollments").update(enrollment).eq("id", existingEnroll.id)
           : await adminClient.from("student_enrollments").insert(enrollment);
         if (enrollErr) throw new Error(enrollErr.message);
+      } else if (classId && sectionId && !academicYearId) {
+        warnings.push("No active academic year for this school — student left unassigned");
       }
 
-      results.push({ row: i, status });
+      results.push({ row: i, status, warning: warnings.length ? warnings.join("; ") : undefined });
     } catch (err) {
       results.push({
         row: i,

@@ -15,14 +15,14 @@ interface PageHeaderProps {
 export function PageHeader({ title, description, action, stats }: PageHeaderProps) {
   return (
     <div className="mb-8 animate-fade-in-up">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">{title}</h1>
           {description && (
             <p className="mt-1 text-sm text-muted-foreground">{description}</p>
           )}
         </div>
-        {action && <div className="ml-4 shrink-0">{action}</div>}
+        {action && <div className="shrink-0 sm:ml-4">{action}</div>}
       </div>
       {stats && stats.length > 0 && (
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

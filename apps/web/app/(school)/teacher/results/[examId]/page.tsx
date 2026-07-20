@@ -1,7 +1,11 @@
+import Link from "next/link";
+import { ArrowLeft, Trophy } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getActiveSection } from "@/lib/section-context";
 import { NoSectionPrompt } from "../../no-section-prompt";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { MarksEntryForm } from "./marks-entry-form";
 
 export default async function ExamMarksPage({
@@ -90,11 +94,31 @@ export default async function ExamMarksPage({
   }).filter((s) => s.id);
 
   return (
-    <div>
-      <h1 className="mb-1 text-2xl font-bold text-gray-900">Enter Marks</h1>
-      <p className="mb-1 text-sm text-gray-500">{exam?.name ?? examId}</p>
-      <p className="mb-6 text-xs text-gray-400">{sectionLabel}</p>
-      <div className="rounded-lg bg-white p-6 shadow-sm">
+    <div className="space-y-6 animate-fade-in-up">
+      <Link
+        href="/teacher/results"
+        className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2")}
+      >
+        <ArrowLeft className="mr-1.5 h-4 w-4" />
+        Back to Results
+      </Link>
+
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Enter Marks</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{exam?.name ?? examId}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground/80">{sectionLabel}</p>
+        </div>
+        <Link
+          href={`/teacher/results/${examId}/rankings?sectionId=${sectionId}`}
+          className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
+        >
+          <Trophy className="mr-1.5 h-4 w-4" />
+          View Rankings
+        </Link>
+      </div>
+
+      <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
         <MarksEntryForm
           examId={examId}
           subjects={(subjects ?? []).map((s) => ({ id: s.id, name: s.name }))}

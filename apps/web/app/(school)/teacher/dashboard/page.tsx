@@ -4,7 +4,10 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getActiveSection } from "@/lib/section-context";
 import { NoSectionPrompt } from "../no-section-prompt";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users, UserCheck, UserX, ClipboardList, ClipboardEdit } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
+import { DashboardTemplate, DashboardWidget } from "@/components/dashboard-template";
 import { SectionAttendanceChart } from "./section-attendance-chart";
 import type { SectionAttendance } from "./section-attendance-chart";
 import Link from "next/link";
@@ -80,6 +83,8 @@ export default async function TeacherDashboard() {
   // Today's attendance numbers
   const totalToday = todayAttRows?.length ?? 0;
   const presentToday = (todayAttRows ?? []).filter((r) => r.status === "present").length;
+  const absentToday = totalToday - presentToday;
+  const presentPct = totalToday > 0 ? Math.round((presentToday / totalToday) * 100) : null;
 
   // Mark attendance URL
   const markAttendanceHref = `/teacher/attendance/mark?sectionId=${sectionId}&date=${today}`;
@@ -149,129 +154,106 @@ export default async function TeacherDashboard() {
     studentNameMap[s.id] = s.full_name ?? "Unknown Student";
   }
 
+  const stats: { label: string; value: string | number; icon: LucideIcon; iconBg: string; iconColor: string; sublabel?: string; href?: string }[] = [
+    { label: "Students", value: studentCount ?? 0, icon: Users, iconBg: "bg-indigo-50", iconColor: "text-indigo-600", href: "/teacher/students" },
+    {
+      label: "Present Today",
+      value: totalToday > 0 ? presentToday : "—",
+      sublabel: presentPct !== null ? `${presentPct}% present` : "Not marked yet",
+      icon: UserCheck,
+      iconBg: "bg-emerald-50",
+      iconColor: "text-emerald-600",
+      href: "/teacher/attendance",
+    },
+    {
+      label: "Absent Today",
+      value: totalToday > 0 ? absentToday : "—",
+      icon: UserX,
+      iconBg: "bg-rose-50",
+      iconColor: "text-rose-600",
+      href: "/teacher/attendance",
+    },
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Section Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">{sectionLabel}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {classTeacherName ? `Class Teacher: ${classTeacherName}` : "No class teacher assigned"}
-            {" · "}
-            {studentCount ?? 0} students
-          </p>
-        </div>
-      </div>
-
-      {/* Today's Attendance Card */}
-      <Card className="transition-shadow duration-200 hover:shadow-md">
-        <CardHeader>
-          <CardTitle>Today&apos;s Attendance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-end gap-6">
-            <div className="flex items-baseline gap-2">
-              <span className="text-5xl font-bold text-foreground">{presentToday}</span>
-              <span className="text-2xl text-muted-foreground">/ {totalToday}</span>
-            </div>
-            {totalToday > 0 && (
-              <span className="mb-1 text-sm font-medium text-emerald-600">
-                {Math.round((presentToday / totalToday) * 100)}% present
-              </span>
-            )}
-          </div>
-          <div className="mt-4">
-            <Link
-              href={markAttendanceHref}
-              className="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
-            >
-              {totalToday > 0 ? "Edit Attendance" : "Mark Attendance"}
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 7-Day Attendance Trend */}
-      <Card className="transition-shadow duration-200 hover:shadow-md">
-        <CardHeader>
-          <CardTitle>7-Day Attendance Trend</CardTitle>
-        </CardHeader>
-        <CardContent>
+    <DashboardTemplate
+      title={sectionLabel}
+      description={`${classTeacherName ? `Class Teacher: ${classTeacherName}` : "No class teacher assigned"} · ${studentCount ?? 0} students`}
+      stats={stats}
+      chart={
+        <DashboardWidget title="7-Day Attendance Trend">
           <SectionAttendanceChart data={trendData} />
-        </CardContent>
-      </Card>
-
-      {/* Upcoming Homework + Recent Discipline */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Upcoming Homework */}
-        <Card className="transition-shadow duration-200 hover:shadow-md">
-          <CardHeader>
-            <CardTitle>Upcoming Homework</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!homeworkRows || homeworkRows.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                No upcoming homework.
-              </p>
-            ) : (
-              <ul className="space-y-3">
-                {homeworkRows.map((hw) => {
-                  const subject = hw.subject as unknown as { name: string } | null;
-                  return (
-                    <li key={hw.id} className="flex items-start justify-between gap-3 rounded-lg border border-border p-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-foreground">{hw.title}</p>
-                        <p className="text-xs text-muted-foreground">{subject?.name ?? "—"}</p>
-                      </div>
-                      <span className="shrink-0 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
-                        {hw.due_date}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Recent Discipline Incidents */}
-        <Card className="transition-shadow duration-200 hover:shadow-md">
-          <CardHeader>
-            <CardTitle>Recent Discipline Incidents</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {disciplineRows.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                No recent incidents.
-              </p>
-            ) : (
-              <ul className="space-y-3">
-                {disciplineRows.map((inc, i) => (
-                  <li key={i} className="flex items-start justify-between gap-3 rounded-lg border border-border p-3">
+        </DashboardWidget>
+      }
+      overview={
+        <DashboardWidget title="Upcoming Homework">
+          {!homeworkRows || homeworkRows.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">No upcoming homework.</p>
+          ) : (
+            <ul className="space-y-3">
+              {homeworkRows.map((hw) => {
+                const subject = hw.subject as unknown as { name: string } | null;
+                return (
+                  <li key={hw.id} className="flex items-start justify-between gap-3 rounded-lg border border-border p-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">
-                        {studentNameMap[inc.student_id] ?? "Unknown Student"}
-                      </p>
-                      <p className="text-xs text-muted-foreground capitalize">{inc.category}</p>
+                      <p className="truncate text-sm font-medium text-foreground">{hw.title}</p>
+                      <p className="text-xs text-muted-foreground">{subject?.name ?? "—"}</p>
                     </div>
-                    <span
-                      className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${
-                        inc.severity === "high"
-                          ? "bg-rose-50 text-rose-700"
-                          : inc.severity === "medium"
-                          ? "bg-amber-50 text-amber-700"
-                          : "bg-slate-100 text-slate-600"
-                      }`}
-                    >
-                      {inc.severity}
+                    <span className="shrink-0 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                      {hw.due_date}
                     </span>
                   </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+                );
+              })}
+            </ul>
+          )}
+        </DashboardWidget>
+      }
+      alerts={
+        <DashboardWidget title="Recent Discipline Incidents">
+          {disciplineRows.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">No recent incidents.</p>
+          ) : (
+            <ul className="space-y-3">
+              {disciplineRows.map((inc, i) => (
+                <li key={i} className="flex items-start justify-between gap-3 rounded-lg border border-border p-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {studentNameMap[inc.student_id] ?? "Unknown Student"}
+                    </p>
+                    <p className="text-xs text-muted-foreground capitalize">{inc.category}</p>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${
+                      inc.severity === "high"
+                        ? "bg-rose-50 text-rose-700"
+                        : inc.severity === "medium"
+                        ? "bg-amber-50 text-amber-700"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {inc.severity}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </DashboardWidget>
+      }
+      quickActions={
+        <DashboardWidget title="Quick Actions">
+          <div className="grid grid-cols-1 gap-2">
+            <Link href={markAttendanceHref} className={buttonVariants({ variant: "default", size: "sm" }) + " justify-center"}>
+              <ClipboardEdit className="h-3.5 w-3.5" />
+              {totalToday > 0 ? "Edit Attendance" : "Mark Attendance"}
+            </Link>
+            <Link href="/teacher/homework" className={buttonVariants({ variant: "outline", size: "sm" }) + " justify-center"}>
+              <ClipboardList className="h-3.5 w-3.5" />
+              View Homework
+            </Link>
+          </div>
+        </DashboardWidget>
+      }
+    />
   );
 }

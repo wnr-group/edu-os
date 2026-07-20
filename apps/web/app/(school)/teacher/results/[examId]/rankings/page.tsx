@@ -1,8 +1,19 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getActiveSection } from "@/lib/section-context";
 import { NoSectionPrompt } from "../../../no-section-prompt";
-import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default async function ExamRankingsPage({
   params,
@@ -83,63 +94,113 @@ export default async function ExamRankingsPage({
     rankLabel: s.hasFail ? "Fail" : "Absent",
   }));
 
+  const isEmpty = ranked.length === 0 && unranked.length === 0;
+
+  function SubjectChips({ subjects, muted }: { subjects: { subject: string; marks: number; max: number; grade: string }[]; muted?: boolean }) {
+    return (
+      <>
+        {subjects.map((s, si) => (
+          <span key={si} className={`mr-3 ${muted && s.grade === "F" ? "text-red-400" : ""}`}>
+            {s.subject}: {s.marks}/{s.max} ({s.grade})
+          </span>
+        ))}
+      </>
+    );
+  }
+
   return (
-    <div>
-      <div className="mb-6 flex items-center gap-4">
-        <Link href={`/teacher/results/${examId}?sectionId=${sectionId}`} className="text-sm text-gray-500 hover:underline">← Back to Marks Entry</Link>
-        <h1 className="text-2xl font-bold text-gray-900">
-          Rankings — {examRow?.name ?? "Exam"}
-        </h1>
+    <div className="space-y-6 animate-fade-in-up">
+      <Link
+        href={`/teacher/results/${examId}?sectionId=${sectionId}`}
+        className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2")}
+      >
+        <ArrowLeft className="mr-1.5 h-4 w-4" />
+        Back to Marks Entry
+      </Link>
+
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Rankings — {examRow?.name ?? "Exam"}</h1>
       </div>
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            <tr>
-              <th className="px-4 py-3 text-left">Rank</th>
-              <th className="px-4 py-3 text-left">Student</th>
-              <th className="px-4 py-3 text-right">Total</th>
-              <th className="px-4 py-3 text-left">Subjects</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
+
+      {/* Desktop table */}
+      <div className="hidden overflow-hidden rounded-xl border border-border bg-card shadow-sm md:block">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50 hover:bg-muted/50">
+              <TableHead className="h-10 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Rank</TableHead>
+              <TableHead className="h-10 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Student</TableHead>
+              <TableHead className="h-10 px-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total</TableHead>
+              <TableHead className="h-10 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Subjects</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {ranked.map((r, i) => (
-              <tr key={i} className={r.rankNum <= 3 ? "bg-amber-50" : ""}>
-                <td className="px-4 py-3 font-bold text-gray-800">{r.rank}</td>
-                <td className="px-4 py-3 font-medium text-gray-900">{r.name}</td>
-                <td className="px-4 py-3 text-right font-semibold text-gray-800">
-                  {r.totalObtained}/{r.totalMax}
-                </td>
-                <td className="px-4 py-3 text-gray-600">
-                  {r.subjects.map((s, si) => (
-                    <span key={si} className="mr-3">{s.subject}: {s.marks}/{s.max} ({s.grade})</span>
-                  ))}
-                </td>
-              </tr>
+              <TableRow key={i} className={r.rankNum <= 3 ? "bg-amber-50" : ""}>
+                <TableCell className="px-4 py-3 font-bold text-foreground">{r.rank}</TableCell>
+                <TableCell className="px-4 py-3 font-medium text-foreground">{r.name}</TableCell>
+                <TableCell className="px-4 py-3 text-right font-semibold text-foreground">{r.totalObtained}/{r.totalMax}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-muted-foreground">
+                  <SubjectChips subjects={r.subjects} />
+                </TableCell>
+              </TableRow>
             ))}
             {unranked.map((r, i) => (
-              <tr key={`u-${i}`} className="bg-gray-50 opacity-70">
-                <td className="px-4 py-3">
-                  <span className="text-gray-400 font-medium">—</span>
+              <TableRow key={`u-${i}`} className="bg-muted/30 opacity-70">
+                <TableCell className="px-4 py-3">
+                  <span className="font-medium text-muted-foreground">—</span>
                   <span className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
                     r.rankLabel === "Fail" ? "bg-red-100 text-red-700" : "bg-gray-200 text-gray-600"
                   }`}>{r.rankLabel}</span>
-                </td>
-                <td className="px-4 py-3 font-medium text-gray-500">{r.name}</td>
-                <td className="px-4 py-3 text-right text-gray-400">{r.totalObtained}/{r.totalMax}</td>
-                <td className="px-4 py-3 text-gray-400">
-                  {r.subjects.map((s, si) => (
-                    <span key={si} className={`mr-3 ${s.grade === "F" ? "text-red-400" : ""}`}>
-                      {s.subject}: {s.marks}/{s.max} ({s.grade})
-                    </span>
-                  ))}
-                </td>
-              </tr>
+                </TableCell>
+                <TableCell className="px-4 py-3 font-medium text-muted-foreground">{r.name}</TableCell>
+                <TableCell className="px-4 py-3 text-right text-muted-foreground">{r.totalObtained}/{r.totalMax}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-muted-foreground">
+                  <SubjectChips subjects={r.subjects} muted />
+                </TableCell>
+              </TableRow>
             ))}
-            {ranked.length === 0 && unranked.length === 0 && (
-              <tr><td colSpan={4} className="p-8 text-center text-gray-400">No results entered for this exam yet.</td></tr>
+            {isEmpty && (
+              <TableRow>
+                <TableCell colSpan={4} className="p-8 text-center text-muted-foreground">
+                  No results entered for this exam yet.
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="space-y-3 md:hidden">
+        {ranked.map((r, i) => (
+          <div key={i} className={`rounded-lg border border-border p-4 shadow-sm ${r.rankNum <= 3 ? "bg-amber-50" : "bg-card"}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-base font-bold text-foreground">{r.rank}</span>
+                <span className="font-medium text-foreground">{r.name}</span>
+              </div>
+              <span className="font-semibold text-foreground">{r.totalObtained}/{r.totalMax}</span>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground"><SubjectChips subjects={r.subjects} /></p>
+          </div>
+        ))}
+        {unranked.map((r, i) => (
+          <div key={`u-${i}`} className="rounded-lg border border-border bg-muted/30 p-4 opacity-80 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                  r.rankLabel === "Fail" ? "bg-red-100 text-red-700" : "bg-gray-200 text-gray-600"
+                }`}>{r.rankLabel}</span>
+                <span className="font-medium text-muted-foreground">{r.name}</span>
+              </div>
+              <span className="text-muted-foreground">{r.totalObtained}/{r.totalMax}</span>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground"><SubjectChips subjects={r.subjects} muted /></p>
+          </div>
+        ))}
+        {isEmpty && (
+          <p className="py-10 text-center text-sm text-muted-foreground">No results entered for this exam yet.</p>
+        )}
       </div>
     </div>
   );

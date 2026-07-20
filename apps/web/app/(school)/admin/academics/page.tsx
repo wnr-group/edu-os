@@ -1,6 +1,7 @@
+import { CalendarRange, CheckCircle2, ClipboardList } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
-import { PageHeader } from "@/components/page-header";
+import { KpiCard, KpiGrid } from "@/components/kpi-card";
 import { NewYearButton, ActivateYearButton, AddExamDialog } from "./academic-dialogs";
 import { AcademicYearsTable, ExamsTable } from "./academics-table";
 
@@ -45,47 +46,42 @@ export default async function AcademicsPage() {
 
   return (
     <div className="space-y-10">
-      <section>
-        <PageHeader
-          title="Academics"
-          description="Manage academic years and exams for your school."
-          action={
-            <div className="flex items-center gap-2">
-              {!draftYear && (
-                <NewYearButton schoolId={schoolId} activeYearId={activeYear?.id ?? null} />
-              )}
-              {draftYear && (
-                <ActivateYearButton draftYearId={draftYear.id} schoolId={schoolId} />
-              )}
-              {draftYear && (
-                <a href="/admin/academics/promote" className="rounded-lg border border-indigo-600 px-4 py-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-50">
-                  Promote Students →
-                </a>
-              )}
-            </div>
-          }
-          stats={[
-            { label: "Academic Years", value: years.length },
-            { label: "Active Year", value: activeYear?.name ?? "—" },
-            { label: "Exams", value: (exams ?? []).length },
-          ]}
-        />
-        <AcademicYearsTable yearRows={yearRows} schoolId={schoolId} />
-      </section>
+      <AcademicYearsTable
+        yearRows={yearRows}
+        schoolId={schoolId}
+        headerAction={
+          <div className="flex flex-wrap items-center gap-2">
+            {!draftYear && (
+              <NewYearButton schoolId={schoolId} activeYearId={activeYear?.id ?? null} />
+            )}
+            {draftYear && (
+              <ActivateYearButton draftYearId={draftYear.id} schoolId={schoolId} />
+            )}
+            {draftYear && (
+              <a href="/admin/academics/promote" className="rounded-lg border border-indigo-600 px-4 py-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-50">
+                Promote Students →
+              </a>
+            )}
+          </div>
+        }
+        stats={
+          <KpiGrid>
+            <KpiCard icon={CalendarRange} label="Academic Years" value={years.length} />
+            <KpiCard icon={CheckCircle2} label="Active Year" value={activeYear?.name ?? "—"} />
+            <KpiCard icon={ClipboardList} label="Exams" value={(exams ?? []).length} />
+          </KpiGrid>
+        }
+      />
 
-      <section>
-        <PageHeader
-          title="Exams"
-          description="Track all exams across academic years."
-          action={
-            <AddExamDialog
-              schoolId={schoolId}
-              academicYears={years.map((y) => ({ id: y.id, name: y.name }))}
-            />
-          }
-        />
-        <ExamsTable examRows={examRows} />
-      </section>
+      <ExamsTable
+        examRows={examRows}
+        headerAction={
+          <AddExamDialog
+            schoolId={schoolId}
+            academicYears={years.map((y) => ({ id: y.id, name: y.name }))}
+          />
+        }
+      />
     </div>
   );
 }

@@ -1,27 +1,22 @@
+import { AlertTriangle, FileText, MessageCircle, Clock } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
-import { DataTable } from "@/components/data-table";
-import { Badge } from "@/components/ui/badge";
-
-type SeverityVariant = "default" | "secondary" | "destructive" | "outline";
-
-function severityVariant(severity: string | null): SeverityVariant {
-  if (severity === "suspension") return "destructive";
-  if (severity === "written") return "secondary";
-  return "outline";
-}
+import { KpiCard, KpiGrid } from "@/components/kpi-card";
+import { DisciplineTable, type DisciplineRow } from "./discipline-table";
 
 export default async function AdminDisciplinePage() {
   const supabase = await createServerSupabaseClient();
   const schoolId = (await getSchoolId())!;
 
+  // student_id added to the select (was already a column, just not read before)
+  // so each row can link to the existing student detail page.
   const { data: records } = await supabase
     .from("discipline_records")
-    .select("id, category, severity, description, created_at, student:student_profiles(full_name, enrollments:student_enrollments(roll_number, section:sections(name, class:classes(name))))")
+    .select("id, student_id, category, severity, description, created_at, student:student_profiles(full_name, enrollments:student_enrollments(roll_number, section:sections(name, class:classes(name))))")
     .eq("school_id", schoolId)
     .order("created_at", { ascending: false });
 
-  const rows = (records ?? []).map((r) => {
+  const rows: DisciplineRow[] = (records ?? []).map((r) => {
     const sp = r.student as unknown as {
       full_name: string;
       enrollments: { roll_number: string | null; section: { name: string; class: { name: string } | null } | null }[] | null;
@@ -31,6 +26,7 @@ export default async function AdminDisciplinePage() {
     const sectionName = enrollment?.section?.name ?? "";
     return {
       id: r.id,
+      student_id: (r as any).student_id ?? "",
       student_name: sp?.full_name ?? "—",
       roll_number: enrollment?.roll_number ?? "—",
       class_section: className && sectionName ? `${className} – ${sectionName}` : "—",
@@ -41,32 +37,32 @@ export default async function AdminDisciplinePage() {
     };
   });
 
+  const total = rows.length;
+  const writtenCount = rows.filter((r) => r.severity === "written").length;
+  const verbalCount = rows.filter((r) => r.severity === "verbal" || !r.severity).length;
+  const pct = (n: number) => (total > 0 ? `${((n / total) * 100).toFixed(1)}% of total` : undefined);
+
+  const categoryOptions = Array.from(new Set(rows.map((r) => r.category).filter((c) => c && c !== "—"))).map((c) => ({
+    label: c.charAt(0).toUpperCase() + c.slice(1),
+    value: c,
+  }));
+
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Discipline</h1>
-        <p className="mt-1 text-sm text-muted-foreground">All discipline incidents across the school.</p>
-      </div>
-      <DataTable
-        data={rows}
-        columns={[
-          { header: "Student", accessor: "student_name" },
-          { header: "Roll No.", accessor: "roll_number" },
-          { header: "Class / Section", accessor: "class_section" },
-          { header: "Category", accessor: "category" },
-          {
-            header: "Severity",
-            accessor: (row) => (
-              <Badge variant={severityVariant(row.severity)}>
-                {row.severity ?? "verbal"}
-              </Badge>
-            ),
-          },
-          { header: "Description", accessor: "description" },
-          { header: "Date", accessor: "date" },
-        ]}
-        emptyMessage="No discipline records found."
-      />
-    </div>
+    <DisciplineTable
+      rows={rows}
+      categoryOptions={categoryOptions}
+      // "Pending Review" has no backing field on discipline_records yet
+      // (no status/review-workflow column exists), so it's shown as a
+      // placeholder rather than a fabricated count. Wire it up to a real
+      // value the moment that column exists — no other layout change needed.
+      stats={
+        <KpiGrid>
+          <KpiCard icon={AlertTriangle} label="Total Incidents" value={total} sublabel="This Academic Year" />
+          <KpiCard icon={FileText} label="Written" value={writtenCount} sublabel={pct(writtenCount)} />
+          <KpiCard icon={MessageCircle} label="Verbal" value={verbalCount} sublabel={pct(verbalCount)} />
+          <KpiCard icon={Clock} label="Pending Review" value="—" sublabel="Not tracked yet" />
+        </KpiGrid>
+      }
+    />
   );
 }

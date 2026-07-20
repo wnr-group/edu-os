@@ -1,18 +1,11 @@
+import { AlertTriangle, FileText, MessageCircle, Clock } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getActiveSection } from "@/lib/section-context";
 import { NoSectionPrompt } from "../no-section-prompt";
-import { DataTable } from "@/components/data-table";
-import { Badge } from "@/components/ui/badge";
+import { KpiCard, KpiGrid } from "@/components/kpi-card";
 import { CreateDisciplineForm } from "./create-discipline-form";
-
-type SeverityVariant = "default" | "secondary" | "destructive" | "outline";
-
-function severityVariant(severity: string | null): SeverityVariant {
-  if (severity === "suspension") return "destructive";
-  if (severity === "written") return "secondary";
-  return "outline";
-}
+import { DisciplineTable, type DisciplineRow } from "./discipline-table";
 
 export default async function TeacherDisciplinePage() {
   const sectionId = await getActiveSection();
@@ -59,10 +52,11 @@ export default async function TeacherDisciplinePage() {
     )
     .order("created_at", { ascending: false });
 
-  const rows = (records ?? []).map((r) => {
+  const rows: DisciplineRow[] = (records ?? []).map((r) => {
     const student = studentMap.get(r.student_id);
     return {
       id: r.id,
+      student_id: r.student_id,
       student_name: student?.name ?? "—",
       roll_number: student?.roll ?? "—",
       category: r.category ?? "—",
@@ -72,17 +66,25 @@ export default async function TeacherDisciplinePage() {
     };
   });
 
+  const total = rows.length;
+  const writtenCount = rows.filter((r) => r.severity === "written").length;
+  const verbalCount = rows.filter((r) => r.severity === "verbal" || !r.severity).length;
+  const pct = (n: number) => (total > 0 ? `${((n / total) * 100).toFixed(1)}% of total` : undefined);
+
+  const categoryOptions = Array.from(new Set(rows.map((r) => r.category).filter((c) => c && c !== "—"))).map((c) => ({
+    label: c.charAt(0).toUpperCase() + c.slice(1),
+    value: c,
+  }));
+
   return (
-    <div>
-      <div className="mb-6">
+    <div className="space-y-6">
+      <div>
         <h1 className="text-2xl font-bold text-foreground">Discipline</h1>
         <p className="mt-1 text-sm text-muted-foreground">Discipline records for your section.</p>
       </div>
 
-      <div className="mb-6 rounded-lg bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-gray-800">
-          Log Incident
-        </h2>
+      <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
+        <h2 className="mb-4 text-base font-semibold text-foreground">Log Incident</h2>
         <CreateDisciplineForm
           schoolId={schoolId}
           sectionId={sectionId}
@@ -91,24 +93,17 @@ export default async function TeacherDisciplinePage() {
         />
       </div>
 
-      <DataTable
-        data={rows}
-        columns={[
-          { header: "Student", accessor: "student_name" },
-          { header: "Roll No.", accessor: "roll_number" },
-          { header: "Category", accessor: "category" },
-          {
-            header: "Severity",
-            accessor: (row) => (
-              <Badge variant={severityVariant(row.severity)}>
-                {row.severity ?? "verbal"}
-              </Badge>
-            ),
-          },
-          { header: "Description", accessor: "description" },
-          { header: "Date", accessor: "date" },
-        ]}
-        emptyMessage="No discipline records yet."
+      <DisciplineTable
+        rows={rows}
+        categoryOptions={categoryOptions}
+        stats={
+          <KpiGrid>
+            <KpiCard icon={AlertTriangle} label="Total Incidents" value={total} sublabel="This section" />
+            <KpiCard icon={FileText} label="Written" value={writtenCount} sublabel={pct(writtenCount)} />
+            <KpiCard icon={MessageCircle} label="Verbal" value={verbalCount} sublabel={pct(verbalCount)} />
+            <KpiCard icon={Clock} label="Pending Review" value="—" sublabel="Not tracked yet" />
+          </KpiGrid>
+        }
       />
     </div>
   );

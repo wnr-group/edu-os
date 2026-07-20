@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Award } from "lucide-react";
-import { FilterableDataTable } from "@/components/filterable-data-table";
+import { ListPageTemplate } from "@/components/list-page-template";
 import { EmptyState } from "@/components/empty-state";
 
 interface StudentRow {
@@ -31,11 +31,13 @@ export function CertificatesTable({
   history,
   classOptions,
   baseHref,
+  stats,
 }: {
   students: StudentRow[];
   history: HistoryRow[];
   classOptions: Option[];
   baseHref: string;
+  stats?: React.ReactNode;
 }) {
   const [tab, setTab] = useState<"students" | "history">("students");
 
@@ -56,7 +58,10 @@ export function CertificatesTable({
       </div>
 
       {tab === "students" ? (
-        <FilterableDataTable
+        <ListPageTemplate<StudentRow>
+          title="Certificates"
+          description="Generate bonafide certificates for students."
+          stats={stats}
           data={students}
           columns={[
             { header: "Name", accessor: (row) => (
@@ -70,14 +75,16 @@ export function CertificatesTable({
           ]}
           searchKeys={["name", "admission"]}
           searchPlaceholder="Search by name or admission number..."
-          filter={
+          filters={
             classOptions.length > 0
-              ? {
-                  label: "All Classes",
-                  options: classOptions,
-                  filterFn: (row: StudentRow, value: string) => row.class_name === value,
-                }
-              : undefined
+              ? [
+                  {
+                    label: "All Classes",
+                    options: classOptions,
+                    filterFn: (row: StudentRow, value: string) => row.class_name === value,
+                  },
+                ]
+              : []
           }
           renderActions={(row) => (
             <Link
@@ -88,12 +95,34 @@ export function CertificatesTable({
               Generate
             </Link>
           )}
+          renderMobileCard={(row) => (
+            <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <Link href={`/admin/students/${row.id}`} className="block truncate font-medium text-indigo-600">
+                    {row.name}
+                  </Link>
+                  <p className="text-xs text-muted-foreground">
+                    Adm {row.admission || "—"} · {row.class_name}{row.section ? ` · ${row.section}` : ""}
+                  </p>
+                </div>
+                <Link
+                  href={`${baseHref}/${row.id}`}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-indigo-50 px-2.5 py-1.5 text-xs font-medium text-indigo-700"
+                >
+                  <Award className="h-3.5 w-3.5" />
+                  Generate
+                </Link>
+              </div>
+            </div>
+          )}
           emptyState={
             <EmptyState icon={Award} title="No students found" description="Add students to generate certificates." />
           }
         />
       ) : (
-        <FilterableDataTable
+        <ListPageTemplate<HistoryRow>
+          title="Certificate History"
           data={history}
           columns={[
             { header: "Student", accessor: (row) => (
@@ -108,6 +137,15 @@ export function CertificatesTable({
           ]}
           searchKeys={["student_name"]}
           searchPlaceholder="Search by student name..."
+          renderMobileCard={(row) => (
+            <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+              <Link href={`/admin/students/${row.student_profile_id}`} className="font-medium text-indigo-600">
+                {row.student_name}
+              </Link>
+              <p className="mt-1 text-xs text-muted-foreground">{row.class_name} · {row.academic_year}</p>
+              <p className="mt-2 text-xs text-muted-foreground">By {row.generated_by_name} · {row.generated_at}</p>
+            </div>
+          )}
           emptyState={
             <EmptyState icon={Award} title="No certificates issued yet" description="Generate a certificate to see history here." />
           }

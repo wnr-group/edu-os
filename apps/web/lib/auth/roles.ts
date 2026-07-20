@@ -56,8 +56,8 @@ export function hasAnyRole(
   schoolId: string | null = null,
 ): boolean {
   return roles.some((r) => {
-    if (!allowed.includes(r.role)) return false;
     if (r.role === "super_admin") return true;
+    if (!allowed.includes(r.role)) return false;
     if (schoolId === null) return true;
     return r.school_id === schoolId;
   });

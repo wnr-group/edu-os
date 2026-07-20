@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+
 export interface SectionOption {
   id: string;
   name: string;
@@ -12,6 +14,8 @@ interface SectionSwitcherProps {
   activeSectionId: string | null;
   userRole: string;
   exitUrl?: string;
+  /** "dark" (default) fits a dark sidebar/drawer background; "light" fits a white one. */
+  variant?: "dark" | "light";
 }
 
 function getParentDomain(): string {
@@ -37,14 +41,18 @@ export function SectionSwitcher({
   activeSectionId,
   userRole,
   exitUrl,
+  variant = "dark",
 }: SectionSwitcherProps) {
   const isTeacher = userRole === "teacher";
+  const isLight = variant === "light";
 
   if (sections.length === 0) {
     if (isTeacher) {
       return (
         <div className="px-4 py-3">
-          <p className="text-xs text-white/50">No sections assigned</p>
+          <p className={cn("text-xs", isLight ? "text-slate-400" : "text-white/50")}>
+            No sections assigned
+          </p>
         </div>
       );
     }
@@ -88,9 +96,14 @@ export function SectionSwitcher({
       <select
         value={activeSectionId ?? ""}
         onChange={handleChange}
-        className="w-full rounded-lg border px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-white/30 border-white/20 bg-white/10 text-white"
+        className={cn(
+          "w-full rounded-lg border px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:ring-2",
+          isLight
+            ? "border-slate-200 bg-white text-slate-700 focus:ring-blue-200"
+            : "border-white/20 bg-white/10 text-white focus:ring-white/30"
+        )}
       >
-        <option value="" disabled className="bg-gray-900 text-white">
+        <option value="" disabled className={isLight ? undefined : "bg-gray-900 text-white"}>
           Select section…
         </option>
         {sortedClasses.map(([className, group]) => (
@@ -99,7 +112,7 @@ export function SectionSwitcher({
               <option
                 key={section.id}
                 value={section.id}
-                className="bg-gray-900 text-white"
+                className={isLight ? undefined : "bg-gray-900 text-white"}
               >
                 {section.className} – Section {section.name}
               </option>
@@ -110,8 +123,12 @@ export function SectionSwitcher({
 
       {exitUrl && activeSectionId && !isTeacher && (
         <button
+          type="button"
           onClick={handleExit}
-          className="w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition-colors text-amber-300 hover:bg-white/[0.08]"
+          className={cn(
+            "block min-h-[28px] w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition-colors",
+            isLight ? "text-amber-600 hover:bg-amber-50" : "text-amber-300 hover:bg-white/[0.08]"
+          )}
         >
           {exitLabel}
         </button>

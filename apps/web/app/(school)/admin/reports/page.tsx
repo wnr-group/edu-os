@@ -1,6 +1,8 @@
+import { Users, ClipboardList, CalendarCheck2, AlertTriangle } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
-import { DataTable } from "@/components/data-table";
+import { KpiCard, KpiGrid } from "@/components/kpi-card";
+import { ExamScheduleTable } from "./exam-schedule-table";
 
 export default async function AdminReportsPage() {
   const supabase = await createServerSupabaseClient();
@@ -42,42 +44,21 @@ export default async function AdminReportsPage() {
     };
   });
 
-  const stats = [
-    { label: "Total Students", value: studentCount ?? 0 },
-    { label: "Total Exams", value: examCount ?? 0 },
-    { label: "Attendance Records", value: attendanceCount ?? 0 },
-    { label: "Discipline Incidents", value: disciplineCount ?? 0 },
-  ];
-
   return (
-    <div>
-      <div className="mb-6">
+    <div className="space-y-8">
+      <div>
         <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
         <p className="mt-1 text-sm text-gray-500">School-wide summary and exam schedule.</p>
       </div>
 
-      <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {stats.map((s) => (
-          <div key={s.label} className="rounded-lg border border-border bg-card p-5 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{s.label}</p>
-            <p className="mt-1 text-3xl font-bold text-foreground">{s.value.toLocaleString("en-IN")}</p>
-          </div>
-        ))}
-      </div>
+      <KpiGrid>
+        <KpiCard icon={Users} label="Total Students" value={studentCount ?? 0} />
+        <KpiCard icon={ClipboardList} label="Total Exams" value={examCount ?? 0} />
+        <KpiCard icon={CalendarCheck2} label="Attendance Records" value={attendanceCount ?? 0} />
+        <KpiCard icon={AlertTriangle} label="Discipline Incidents" value={disciplineCount ?? 0} />
+      </KpiGrid>
 
-      <div>
-        <h2 className="mb-4 text-lg font-semibold text-gray-800">Exam Schedule</h2>
-        <DataTable
-          data={examRows}
-          columns={[
-            { header: "Exam Name", accessor: "name" },
-            { header: "Academic Year", accessor: "academic_year" },
-            { header: "Start Date", accessor: "start_date" },
-            { header: "End Date", accessor: "end_date" },
-          ]}
-          emptyMessage="No exams scheduled yet."
-        />
-      </div>
+      <ExamScheduleTable rows={examRows} />
     </div>
   );
 }
