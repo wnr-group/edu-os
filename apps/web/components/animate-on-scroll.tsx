@@ -57,7 +57,7 @@ export function AnimateOnScroll({
       className={className}
       style={{
         opacity: isVisible ? 1 : 0,
-        transform: isVisible ? "translateY(0) translateX(0) scale(1)" : transforms[from],
+        transform: isVisible ? "none" : transforms[from],
         transition: `opacity ${duration}ms cubic-bezier(0.25, 1, 0.5, 1) ${delay}ms, transform ${duration}ms cubic-bezier(0.25, 1, 0.5, 1) ${delay}ms`,
       }}
     >
@@ -114,7 +114,7 @@ export function StaggerChildren({
               key={i}
               style={{
                 opacity: isVisible ? 1 : 0,
-                transform: isVisible ? "translateY(0)" : "translateY(24px)",
+                transform: isVisible ? "none" : "translateY(24px)",
                 transition: `opacity 500ms cubic-bezier(0.25, 1, 0.5, 1) ${baseDelay + i * staggerMs}ms, transform 500ms cubic-bezier(0.25, 1, 0.5, 1) ${baseDelay + i * staggerMs}ms`,
               }}
             >

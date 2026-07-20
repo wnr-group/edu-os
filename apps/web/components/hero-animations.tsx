@@ -26,7 +26,7 @@ export function HeroReveal({ children, delay = 0, className = "" }: HeroRevealPr
       className={className}
       style={{
         opacity: mounted ? 1 : 0,
-        transform: mounted ? "translateY(0)" : "translateY(20px)",
+        transform: mounted ? "none" : "translateY(20px)",
         transition: `opacity 700ms cubic-bezier(0.25, 1, 0.5, 1) ${delay}ms, transform 700ms cubic-bezier(0.25, 1, 0.5, 1) ${delay}ms`,
       }}
     >
@@ -53,7 +53,7 @@ export function HeroFloat({ children, delay = 0, className = "" }: HeroRevealPro
       className={className}
       style={{
         opacity: mounted ? 1 : 0,
-        transform: mounted ? "translateY(0) scale(1)" : "translateY(40px) scale(0.96)",
+        transform: mounted ? "none" : "translateY(40px) scale(0.96)",
         transition: `opacity 900ms cubic-bezier(0.25, 1, 0.5, 1) ${delay}ms, transform 900ms cubic-bezier(0.25, 1, 0.5, 1) ${delay}ms`,
       }}
     >
