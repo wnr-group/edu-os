@@ -2,25 +2,29 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import {
   CheckCircle,
-  BarChart3,
-  Smartphone,
-  FileText,
-  Calendar,
-  Bell,
   TrendingUp,
-  Clock,
-  Shield,
+  MessageSquare,
+  PenSquare,
+  Archive,
+  PlayCircle,
   ArrowRight,
+  Globe,
+  Mail,
+  Share2,
+  Rows3,
+  BarChart3,
 } from "lucide-react";
-import { AnimateOnScroll, StaggerChildren } from "@/components/animate-on-scroll";
+import { AnimateOnScroll } from "@/components/animate-on-scroll";
 import { HeroReveal, HeroFloat } from "@/components/hero-animations";
+import { Navbar } from "@/components/navbar";
 
 export const metadata: Metadata = {
-  title: "ConnectMySkool — The School ERP That Connects Everyone",
+  title: "EduOS — Empowering Schools with Intelligent Management",
   description:
-    "ConnectMySkool gives your school a powerful web portal for staff and a branded mobile app for parents. Attendance, fees, report cards — setup in 48 hours.",
+    "EduOS gives your school a unified platform for administration, academics, and communication — attendance, grading, fee tracking, and parent engagement in one place.",
   alternates: {
-    canonical: "https://connectmyskool.com",
+    // NOTE: placeholder domain — replace once the real EduOS domain is confirmed.
+    canonical: "https://eduos.com",
   },
 };
 
@@ -29,9 +33,10 @@ const jsonLd = {
   "@graph": [
     {
       "@type": "Organization",
-      name: "ConnectMySkool",
-      url: "https://connectmyskool.com",
-      logo: "https://connectmyskool.com/logo-mark.png",
+      name: "EduOS",
+      url: "https://eduos.com",
+      // NOTE: placeholder — point at the real EduOS logo file once available.
+      logo: "https://eduos.com/logo-mark.png",
       contactPoint: {
         "@type": "ContactPoint",
         email: "balaji.p2prhel@gmail.com",
@@ -41,7 +46,7 @@ const jsonLd = {
     },
     {
       "@type": "SoftwareApplication",
-      name: "ConnectMySkool",
+      name: "EduOS",
       applicationCategory: "EducationalApplication",
       operatingSystem: "Web, Android, iOS",
       offers: {
@@ -51,10 +56,61 @@ const jsonLd = {
         description: "Free demo available",
       },
       description:
-        "School ERP platform with web portal for admins/teachers and mobile app for parents. Covers attendance, fees, report cards, timetable, and more.",
+        "Unified school management platform covering attendance, grading, fee tracking, inventory, and parent communication.",
     },
   ],
 };
+
+const NAV_LINKS = [
+  { label: "Home", href: "#", active: true },
+  { label: "About Us", href: "#about" },
+  { label: "How It Works", href: "#how-it-works" },
+  { label: "Testimonials", href: "#testimonials" },
+  { label: "Contact Us", href: "#cta" },
+];
+
+function LogoMark({ className = "h-9 w-9" }: { className?: string }) {
+  return (
+    <span className={`relative block overflow-hidden rounded-lg ${className}`}>
+      <Image
+        src="/logo.jpg"
+        alt="EduOS logo"
+        fill
+        sizes="40px"
+        className="object-contain"
+      />
+    </span>
+  );
+}
+function CircularProgress({ percent = 80 }: { percent?: number }) {
+  const r = 42;
+  const circumference = 2 * Math.PI * r;
+  const filled = (circumference * percent) / 100;
+  return (
+    <svg viewBox="0 0 100 100" className="h-24 w-24 -rotate-90">
+      <circle cx="50" cy="50" r={r} fill="none" stroke="#E2E8F0" strokeWidth="9" />
+      <circle
+        cx="50"
+        cy="50"
+        r={r}
+        fill="none"
+        stroke="#F5A623"
+        strokeWidth="9"
+        strokeLinecap="round"
+        strokeDasharray={`${filled} ${circumference}`}
+      />
+      <text
+        x="50"
+        y="54"
+        textAnchor="middle"
+        transform="rotate(90 50 50)"
+        className="fill-[#0D1B2A] text-[22px] font-extrabold"
+      >
+        {percent}%
+      </text>
+    </svg>
+  );
+}
 
 export default function MarketingPage() {
   return (
@@ -65,410 +121,450 @@ export default function MarketingPage() {
       />
 
       {/* ── NAVBAR ── */}
-      <nav className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <Image src="/logo-mark.webp" alt="ConnectMySkool logo" width={36} height={36} className="rounded-lg" />
-            <span className="text-lg font-bold tracking-tight text-[#0D1B2A]">ConnectMySkool</span>
-          </div>
-          <div className="hidden items-center gap-8 md:flex">
-            <a href="#features" className="text-sm text-slate-600 transition-colors hover:text-[#0E8A92]">Features</a>
-            <a href="#how-it-works" className="text-sm text-slate-600 transition-colors hover:text-[#0E8A92]">How It Works</a>
-            <a href="#testimonial" className="text-sm text-slate-600 transition-colors hover:text-[#0E8A92]">Testimonials</a>
-            <a href="#contact" className="text-sm text-slate-600 transition-colors hover:text-[#0E8A92]">Contact</a>
-          </div>
-          <div className="flex items-center gap-2 md:gap-3">
-            <a
-              href="/login"
-              className="rounded-full px-4 py-2 text-sm font-semibold text-[#0D1B2A] transition-colors hover:text-[#0E8A92]"
-            >
-              Log in
-            </a>
-            <a
-              href="#contact"
-              className="hidden rounded-full bg-[#1BABB4] px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-[#17969e] md:block"
-            >
-              Book a Demo
-            </a>
-          </div>
-        </div>
-      </nav>
+      <Navbar active="Home" />
 
+    
       {/* ── HERO ── */}
-      <section className="relative overflow-hidden px-5 pb-16 pt-14 md:px-6 md:pb-24 md:pt-20">
-        <div className="pointer-events-none absolute left-1/2 top-0 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-[#1BABB4]/15 blur-[120px]" />
-        <div className="relative mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-2 lg:gap-12">
+      <section className="relative flex min-h-screen flex-col justify-center overflow-hidden px-5 pb-14 pt-12 md:px-6 md:pb-20 md:pt-16 lg:pb-24 lg:pt-20">
+        <div className="pointer-events-none absolute left-1/2 top-0 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-[#2B6CB0]/10 blur-[120px]" />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[1fr_1.2fr] lg:gap-16">
           {/* Left */}
           <div>
             <HeroReveal delay={100}>
-              <span className="mb-4 inline-block rounded-full border border-[#1BABB4]/40 bg-[#1BABB4]/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#0E8A92] md:px-4 md:py-1.5 md:text-xs">
-                One Platform. Every Stakeholder.
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#2B6CB0]/30 bg-[#2B6CB0]/10 px-3 py-1.5 text-[11px] font-semibold text-[#2B6CB0] md:px-4 md:text-xs">
+                <CheckCircle className="h-3.5 w-3.5" />
+                Next-Generation School Management
               </span>
             </HeroReveal>
             <HeroReveal delay={200}>
-              <h1 className="mt-4 text-3xl font-extrabold leading-[1.15] tracking-tight text-[#0D1B2A] sm:text-4xl lg:text-6xl">
-                The School ERP That{" "}
-                <span className="text-[#0E8A92]">Connects Everyone</span>
-                {" "}— Admins, Teachers &amp; Parents.
+              <h1 className="mt-4 text-3xl font-extrabold leading-[1.15] tracking-tight text-[#0D1B2A] sm:text-4xl lg:text-5xl">
+                Empowering Schools with{" "}
+                <span className="text-[#2B6CB0]">Intelligent Management</span>
               </h1>
             </HeroReveal>
             <HeroReveal delay={350}>
-              <p className="mt-4 text-base leading-relaxed text-slate-600 md:mt-6 md:text-lg">
-                ConnectMySkool gives your school a powerful web portal for staff and
-                a beautifully branded mobile app for parents — all in one platform.
+              <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 md:mt-6 md:text-lg">
+                Streamline your entire campus ecosystem with a unified platform. From
+                automated grading to real-time parent communication, we provide the
+                tools educators need to focus on what matters most: student success.
               </p>
             </HeroReveal>
             <HeroReveal delay={500}>
-              <div className="mt-6 flex flex-wrap gap-3 md:mt-8">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row md:mt-8">
                 <a
-                  href="#contact"
-                  className="flex items-center gap-2 rounded-full bg-[#1BABB4] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#1BABB4]/20 transition-all hover:bg-[#17969e] hover:scale-[1.03] active:scale-[0.97]"
+                  href="#cta"
+                  className="flex items-center justify-center gap-2 rounded-full bg-[#0D1B2A] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#0D1B2A]/15 transition-all hover:bg-[#16283b] hover:scale-[1.03] active:scale-[0.97]"
                 >
-                  Book a Demo <ArrowRight className="h-4 w-4" />
+                  Get Started Free <ArrowRight className="h-4 w-4" />
                 </a>
                 <a
-                  href="https://wa.me/919789471572"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-[#0D1B2A] transition-all hover:border-slate-400 hover:bg-slate-50 hover:scale-[1.03] active:scale-[0.97]"
+                  href="mailto:balaji.p2prhel@gmail.com?subject=Request%20a%20Demo"
+                  className="flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-[#0D1B2A] transition-all hover:border-slate-400 hover:bg-slate-50 hover:scale-[1.03] active:scale-[0.97]"
                 >
-                  <svg className="h-4 w-4 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                  </svg>
-                  Chat on WhatsApp
+                  <PlayCircle className="h-4 w-4 text-[#2B6CB0]" />
+                  Watch Demo
                 </a>
               </div>
             </HeroReveal>
             <HeroReveal delay={650}>
-              <div className="mt-6 flex flex-wrap items-center gap-4 md:mt-8 md:gap-6">
-                {[
-                  { icon: CheckCircle, text: "No long contracts" },
-                  { icon: Clock, text: "Setup in 48 hours" },
-                  { icon: Shield, text: "Built for Indian schools" },
-                ].map(({ icon: Icon, text }) => (
-                  <div key={text} className="flex items-center gap-1.5 text-xs text-slate-600 md:gap-2 md:text-sm">
-                    <Icon className="h-3.5 w-3.5 text-[#0E8A92] md:h-4 md:w-4" />
-                    {text}
-                  </div>
-                ))}
+              <div className="mt-6 flex items-center gap-3 md:mt-8">
+                <div className="flex -space-x-2">
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className="h-8 w-8 rounded-full border-2 border-white bg-[#2B6CB0]/15"
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-slate-600 sm:text-sm">
+                  Trusted by <span className="font-bold text-[#0D1B2A]">500+</span> Institutions
+                  worldwide
+                </p>
               </div>
             </HeroReveal>
           </div>
 
-          {/* Right — Real dashboard screenshot (hidden on mobile) */}
-          <HeroFloat delay={400} className="relative hidden justify-center lg:flex lg:justify-end">
-            <div className="relative w-full max-w-lg">
-              <div className="absolute inset-0 rounded-2xl bg-[#1BABB4]/15 blur-3xl" />
-              <div className="relative overflow-hidden rounded-2xl border border-slate-200 shadow-2xl shadow-slate-300/40">
-                <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-100 px-4 py-3">
-                  <div className="flex gap-1.5">
-                    <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-green-400" />
-                  </div>
-                  <div className="mx-auto flex-1 max-w-xs rounded bg-white px-3 py-1 text-center text-xs text-slate-500">
-                    school.connectmyskool.com/admin/dashboard
-                  </div>
-                </div>
+          {/* Right — hero photo, stacked below text on mobile/tablet, beside it on desktop */}
+          <HeroFloat delay={400} className="relative flex justify-center lg:justify-end">
+            <div className="relative w-full max-w-xl lg:max-w-none">
+              <div className="hero-glow-pulse absolute inset-0 rounded-2xl bg-[#2B6CB0]/10 blur-3xl" />
+              <div className="hero-drift absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[#F5A623]/15 blur-2xl" />
+              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-2xl shadow-slate-300/40">
                 <Image
-                  src="/screenshots/01-dashboard.webp"
-                  alt="ConnectMySkool admin dashboard showing attendance, fees, and student overview"
-                  width={720}
-                  height={540}
+                  src="/hero-section.jpg"
+                  alt="Teacher reviewing real-time student performance data with her class"
+                  fill
                   priority
-                  className="w-full"
+                  sizes="(min-width: 1024px) 50vw, (min-width: 640px) 85vw, 100vw"
+                  className="object-cover"
                 />
               </div>
-              <div className="absolute -bottom-4 -left-6 flex items-center gap-2 rounded-full border border-[#1BABB4]/30 bg-white px-4 py-2 shadow-xl shadow-slate-300/40">
-                <CheckCircle className="h-3.5 w-3.5 text-[#0E8A92]" />
-                <span className="text-xs font-medium text-[#0D1B2A]">Attendance marked in 30 sec</span>
-              </div>
-              <div className="absolute -right-6 top-8 flex items-center gap-2 rounded-full border border-[#F5A623]/40 bg-white px-4 py-2 shadow-xl shadow-slate-300/40">
-                <Bell className="h-3.5 w-3.5 text-[#F5A623]" />
-                <span className="text-xs font-medium text-[#0D1B2A]">Fee reminders on autopilot</span>
+              <div className="card-float absolute -bottom-4 left-4 right-4 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-xl shadow-slate-300/40 sm:left-6 sm:right-6">
+                <div className="flex items-center gap-2">
+                  <span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-lg bg-[#F5A623]/15">
+                    <TrendingUp className="h-4 w-4 text-[#F5A623]" />
+                  </span>
+                  <div>
+                    <p className="text-[10px] font-medium text-slate-500">Real-time Performance</p>
+                    <p className="text-sm font-bold text-[#0D1B2A]">+24% Efficiency</p>
+                  </div>
+                </div>
+                <BarChart3 className="h-5 w-5 flex-shrink-0 text-[#2B6CB0]" />
               </div>
             </div>
           </HeroFloat>
         </div>
       </section>
 
-      {/* ── MARQUEE STRIP ── */}
-      <div className="overflow-hidden border-y border-slate-200 bg-[#EDF2F5] py-4">
-        <div
-          className="flex gap-6 whitespace-nowrap motion-reduce:animate-none"
-          style={{ animation: "marquee 30s linear infinite", display: "flex", width: "max-content" }}
-        >
-          {Array.from({ length: 2 }).flatMap(() =>
-            [
-              "✓ Attendance marked in 30 sec",
-              "✓ Fee reminders on autopilot",
-              "✓ Report cards in one click",
-              "✓ Zero paperwork",
-              "✓ Parents always informed",
-              "✓ Timetable published digitally",
-              "✓ Certificates generated instantly",
-              "✓ Class-wise analytics",
-              "✓ Built for Indian schools",
-            ].map((text, i) => (
-              <span
-                key={`${text}-${i}`}
-                className="rounded-full border border-[#1BABB4]/30 bg-white px-4 py-1.5 text-xs font-medium text-slate-600"
-              >
-                {text}
-              </span>
-            ))
-          )}
+      {/* ── STATS STRIP ── */}
+      <section className="bg-[#0D1B2A] px-5 py-12 md:px-6 md:py-16">
+        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-6 text-center lg:grid-cols-4 lg:gap-8">
+          {[
+            { value: "99.9%", label: "Uptime Reliability" },
+            { value: "1.2M+", label: "Active Students" },
+            { value: "25+", label: "Integrated Tools" },
+            { value: "4.9/5", label: "User Rating" },
+          ].map((stat) => (
+            <div key={stat.label}>
+              <p className="text-2xl font-extrabold text-white md:text-3xl">{stat.value}</p>
+              <p className="mt-1 text-xs text-[#8FB4DA] md:text-sm">{stat.label}</p>
+            </div>
+          ))}
         </div>
-      </div>
+      </section>
 
-      {/* ── PRODUCT SHOWCASE ── */}
-      <section className="px-4 py-16 md:px-6 md:py-24">
-        <div className="mx-auto max-w-6xl">
-          <AnimateOnScroll className="mb-8 text-center md:mb-12">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-[#0E8A92] md:text-xs">Product</span>
-            <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-[#0D1B2A] sm:text-3xl md:text-4xl">
-              Everything your school needs,<br className="hidden sm:block" /> beautifully designed.
+      {/* ── FEATURES HEADING ── */}
+      <section id="features" className="px-5 pb-10 pt-14 md:px-6 md:pb-12 md:pt-20">
+        <div className="mx-auto max-w-3xl text-center">
+          <AnimateOnScroll delay={0}>
+            <h2 className="text-3xl font-extrabold tracking-tight text-[#0D1B2A] sm:text-4xl">
+              Centralized Command for Modern Education
             </h2>
-            <p className="mt-3 text-sm text-slate-600 md:mt-4 md:text-base">
-              Stop jumping between clunky tools. ConnectMySkool brings administration,<br className="hidden md:block" />
-              academics, and communication into one seamless, intuitive interface.
+          </AnimateOnScroll>
+          <AnimateOnScroll delay={120}>
+            <p className="mt-4 text-sm text-slate-600 md:text-base">
+              Designed to eliminate administrative silos and provide a seamless experience for
+              staff, students, and parents alike.
             </p>
           </AnimateOnScroll>
+        </div>
+      </section>
 
-          <AnimateOnScroll delay={200} from="scale">
-            <div className="relative overflow-hidden rounded-2xl bg-white p-4 pb-0 shadow-2xl shadow-slate-300/40 ring-1 ring-slate-200 md:rounded-3xl md:p-6 md:pb-0 lg:p-10 lg:pb-0">
-              {/* Stat bar */}
-              <div className="mb-6 grid grid-cols-2 gap-4 sm:flex sm:flex-wrap sm:justify-center sm:gap-8 md:mb-8 lg:gap-16">
-                {[
-                  { label: "Total Students", value: "1,021" },
-                  { label: "Present Today", value: "984" },
-                  { label: "Total Teachers", value: "45" },
-                  { label: "Fee Pending", value: "₹4.2L", accent: true },
-                ].map((s) => (
-                  <div key={s.label} className="text-center">
-                    <p className="text-[10px] uppercase tracking-widest text-slate-500">{s.label}</p>
-                    <p className={`mt-1 text-2xl font-extrabold ${s.accent ? "text-[#E0860D]" : "text-[#0D1B2A]"}`}>{s.value}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Composite: phones overlap dashboard */}
-              <div className="relative mx-auto flex items-end justify-center">
-                {/* Teacher phone */}
-                <div className="relative z-20 -mr-8 mb-[-80px] hidden w-[210px] flex-shrink-0 self-end lg:block xl:w-[240px]">
-                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full border border-[#1BABB4]/30 bg-white px-3 py-1.5 shadow-xl shadow-slate-300/40 whitespace-nowrap z-30">
-                    <CheckCircle className="h-3 w-3 text-[#0E8A92]" />
-                    <span className="text-[10px] font-medium text-[#0D1B2A]">Attendance marked in 30 seconds</span>
-                  </div>
-                  <div className="overflow-hidden rounded-[28px] border-2 border-white shadow-2xl shadow-slate-400/40">
-                    <Image src="/screenshots/mobile-11-attendance.webp" alt="Teacher marking attendance on ConnectMySkool mobile app" width={540} height={1170} className="w-full" />
-                  </div>
+      {/* ── BENTO GRID ── */}
+      {/* ── BENTO GRID ── */}
+      <section className="px-5 pb-20 md:px-6 md:pb-28">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 lg:gap-5">
+          {/* Row 1 */}
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:gap-6">
+            {/* Comprehensive Student Tracking */}
+            <AnimateOnScroll
+              delay={0}
+              className="group rounded-2xl border border-slate-200 bg-[#EEF3F8] p-5 sm:p-6 transition-all duration-300 ease-out hover:scale-[1.03] hover:border-[#2B6CB0]/30 hover:shadow-lg hover:shadow-slate-300/30 lg:col-span-7 lg:p-7"
+            >
+              <div className="flex flex-col gap-5 md:flex-row md:items-center md:gap-6">
+                <div className="flex-1">
+                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#2B6CB0]/10 transition-transform duration-300 group-hover:scale-105">
+                    <TrendingUp className="h-5 w-5 text-[#2B6CB0]" />
+                  </span>
+                  <h3 className="mt-5 text-xl font-bold text-[#0D1B2A] lg:text-2xl">
+                    Comprehensive Student Tracking
+                  </h3>
+                  <p className="mt-3 text-sm leading-relaxed text-slate-600 lg:text-base">
+                    Monitor attendance, academic progress, and behavioral patterns in real-time.
+                    Our AI-driven analytics flag students at risk, allowing for early intervention
+                    and personalized support.
+                  </p>
+                  <ul className="mt-4 space-y-2.5">
+                    {["Dynamic Academic Portfolios", "Automated Attendance Reports"].map((item) => (
+                      <li
+                        key={item}
+                        className="flex items-center gap-2 text-sm font-medium text-[#0D1B2A] lg:text-base"
+                      >
+                        <CheckCircle className="h-4 w-4 flex-shrink-0 text-[#2B6CB0] lg:h-5 lg:w-5" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-
-                {/* Dashboard */}
-                <div className="relative z-10 w-full max-w-3xl flex-shrink-0 overflow-hidden rounded-t-2xl border border-b-0 border-slate-200 shadow-2xl shadow-slate-300/40">
-                  <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-100 px-4 py-3">
+                <div className="w-full overflow-hidden rounded-xl border border-slate-200 shadow-lg shadow-slate-300/30 md:max-w-[280px] md:flex-shrink-0 lg:max-w-[320px]">
+                  <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-100 px-3 py-2">
                     <div className="flex gap-1.5">
                       <div className="h-2 w-2 rounded-full bg-red-400" />
                       <div className="h-2 w-2 rounded-full bg-yellow-400" />
                       <div className="h-2 w-2 rounded-full bg-green-400" />
                     </div>
-                    <div className="ml-3 flex-1 rounded bg-white px-3 py-1 text-xs text-slate-500">
-                      school.connectmyskool.com/admin/dashboard
-                    </div>
                   </div>
-                  <Image src="/screenshots/01-dashboard.webp" alt="Full admin dashboard with student and fee overview" width={1440} height={900} className="w-full" />
-                </div>
-
-                {/* Parent phone */}
-                <div className="relative z-20 -ml-8 mb-[-80px] hidden w-[210px] flex-shrink-0 self-end lg:block xl:w-[240px]">
-                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full border border-[#F5A623]/40 bg-white px-3 py-1.5 shadow-xl shadow-slate-300/40 whitespace-nowrap z-30">
-                    <Bell className="h-3 w-3 text-[#F5A623]" />
-                    <span className="text-[10px] font-medium text-[#0D1B2A]">Fee reminders sent automatically</span>
-                  </div>
-                  <div className="overflow-hidden rounded-[28px] border-2 border-white shadow-2xl shadow-slate-400/40">
-                    <Image src="/screenshots/mobile-parent-01-dashboard.webp" alt="Parent mobile app showing child attendance and homework" width={540} height={1170} className="w-full" />
-                  </div>
+                  <Image
+                    src="/screenshots/01-dashboard.webp"
+                    alt="Student progress dashboard preview"
+                    width={900}
+                    height={500}
+                    className="h-auto w-full"
+                  />
                 </div>
               </div>
-            </div>
-          </AnimateOnScroll>
-        </div>
-      </section>
+            </AnimateOnScroll>
 
-      {/* ── FEATURES GRID ── */}
-      <section id="features" className="relative bg-[#EDF2F5] px-5 py-16 md:px-6 md:py-24">
-        <div className="mx-auto max-w-7xl">
-          <AnimateOnScroll className="text-center">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-[#0E8A92] md:text-xs">Features</span>
-            <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-[#0D1B2A] sm:text-3xl md:text-4xl">Built for every role in your school.</h2>
-            <p className="mt-3 text-sm text-slate-600 md:mt-4 md:text-base">From the principal&apos;s dashboard to the parent&apos;s phone — every touchpoint covered.</p>
-          </AnimateOnScroll>
-          <StaggerChildren className="mt-8 grid gap-4 sm:grid-cols-2 md:mt-14 md:gap-5 lg:grid-cols-3" staggerMs={120} baseDelay={100}>
-            {[
-              { icon: CheckCircle, title: "Attendance Management", desc: "Teachers mark attendance on web in seconds; parents see it instantly on the mobile app.", color: "#1BABB4" },
-              { icon: TrendingUp, title: "Fee Collection & Tracking", desc: "Track dues, generate receipts, and send automated payment reminders to parents.", color: "#F5A623" },
-              { icon: Smartphone, title: "Parent Mobile App", desc: "A branded app for your school. Academics, fees, attendance — all in one place.", color: "#4CAF50" },
-              { icon: FileText, title: "Report Cards & Certificates", desc: "Generate and share digital report cards and achievement certificates instantly.", color: "#2979FF" },
-              { icon: BarChart3, title: "Principal Analytics", desc: "School-wide dashboards with attendance trends, fee collection, and class performance.", color: "#1BABB4" },
-              { icon: Calendar, title: "Timetable & Homework", desc: "Publish class timetables and homework assignments digitally — no WhatsApp groups needed.", color: "#F5A623" },
-            ].map(({ icon: Icon, title, desc, color }) => (
-              <div
-                key={title}
-                className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50 transition-all duration-200 hover:border-[#1BABB4]/40 hover:shadow-lg hover:shadow-slate-300/50 hover:-translate-y-1"
-              >
-                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: `${color}1A` }}>
-                  <Icon className="h-5 w-5" style={{ color }} />
-                </div>
-                <h3 className="mb-2 text-base font-bold text-[#0D1B2A]">{title}</h3>
-                <p className="text-sm leading-relaxed text-slate-600">{desc}</p>
-                <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-[#0E8A92] opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                  Learn more <ArrowRight className="h-3 w-3" />
-                </div>
-              </div>
-            ))}
-          </StaggerChildren>
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS ── */}
-      <section id="how-it-works" className="relative px-5 py-16 md:px-6 md:py-24">
-        <div className="pointer-events-none absolute left-1/2 top-1/2 h-[400px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#1BABB4]/10 blur-[100px]" />
-        <div className="relative mx-auto max-w-4xl text-center">
-          <AnimateOnScroll>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-[#0E8A92] md:text-xs">Process</span>
-            <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-[#0D1B2A] sm:text-3xl md:text-4xl">Up and running in 3 simple steps.</h2>
-            <p className="mt-4 text-slate-600">No IT team needed. We handle everything.</p>
-          </AnimateOnScroll>
-          <StaggerChildren className="relative mt-16 grid gap-8 md:grid-cols-3" staggerMs={150}>
-            {[
-              { n: "1", title: "We Set Up Your School", desc: "We configure your portal, import your student data, and build your branded parent app." },
-              { n: "2", title: "Your Staff Gets Started", desc: "Teachers and admins log in to the web portal. We train your full team in one session." },
-              { n: "3", title: "Parents Stay Connected", desc: "Parents download your school's app and get real-time updates on everything." },
-            ].map(({ n, title, desc }) => (
-              <div key={n} className="flex flex-col items-center text-center">
-                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#1BABB4] bg-[#1BABB4]/10 text-lg font-extrabold text-[#0E8A92]">
-                  {n}
-                </div>
-                <h3 className="mb-2 text-base font-bold text-[#0D1B2A]">{title}</h3>
-                <p className="text-sm leading-relaxed text-slate-600">{desc}</p>
-              </div>
-            ))}
-          </StaggerChildren>
-          <AnimateOnScroll delay={400}>
-            <a
-              href="#contact"
-              className="mt-12 inline-flex items-center gap-2 rounded-full bg-[#1BABB4] px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-[#1BABB4]/20 transition-all hover:bg-[#17969e] hover:scale-[1.03] active:scale-[0.97]"
+            {/* Parent Hub */}
+            <AnimateOnScroll
+              delay={150}
+              className="group rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 transition-all duration-300 ease-out hover:scale-[1.03] hover:border-[#F5A623]/40 hover:shadow-lg hover:shadow-slate-300/30 lg:col-span-5 lg:p-7"
             >
-              Book a Free Demo <ArrowRight className="h-4 w-4" />
-            </a>
-          </AnimateOnScroll>
-        </div>
-      </section>
-
-      {/* ── SOCIAL PROOF ── */}
-      <section id="testimonial" className="px-4 py-16 md:px-6 md:py-24">
-        <div className="mx-auto max-w-7xl">
-          <AnimateOnScroll from="scale">
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-200/50 md:rounded-3xl">
-              <div className="grid md:grid-cols-2">
-                <div className="border-b border-slate-200 p-6 md:border-b-0 md:border-r md:p-10">
-                  <div className="mb-4 text-5xl font-serif leading-none text-[#1BABB4]/50 md:mb-6 md:text-6xl">&ldquo;</div>
-                  <p className="text-base font-medium leading-relaxed text-[#0D1B2A] md:text-xl">
-                    ConnectMySkool transformed how we communicate with parents.
-                    Fee collection alone saves us 3 hours a week.
-                  </p>
-                  <div className="mt-8 flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1BABB4]/15 text-sm font-bold text-[#0E8A92]">
-                      AM
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[#0D1B2A]">Dr. Anjali Mehta</p>
-                      <p className="text-xs text-slate-500">Principal, St. Xavier&apos;s International</p>
-                    </div>
-                  </div>
+              <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#F5A623]/15 transition-transform duration-300 group-hover:scale-105">
+                <MessageSquare className="h-5 w-5 text-[#F5A623]" />
+              </span>
+              <h3 className="mt-5 text-xl font-bold text-[#0D1B2A] lg:text-2xl">Parent Hub</h3>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600 lg:text-base">
+                Bridge the gap between school and home with instant messaging, fee payments,
+                and event calendars.
+              </p>
+              <div className="mt-5 space-y-2.5">
+                <div className="flex items-center gap-2.5 rounded-xl bg-[#EEF3F8] px-4 py-3.5">
+                  <span className="h-2 w-2 flex-shrink-0 rounded-full bg-red-500" />
+                  <span className="text-sm font-medium text-[#0D1B2A] lg:text-base">New Grade Published</span>
                 </div>
-                <div className="grid grid-cols-2 bg-[#F6F9FB]">
+                <div className="flex items-center gap-2.5 rounded-xl bg-[#EEF3F8] px-4 py-3.5">
+                  <span className="h-2 w-2 flex-shrink-0 rounded-full bg-[#2B6CB0]" />
+                  <span className="text-sm font-medium text-[#0D1B2A] lg:text-base">Parent-Teacher Meeting</span>
+                </div>
+              </div>
+            </AnimateOnScroll>
+          </div>
+
+          {/* Row 2 */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
+            {/* Automated Grading */}
+            <AnimateOnScroll
+              delay={0}
+              className="group flex flex-col items-start rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 transition-all duration-300 ease-out hover:scale-[1.03] hover:border-[#2B6CB0]/30 hover:shadow-lg hover:shadow-slate-300/30 lg:col-span-4 lg:p-7"
+            >
+              <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#2B6CB0]/10 transition-transform duration-300 group-hover:scale-105">
+                <PenSquare className="h-5 w-5 text-[#2B6CB0]" />
+              </span>
+              <h3 className="mt-4 text-lg font-bold text-[#0D1B2A] lg:text-xl">Automated Grading</h3>
+              <p className="mt-2.5 text-sm leading-relaxed text-slate-600">
+                Reduce teacher workload by 40% with smart grading tools and instant feedback
+                loops for digital assessments.
+              </p>
+              <div className="mt-5 self-center">
+                <CircularProgress percent={80} />
+              </div>
+            </AnimateOnScroll>
+
+            {/* Inventory & Resource Control */}
+            <AnimateOnScroll
+              delay={150}
+              className="group flex flex-col justify-center rounded-2xl bg-[#0D1B2A] p-5 sm:p-6 transition-all duration-300 ease-out hover:scale-[1.03] hover:shadow-lg hover:shadow-[#2B6CB0]/20 lg:col-span-8 lg:p-7"
+            >
+              <div className="flex w-full flex-col items-center gap-5 lg:flex-row lg:justify-between lg:gap-6">
+                <div className="max-w-sm">
+                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-white/10 transition-transform duration-300 group-hover:scale-105">
+                    <Archive className="h-5 w-5 text-white" />
+                  </span>
+                  <h3 className="mt-4 text-lg font-bold text-white lg:text-xl">Inventory &amp; Resource Control</h3>
+                  <p className="mt-2.5 text-sm leading-relaxed text-[#B9CBDF]">
+                    Maintain a digital audit trail of textbooks, lab equipment, and sports gear
+                    across multiple campuses.
+                  </p>
+                </div>
+                <div className="w-full rounded-xl bg-white/5 p-4 lg:w-auto lg:min-w-[280px]">
                   {[
-                    { value: "98%", label: "Parent app adoption rate" },
-                    { value: "3×", label: "Faster fee collection" },
-                    { value: "0%", label: "Data entry errors" },
-                    { value: "15 hrs", label: "Saved weekly on admin" },
-                  ].map(({ value, label }, i) => (
+                    { label: "Library Books", value: "84% Stocked", accent: false },
+                    { label: "Lab Supplies", value: "Low Stock", accent: true },
+                    { label: "Athletic Gear", value: "Pending Order", accent: true },
+                  ].map((row, i, arr) => (
                     <div
-                      key={label}
-                      className={`flex flex-col items-center justify-center p-4 text-center border-slate-200 md:p-8 ${i < 2 ? "border-b" : ""} ${i % 2 === 0 ? "border-r" : ""}`}
+                      key={row.label}
+                      className={`flex items-center justify-between gap-6 py-2.5 md:py-3 ${i < arr.length - 1 ? "border-b border-white/10" : ""
+                        }`}
                     >
-                      <p className="text-xl font-extrabold text-[#0E8A92] md:text-3xl">{value}</p>
-                      <p className="mt-1 text-[10px] text-slate-500 md:text-xs">{label}</p>
+                      <span className="text-sm font-semibold text-white">{row.label}</span>
+                      <span
+                        className={`text-sm font-medium ${row.accent ? "text-[#F5A623]" : "text-white"
+                          }`}
+                      >
+                        {row.value}
+                      </span>
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
-          </AnimateOnScroll>
+            </AnimateOnScroll>
+          </div>
         </div>
       </section>
 
-      {/* ── FOOTER CTA ── */}
-      <section id="contact" className="relative overflow-hidden px-5 py-16 md:px-6 md:py-24">
-        <div className="pointer-events-none absolute left-1/2 top-0 h-[400px] w-[600px] -translate-x-1/2 rounded-full bg-[#1BABB4]/10 blur-[100px]" />
-        <AnimateOnScroll className="relative mx-auto max-w-3xl text-center">
-          <h2 className="text-2xl font-extrabold tracking-tight text-[#0D1B2A] sm:text-3xl md:text-4xl lg:text-5xl">
-            Ready to connect your school?
-          </h2>
-          <p className="mt-4 text-sm text-slate-600 md:mt-5 md:text-lg">
-            See ConnectMySkool in action — a live demo tailored to your school&apos;s needs, no commitment required.
-          </p>
-          <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center md:mt-8">
-            <a
-              href="mailto:balaji.p2prhel@gmail.com"
-              className="flex items-center gap-2 rounded-full bg-[#1BABB4] px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-[#1BABB4]/20 transition-all hover:bg-[#17969e] hover:scale-[1.03] active:scale-[0.97]"
-            >
-              Book a Demo <ArrowRight className="h-4 w-4" />
-            </a>
-            <a
-              href="https://wa.me/919789471572"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-full border border-slate-300 bg-white px-8 py-3 text-sm font-semibold text-[#0D1B2A] transition-all hover:border-slate-400 hover:bg-slate-50 hover:scale-[1.03] active:scale-[0.97]"
-            >
-              <svg className="h-4 w-4 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-              </svg>
-              Chat on WhatsApp
-            </a>
+      {/* ── CTA BANNER ── */}
+      <section id="cta" className="px-5 pb-16 md:px-6 md:pb-24">
+        <AnimateOnScroll from="scale" className="mx-auto max-w-7xl">
+          <div className="relative overflow-hidden rounded-3xl bg-[#0D1B2A] px-6 py-14 text-center md:px-12 md:py-20">
+            <div className="pointer-events-none absolute right-0 top-0 h-[300px] w-[400px] rounded-full bg-[#2B6CB0]/20 blur-[100px]" />
+            <div className="relative mx-auto max-w-2xl">
+              <h2 className="text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl lg:text-5xl">
+                Ready to transform your school?
+              </h2>
+              <p className="mt-4 text-sm text-[#B9CBDF] md:text-lg">
+                Join hundreds of innovative schools and districts that have already switched to
+                EduOS. Request a personalized demo today.
+              </p>
+              <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+                <a
+                  href="/login"
+                  className="text-sm font-bold text-white transition-opacity hover:opacity-80"
+                >
+                  Get Started Now
+                </a>
+                <a
+                  href="mailto:balaji.p2prhel@gmail.com?subject=Schedule%20a%20Call"
+                  className="rounded-full border border-white/30 bg-white/5 px-8 py-3 text-sm font-semibold text-white transition-all hover:bg-white/10 hover:scale-[1.03] active:scale-[0.97]"
+                >
+                  Schedule a Call
+                </a>
+              </div>
+            </div>
           </div>
         </AnimateOnScroll>
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-slate-200 bg-[#EDF2F5] px-6 py-8">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 text-xs text-slate-500 md:flex-row">
-          <div className="flex items-center gap-2">
-            <Image src="/logo-mark.webp" alt="ConnectMySkool" width={20} height={20} />
-            <span>© {new Date().getFullYear()} ConnectMySkool. All rights reserved.</span>
+      <footer className="bg-[#0D1B2A] px-5 pb-8 pt-14 md:px-6 md:pt-16">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid grid-cols-1 gap-10 md:grid-cols-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <LogoMark className="h-7 w-7" />
+                <span className="text-base font-bold text-white">EduOS</span>
+              </div>
+              <p className="mt-4 text-sm leading-relaxed text-[#8FA3BC]">
+                Leading the evolution of educational technology with enterprise-grade
+                management systems for the modern campus.
+              </p>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-bold text-white">Product</h4>
+              <ul className="mt-4 space-y-3">
+                {[
+                  { label: "Features", href: "#features" },
+                  { label: "Solutions", href: "#" },
+                  { label: "Pricing", href: "#" },
+                  { label: "Security", href: "#" },
+                ].map((link) => (
+                  <li key={link.label}>
+                    <a href={link.href} className="text-sm text-[#8FA3BC] transition-colors hover:text-white">
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-bold text-white">Resources</h4>
+              <ul className="mt-4 space-y-3">
+                {["Documentation", "Blog", "Support Center", "Webinars"].map((label) => (
+                  <li key={label}>
+                    <a href="#" className="text-sm text-[#8FA3BC] transition-colors hover:text-white">
+                      {label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-bold text-white">Legal</h4>
+              <ul className="mt-4 space-y-3">
+                {[
+                  { label: "Privacy Policy", href: "/privacy" },
+                  { label: "Terms of Service", href: "#" },
+                  { label: "Cookie Policy", href: "#" },
+                ].map((link) => (
+                  <li key={link.label}>
+                    <a href={link.href} className="text-sm text-[#8FA3BC] transition-colors hover:text-white">
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-          <div className="flex gap-6">
-            <a href="#features" className="hover:text-[#0E8A92] transition-colors">Features</a>
-            <a href="/login" className="hover:text-[#0E8A92] transition-colors">Log in</a>
-            <a href="/privacy" className="hover:text-[#0E8A92] transition-colors">Privacy Policy</a>
-            <a href="#contact" className="hover:text-[#0E8A92] transition-colors">Contact</a>
+
+          <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 text-xs text-[#8FA3BC] md:flex-row">
+            <p>© {new Date().getFullYear()} EduOS Management Systems. All rights reserved.</p>
+            <div className="flex items-center gap-4">
+              <a href="/" aria-label="Website" className="transition-colors hover:text-white">
+                <Globe className="h-4 w-4" />
+              </a>
+              <a
+                href="mailto:balaji.p2prhel@gmail.com"
+                aria-label="Email"
+                className="transition-colors hover:text-white"
+              >
+                <Mail className="h-4 w-4" />
+              </a>
+              <a
+                href="https://wa.me/919789471572"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Chat on WhatsApp"
+                className="transition-colors hover:text-white"
+              >
+                <Share2 className="h-4 w-4" />
+              </a>
+            </div>
           </div>
         </div>
       </footer>
 
       <style>{`
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
+        @keyframes heroGlowPulse {
+          0%, 100% { opacity: 0.55; transform: scale(1); }
+          50% { opacity: 0.9; transform: scale(1.08); }
+        }
+        @keyframes heroDrift {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(-14px, 16px); }
+        }
+        .hero-glow-pulse {
+          animation: heroGlowPulse 7s ease-in-out infinite;
+        }
+        .hero-drift {
+          animation: heroDrift 11s ease-in-out infinite;
         }
         @media (prefers-reduced-motion: reduce) {
-          .motion-reduce\\:animate-none {
+          details[open] > div,
+          .hero-glow-pulse,
+          .hero-drift {
             animation: none !important;
           }
         }
       `}</style>
+      <style>{`
+  @keyframes heroGlowPulse {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50% { opacity: 0.9; transform: scale(1.08); }
+  }
+  @keyframes heroDrift {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-14px, 16px); }
+  }
+  @keyframes cardFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  .hero-glow-pulse { animation: heroGlowPulse 7s ease-in-out infinite; }
+  .hero-drift { animation: heroDrift 11s ease-in-out infinite; }
+  .card-float { animation: cardFloat 5s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    details[open] > div,
+    .hero-glow-pulse,
+    .hero-drift,
+    .card-float {
+      animation: none !important;
+    }
+  }
+`}</style>
     </div>
   );
 }
