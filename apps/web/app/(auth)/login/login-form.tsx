@@ -130,7 +130,7 @@ export function LoginForm({
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-indigo-100">
+    <main className="flex min-h-screen items-center justify-center bg-[#F6F9FB]">
       <div className="w-full max-w-md rounded-xl border border-border bg-white p-8 shadow-sm">
         <div className="mb-6 flex flex-col items-center gap-3">
           <div
@@ -163,7 +163,7 @@ export function LoginForm({
               <label className="mb-1.5 block text-sm font-medium text-foreground">
                 Mobile Number
               </label>
-              <div className="flex overflow-hidden rounded-lg border border-border focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20">
+              <div className="flex overflow-hidden rounded-lg border border-border focus-within:border-[#2B6CB0] focus-within:ring-2 focus-within:ring-[#2B6CB0]/20">
                 <span className="flex items-center bg-muted px-3 text-sm text-muted-foreground">
                   +91
                 </span>
@@ -196,7 +196,7 @@ export function LoginForm({
               <button
                 type="button"
                 onClick={() => { setStep("phone"); setOtp(""); setError(null); setLoading(false); }}
-                className="text-indigo-600 underline"
+                className="text-[#2B6CB0] underline"
               >
                 Change
               </button>
@@ -214,7 +214,7 @@ export function LoginForm({
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                 placeholder="123456"
                 required
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm tracking-widest transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm tracking-widest transition-colors focus:border-[#2B6CB0] focus:outline-none focus:ring-2 focus:ring-[#2B6CB0]/20"
               />
             </div>
             <button
@@ -229,7 +229,7 @@ export function LoginForm({
               type="button"
               onClick={handleResend}
               disabled={resendCooldown > 0}
-              className="mt-3 w-full text-sm text-indigo-600 disabled:text-muted-foreground"
+              className="mt-3 w-full text-sm text-[#2B6CB0] disabled:text-muted-foreground"
             >
               {resendCooldown > 0 ? `Resend OTP in ${resendCooldown}s` : "Resend OTP"}
             </button>

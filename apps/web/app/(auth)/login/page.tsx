@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const PLATFORM_ADMIN_DOMAINS = ["admin.balajierp.com", "core.lvh.me", "core.connectmyskool.com"];
+const PLATFORM_ADMIN_DOMAINS = ["admin.balajierp.com", "core.lvh.me", "core.connectmyskool.com", "core.eduos.com"];
 
 export default async function LoginPage() {
   const headersList = await headers();
@@ -20,8 +20,8 @@ export default async function LoginPage() {
     return (
       <LoginForm
         schoolId={null}
-        schoolName="ConnectMySkool Admin"
-        primaryColor="#0d9488"
+        schoolName="EduOS Admin"
+        primaryColor="#2B6CB0"
       />
     );
   }
@@ -44,7 +44,7 @@ export default async function LoginPage() {
   return (
     <LoginForm
       schoolId={school.id}
-      schoolName={school.name}
+      schoolName={school.name ?? "School Portal"}
       primaryColor={school.primary_color ?? "#2563EB"}
     />
   );

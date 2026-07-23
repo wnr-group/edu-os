@@ -10,6 +10,15 @@ import {
   Building2, BarChart3, Shield, Upload, LogOut, Image, Tag,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import type { LucideIcon } from "lucide-react";
 
 export const ICON_MAP: Record<string, LucideIcon> = {
@@ -43,10 +52,13 @@ export interface NavItem {
 
 interface SidebarProps {
   title: string;
-  items: NavItem[];
+  /** Flat nav list — one item per page, each with its own icon. */
+  items?: NavItem[];
   brandColor?: string; // hex color from school's primary_color
   userName?: string;
   userRole?: string;
+  /** Shown in the avatar dropdown when the current role has a Settings page. */
+  settingsHref?: string;
   sectionSwitcher?: React.ReactNode;
 }
 
@@ -90,10 +102,26 @@ const RLABEL =
 
 /**
  * Collapsed 78px icon rail that expands to 240px on hover/focus to reveal
- * labels. Renders as an absolutely-positioned overlay inside a fixed-width
- * slot so expansion never reflows the page content.
+ * labels — the original navigation pattern, unchanged. Renders as an
+ * absolutely-positioned overlay inside a fixed-width slot so expansion
+ * never reflows the page content.
+ *
+ * Internal layout: brand pinned at top, the flat nav list fills and
+ * scrolls the middle if it overflows, and the user/logout block is pinned
+ * at the bottom — so the page itself never scrolls because of the
+ * sidebar, only the nav region does when needed. No search here — the top
+ * nav already has one; the mobile drawer (a separate component) keeps its
+ * own, since mobile has no top nav.
  */
-export function Sidebar({ title, items, brandColor, userName, userRole, sectionSwitcher }: SidebarProps) {
+export function Sidebar({
+  title,
+  items,
+  brandColor,
+  userName,
+  userRole,
+  settingsHref,
+  sectionSwitcher,
+}: SidebarProps) {
   const pathname = usePathname();
 
   const isValidHex = brandColor && /^#[0-9a-fA-F]{6}$/.test(brandColor);
@@ -103,30 +131,34 @@ export function Sidebar({ title, items, brandColor, userName, userRole, sectionS
   return (
     <div className="relative hidden h-full w-[78px] shrink-0 lg:block">
       <aside
-        className="group absolute inset-y-0 left-0 z-40 flex w-[78px] flex-col overflow-hidden rounded-[20px] bg-white py-4 shadow-[0_4px_20px_rgba(29,78,216,.09)] transition-[width,box-shadow] duration-200 ease-in-out hover:w-60 hover:shadow-[0_12px_40px_rgba(29,78,216,.18)] has-[:focus-visible]:w-60 has-[:focus-visible]:shadow-[0_12px_40px_rgba(29,78,216,.18)]"
+        className="group absolute inset-y-0 left-0 z-40 flex w-[78px] flex-col justify-between overflow-hidden rounded-[20px] bg-white py-3 shadow-[0_4px_20px_rgba(29,78,216,.09)] transition-[width,box-shadow] duration-200 ease-in-out hover:w-60 hover:shadow-[0_12px_40px_rgba(29,78,216,.18)] has-[:focus-visible]:w-60 has-[:focus-visible]:shadow-[0_12px_40px_rgba(29,78,216,.18)]"
       >
-        <div className="mx-[13px] mb-2 flex items-center gap-[13px] pb-1.5 pl-[5px] pr-[15px] transition-[padding-left] duration-200 ease-in-out group-hover:pl-[15px] group-has-[:focus-visible]:pl-[15px]">
-          <div
-            className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[13px]"
-            style={{ backgroundColor: accent }}
-          >
-            <GraduationCap className="h-[18px] w-[18px] text-white" />
+        <div className="flex shrink-0 flex-col">
+          <div className="mx-[13px] mb-1 flex items-center gap-[13px] pb-1 pl-[5px] pr-[15px] transition-[padding-left] duration-200 ease-in-out group-hover:pl-[15px] group-has-[:focus-visible]:pl-[15px]">
+            <div
+              className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[12px]"
+              style={{ backgroundColor: accent }}
+            >
+              <GraduationCap className="h-[16px] w-[16px] text-white" />
+            </div>
+            <span className={cn(RLABEL, "text-base font-bold tracking-[-0.3px] text-slate-900")}>
+              {title}
+            </span>
           </div>
-          <span className={cn(RLABEL, "text-base font-bold tracking-[-0.3px] text-slate-900")}>
-            {title}
-          </span>
+
+         {sectionSwitcher && (
+            <>
+              <div className="mx-[13px] border-t border-[#eef0f3]" />
+              <div className={cn(RLABEL, "shrink-0")}>{sectionSwitcher}</div>
+            </>
+          )}
+          <div className="mx-[13px] border-t border-[#eef0f3]" />
         </div>
 
-        {sectionSwitcher && (
-          <>
-            <div className="mx-[13px] border-t border-[#eef0f3]" />
-            <div className={cn(RLABEL, "shrink-0")}>{sectionSwitcher}</div>
-            <div className="mx-[13px] border-t border-[#eef0f3]" />
-          </>
-        )}
-
-        <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden py-2">
-          {items.map((item) => {
+        {/* Only this region scrolls — the rail itself never grows past its
+           parent's height, so the sidebar never causes page-level scroll. */}
+        <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden py-2">
+          {(items ?? []).map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = ICON_MAP[item.label] ?? LayoutDashboard;
             return (
@@ -162,38 +194,49 @@ export function Sidebar({ title, items, brandColor, userName, userRole, sectionS
           })}
         </nav>
 
-        {userName && (
-          <div className="mx-[13px] flex items-center gap-[13px] border-t border-[#eef0f3] pl-[7px] pr-[15px] pt-3 transition-[padding-left] duration-200 ease-in-out group-hover:pl-[15px] group-has-[:focus-visible]:pl-[15px]">
-            <div
-              className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white"
-              style={{ backgroundColor: accent }}
-            >
-              {userName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
-            </div>
-            <div className={cn(RLABEL, "min-w-0 flex-1 leading-tight")}>
-              <p className="truncate text-[13.5px] font-semibold text-slate-900">{userName}</p>
-              <p className="truncate text-xs text-slate-400">
-                {ROLE_LABELS[userRole ?? ""] ?? userRole}
-              </p>
-            </div>
-          </div>
-        )}
-        <div className="mx-[13px] mt-1">
-          <button
-            onClick={async () => {
-              const supabase = createClient();
-              await supabase.auth.signOut();
-              window.location.href = "/login";
-            }}
-            title="Logout"
-            aria-label="Logout"
-            className="flex h-[46px] w-full items-center gap-[14px] rounded-[14px] px-[15px] text-[#94a3b8] transition-colors hover:bg-slate-50"
-          >
-            <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center">
-              <LogOut className="h-[21px] w-[21px]" />
-            </span>
-            <span className={cn(RLABEL, "text-[14.5px] font-medium text-[#475569]")}>Logout</span>
-          </button>
+        <div className="mx-[13px] mt-1 shrink-0 border-t border-[#eef0f3] pt-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex w-full items-center gap-[13px] rounded-[14px] py-1.5 pl-[7px] pr-[15px] outline-none transition-[padding-left] duration-200 ease-in-out group-hover:pl-[15px] group-has-[:focus-visible]:pl-[15px] hover:bg-slate-50">
+              <div
+                className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white"
+                style={{ backgroundColor: accent }}
+              >
+                {(userName ?? "").split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
+              </div>
+              <div className={cn(RLABEL, "min-w-0 flex-1 text-left leading-tight")}>
+                <p className="truncate text-[13.5px] font-semibold text-slate-900">{userName}</p>
+                <p className="truncate text-xs text-slate-400">
+                  {ROLE_LABELS[userRole ?? ""] ?? userRole}
+                </p>
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" side="top" className="min-w-48">
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="text-sm font-semibold text-foreground">{userName}</DropdownMenuLabel>
+                <DropdownMenuLabel className="-mt-1.5">{ROLE_LABELS[userRole ?? ""] ?? userRole}</DropdownMenuLabel>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                {settingsHref && (
+                  <DropdownMenuItem render={<Link href={settingsHref} />}>
+                    <Settings className="h-4 w-4" />
+                    Settings
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={async () => {
+                    const supabase = createClient();
+                    await supabase.auth.signOut();
+                    window.location.href = "/login";
+                  }}
+                >
+                  <LogOut className="h-4 w-4" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </aside>
     </div>

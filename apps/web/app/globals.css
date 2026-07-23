@@ -31,13 +31,43 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply text-foreground antialiased;
+    /* Subtle premium gradient built from the theme's own --primary hue —
+       replaces the flat bg-background fill. Large, gentle: reads as
+       "barely off-white with a blue cast" rather than a visible design
+       element, so existing text/card contrast is untouched. */
+    background-color: #ffffff;
+    background-image: linear-gradient(135deg, #ffffff 0%, hsl(239 85% 97%) 28%, hsl(239 88% 93%) 60%, hsl(239 90% 88%) 100%);
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* No .dark theme is wired up yet (darkMode: ["class"] in tailwind.config
+     has no matching .dark variable block), but if one is added later this
+     ensures the gradient doesn't fight a dark background — it falls back
+     to a flat fill driven by the (future) dark --background value. */
+  .dark body {
+    background-image: none;
   }
 }
 
+
+/* Staggered animation delays */
 /* Staggered animation delays */
 @layer utilities {
+  /* Subtle premium gradient built from the theme's own --primary hue (239°),
+     used as the canvas behind every authenticated page (Dashboard, Students,
+     Teachers, Homework, etc. all render on top of this via their own white
+     card components) and in the thin gutter around the content panel.
+     Stays light enough (93%+ lightness) that white cards/borders/text keep
+     full contrast — this tints the empty space, not the content itself. */
+  .bg-app-shell {
+    background-color: #ffffff;
+    background-image: linear-gradient(135deg, #ffffff 0%, hsl(239 85% 97%) 28%, hsl(239 88% 93%) 60%, hsl(239 90% 88%) 100%);
+  }
+  .dark .bg-app-shell {
+    background-image: none;
+  }
+
   .stagger-1 { animation-delay: 0ms; }
   .stagger-2 { animation-delay: 60ms; }
   .stagger-3 { animation-delay: 120ms; }

@@ -38,11 +38,11 @@ export default async function PlatformAdminLayout({
   const userName = profile?.full_name ?? user.email ?? "Admin";
 
   return (
-    <div className="flex h-screen overflow-hidden bg-muted">
+    <div className="flex h-screen overflow-hidden bg-app-shell">
       <Sidebar title={PRODUCT_NAME} items={NAV} userName={userName} userRole="super_admin" />
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopBar userName={userName} userRole="super_admin" showSearch={false} />
-        <MobileNav title={PRODUCT_NAME} items={NAV} userName={userName} userRole="super_admin" showNotifications={false} />
+        <MobileNav title={PRODUCT_NAME} items={NAV} userName={userName} userRole="super_admin" showSearch={false} />
         <main className="flex-1 overflow-y-auto p-4 pb-24 lg:p-8 lg:pb-8">{children}</main>
       </div>
     </div>

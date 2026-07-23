@@ -8,13 +8,13 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-display" });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://connectmyskool.com"),
+  metadataBase: new URL("https://eduos.com"),
   title: {
-    default: "ConnectMySkool — School ERP for Admins, Teachers & Parents",
-    template: "%s | ConnectMySkool",
+    default: "EduOS — Empowering Schools with Intelligent Management",
+    template: "%s | EduOS",
   },
   description:
-    "ConnectMySkool gives your school a powerful web portal for staff and a branded mobile app for parents. Attendance, fees, report cards — all in one platform.",
+     "EduOS gives your school a unified platform for administration, academics, and communication — attendance, grading, fee tracking, and parent engagement in one place.",
   keywords: [
     "school ERP",
     "school management software",
@@ -22,30 +22,30 @@ export const metadata: Metadata = {
     "attendance management",
     "fee collection software",
     "Indian school ERP",
-    "ConnectMySkool",
+    "EduOS",
   ],
-  authors: [{ name: "ConnectMySkool" }],
-  creator: "ConnectMySkool",
+  authors: [{ name: "EduOS" }],
+  creator: "EduOS",
   openGraph: {
     type: "website",
     locale: "en_IN",
-    url: "https://connectmyskool.com",
-    siteName: "ConnectMySkool",
-    title: "ConnectMySkool — The School ERP That Connects Everyone",
+    url: "https://eduos.com",
+    siteName: "EduOS",
+    title: "EduOS — The School ERP That Connects Everyone",
     description:
-      "A powerful web portal for staff and a beautifully branded mobile app for parents — attendance, fees, report cards, all in one platform.",
+      "A unified operating system for administration, academics, and communication — attendance, grading, fee tracking, and parent engagement, all in one platform.",
     images: [
       {
         url: "/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "ConnectMySkool — School ERP Dashboard",
+        alt: "EduOS — School ERP Dashboard",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ConnectMySkool — School ERP for Admins, Teachers & Parents",
+    title: "EduOS — Empowering Schools with Intelligent Management",
     description:
       "A powerful web portal for staff and a beautifully branded mobile app for parents — all in one platform.",
     images: ["/og-image.jpg"],
