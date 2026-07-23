@@ -37,10 +37,7 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
       { label: "Students", href: "/admin/students" },
       { label: "Teachers", href: "/admin/teachers" },
       { label: "Classes", href: "/admin/classes" },
-      { label: "Announcements", href: "/admin/announcements" },
       { label: "Timetable", href: "/admin/timetable" },
-      { label: "Fees", href: "/admin/fees" },
-      { label: "Discipline", href: "/admin/discipline" },
     ],
     sections: sections({
       academic: [
@@ -51,10 +48,13 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
         { label: "Certificates", href: "/admin/certificates" },
       ],
       administration: [
+        { label: "Fees", href: "/admin/fees" },
+        { label: "Discipline", href: "/admin/discipline" },
         { label: "Fee Types", href: "/admin/settings/fee-types" },
         { label: "Reports", href: "/admin/reports" },
       ],
       communication: [
+        { label: "Announcements", href: "/admin/announcements" },
         { label: "Gallery", href: "/admin/gallery" },
         { label: "Feedback", href: "/admin/feedback" },
       ],

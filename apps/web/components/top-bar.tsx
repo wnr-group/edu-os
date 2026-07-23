@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, ChevronDown, Settings, LogOut } from "lucide-react";
+import { ChevronRight, ChevronDown, Settings, LogOut, GraduationCap } from "lucide-react";
 import { CommandSearch } from "@/components/command-search";
 import { createClient } from "@/lib/supabase";
 import { formatSegment } from "@/lib/format-segment";
@@ -20,9 +20,15 @@ import {
 export { formatSegment };
 
 interface TopBarProps {
+  /** App/school name shown next to the logo mark. */
+  title?: string;
+  /** Where the logo links to — defaults to "/". */
+  logoHref?: string;
   userName: string;
   userRole: string;
   brandColor?: string;
+  /** Section selector, moved here from the (now removed) desktop sidebar. */
+  sectionSwitcher?: React.ReactNode;
   yearSwitcher?: React.ReactNode;
   showSearch?: boolean;
   frequentItems?: NavItem[];
@@ -60,9 +66,12 @@ function NavLink({ item, isActive, accent }: { item: NavItem; isActive: boolean;
 }
 
 export function TopBar({
+  title = "EduOS",
+  logoHref = "/",
   userName,
   userRole,
   brandColor,
+  sectionSwitcher,
   yearSwitcher,
   showSearch = true,
   frequentItems,
@@ -90,9 +99,35 @@ export function TopBar({
   );
 
   return (
-    <header className="hidden h-14 shrink-0 items-center justify-between border-b bg-white px-6 lg:flex">
+    <header className="hidden h-14 shrink-0 items-center gap-5 border-b bg-white px-6 lg:flex">
+      {/* 1. App logo/icon — name is hidden by default and only reveals as a
+         tooltip on hover or click/focus, so "Demo School" etc. doesn't take
+         up permanent space in the bar. */}
+      <Link
+        href={logoHref}
+        aria-label={title}
+        className="group relative flex shrink-0 items-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+      >
+        <div
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px]"
+          style={{ backgroundColor: accent }}
+        >
+          <GraduationCap className="h-4 w-4 text-white" />
+        </div>
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute left-0 top-full z-20 mt-2 whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus:opacity-100"
+        >
+          {title}
+        </span>
+      </Link>
+
+      <div className="h-6 w-px shrink-0 bg-border" />
+
+      {/* 2 & 3. Frequent nav items + "More" dropdown (falls back to a breadcrumb
+         when no nav config applies, e.g. Platform Admin without frequentItems) */}
       {hasFrequent ? (
-        <nav className="flex items-center gap-6">
+        <nav className="flex shrink-0 items-center gap-6">
           {frequentItems!.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             return <NavLink key={item.href} item={item} isActive={isActive} accent={accent} />;
@@ -101,7 +136,7 @@ export function TopBar({
           {hasMore && (
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="group relative flex items-center gap-1 px-1 py-1.5 text-sm outline-none"
+                className="group relative flex shrink-0 items-center gap-1 px-1 py-1.5 text-sm outline-none"
                 style={{ color: moreActive ? accent : "#475569", fontWeight: moreActive ? 600 : 500 }}
               >
                 More
@@ -133,7 +168,7 @@ export function TopBar({
           )}
         </nav>
       ) : (
-        <nav className="flex items-center gap-1.5 text-sm">
+        <nav className="flex shrink-0 items-center gap-1.5 text-sm">
           {segments.length === 0 ? (
             <span className="font-semibold text-foreground">Dashboard</span>
           ) : (
@@ -155,18 +190,20 @@ export function TopBar({
         </nav>
       )}
 
-      {yearSwitcher && (
-        <div className="flex items-center">{yearSwitcher}</div>
-      )}
+      {/* 4. Section selector — moved here from the desktop sidebar */}
+      {sectionSwitcher && <div className="flex shrink-0 items-center">{sectionSwitcher}</div>}
 
-      <div className="flex items-center gap-4">
+      {/* 5, 6, 7. Academic year selector, global search, user profile */}
+      <div className="ml-auto flex shrink-0 items-center gap-4">
+        {yearSwitcher && <div className="flex items-center">{yearSwitcher}</div>}
+
         {showSearch && <CommandSearch userRole={userRole} />}
 
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
             <div
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-              style={{ backgroundColor: brandColor ?? "#4f46e5" }}
+              style={{ backgroundColor: brandColor ?? accent }}
             >
               {initials}
             </div>

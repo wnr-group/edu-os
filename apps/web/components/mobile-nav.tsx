@@ -26,8 +26,8 @@ interface MobileNavProps {
  * Mobile-only navigation: top bar (hamburger + page title), a slide-out
  * drawer with the full flat nav (reuses Sidebar's icon map/colors so the
  * two never drift apart), and a bottom tab bar with the first 3 nav items
- * + "More" (opens the same drawer). Hidden at `lg` and above, where
- * `Sidebar`/`TopBar` take over.
+ * + "More" (opens the same drawer). Hidden at `lg` and above, where the
+ * `TopBar` takes over.
  */
 export function MobileNav({
   title,

@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface SectionOption {
@@ -16,6 +17,9 @@ interface SectionSwitcherProps {
   exitUrl?: string;
   /** "dark" (default) fits a dark sidebar/drawer background; "light" fits a white one. */
   variant?: "dark" | "light";
+  /** "stack" (default) is the vertical block used in the mobile drawer;
+   * "inline" is a compact horizontal control for the desktop top bar. */
+  layout?: "stack" | "inline";
 }
 
 function getParentDomain(): string {
@@ -42,13 +46,17 @@ export function SectionSwitcher({
   userRole,
   exitUrl,
   variant = "dark",
+  layout = "stack",
 }: SectionSwitcherProps) {
   const isTeacher = userRole === "teacher";
   const isLight = variant === "light";
+  const isInline = layout === "inline";
 
   if (sections.length === 0) {
     if (isTeacher) {
-      return (
+      return isInline ? (
+        <p className="text-xs text-slate-400">No sections assigned</p>
+      ) : (
         <div className="px-4 py-3">
           <p className={cn("text-xs", isLight ? "text-slate-400" : "text-white/50")}>
             No sections assigned
@@ -89,50 +97,83 @@ export function SectionSwitcher({
     window.location.href = exitUrl ?? "/";
   }
 
-  const exitLabel = userRole === "principal" ? "← Back to Principal" : "← Back to Admin";
+  const exitLabel = userRole === "principal" ? "Back to Principal" : "Back to Admin";
+
+  const selectEl = (
+    <select
+      value={activeSectionId ?? ""}
+      onChange={handleChange}
+      className={cn(
+        "rounded-lg border px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:ring-2",
+        isInline ? "w-48" : "w-full",
+        isLight
+          ? "border-slate-200 bg-white text-slate-700 focus:ring-blue-200"
+          : "border-white/20 bg-white/10 text-white focus:ring-white/30"
+      )}
+    >
+      <option value="" disabled className={isLight ? undefined : "bg-gray-900 text-white"}>
+        Select section…
+      </option>
+      {sortedClasses.map(([className, group]) => (
+        <optgroup key={className} label={className}>
+          {group.sections.map((section) => (
+            <option
+              key={section.id}
+              value={section.id}
+              className={isLight ? undefined : "bg-gray-900 text-white"}
+            >
+              {section.className} – Section {section.name}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
+  );
+
+  // In the top bar (inline), space is tight, so the exit control shrinks to
+  // an icon-only button with the full label available as a tooltip/aria-label.
+  // The mobile drawer (stack) has room, so it keeps the full text.
+  const exitButton = exitUrl && activeSectionId && !isTeacher && (
+    isInline ? (
+      <button
+        type="button"
+        onClick={handleExit}
+        title={exitLabel}
+        aria-label={exitLabel}
+        className={cn(
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
+          isLight ? "text-amber-600 hover:bg-amber-50" : "text-amber-300 hover:bg-white/[0.08]"
+        )}
+      >
+        <ArrowLeft className="h-4 w-4" />
+      </button>
+    ) : (
+      <button
+        type="button"
+        onClick={handleExit}
+        className={cn(
+          "block min-h-[28px] w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition-colors",
+          isLight ? "text-amber-600 hover:bg-amber-50" : "text-amber-300 hover:bg-white/[0.08]"
+        )}
+      >
+        ← {exitLabel}
+      </button>
+    )
+  );
+
+  if (isInline) {
+    return (
+      <div className="flex shrink-0 items-center gap-1.5">
+        {selectEl}
+        {exitButton}
+      </div>
+    );
+  }
 
   return (
     <div className="px-3 py-2 space-y-1.5">
-      <select
-        value={activeSectionId ?? ""}
-        onChange={handleChange}
-        className={cn(
-          "w-full rounded-lg border px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:ring-2",
-          isLight
-            ? "border-slate-200 bg-white text-slate-700 focus:ring-blue-200"
-            : "border-white/20 bg-white/10 text-white focus:ring-white/30"
-        )}
-      >
-        <option value="" disabled className={isLight ? undefined : "bg-gray-900 text-white"}>
-          Select section…
-        </option>
-        {sortedClasses.map(([className, group]) => (
-          <optgroup key={className} label={className}>
-            {group.sections.map((section) => (
-              <option
-                key={section.id}
-                value={section.id}
-                className={isLight ? undefined : "bg-gray-900 text-white"}
-              >
-                {section.className} – Section {section.name}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </select>
-
-      {exitUrl && activeSectionId && !isTeacher && (
-        <button
-          type="button"
-          onClick={handleExit}
-          className={cn(
-            "block min-h-[28px] w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition-colors",
-            isLight ? "text-amber-600 hover:bg-amber-50" : "text-amber-300 hover:bg-white/[0.08]"
-          )}
-        >
-          {exitLabel}
-        </button>
-      )}
+      {selectEl}
+      {exitButton}
     </div>
   );
 }

@@ -5,7 +5,6 @@ import { createServerSupabaseClient } from "../../lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getActiveRoles, topRole } from "@/lib/auth/roles";
 import { NAV_CONFIG, allNavItems } from "@/lib/nav-config";
-import { Sidebar } from "@/components/sidebar";
 import { TopBar } from "@/components/top-bar";
 import { MobileNav } from "@/components/mobile-nav";
 import { Breadcrumbs } from "@/components/breadcrumbs";
@@ -174,10 +173,6 @@ export default async function SchoolLayout({
 // Mobile has no top nav, so its drawer/bottom-tab-bar needs every page,
 // frequent + sectioned, flattened into one list (the original pattern).
 const allItems = allNavItems(navConfig);
-// Desktop already shows the frequent items in the top nav — the sidebar
-// there should only carry the remaining ("More") modules, so nothing is
-// duplicated between the two.
-const desktopSidebarItems = navConfig.sections.flatMap((s) => s.items);
 const dashboardHref = navConfig.frequent[0]?.href ?? "/login";
 // Only School Admin has a Settings page today.
 const settingsHref = displayRole === "school_admin" ? "/admin/settings" : undefined;
@@ -197,55 +192,49 @@ const settingsHref = displayRole === "school_admin" ? "/admin/settings" : undefi
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-app-shell lg:gap-[14px] lg:p-[14px]">
-      <Sidebar
+    <div className="flex h-screen flex-col overflow-hidden bg-app-shell">
+      <TopBar
         title={schoolName}
-        items={desktopSidebarItems}
+        logoHref={dashboardHref}
+        userName={sidebarUserName}
+        userRole={displayRole}
+        brandColor={brandColor}
+        frequentItems={navConfig.frequent}
+        moreSections={navConfig.sections}
+        settingsHref={settingsHref}
+        sectionSwitcher={
+          showSectionSwitcher ? (
+            <SectionSwitcher {...sectionSwitcherProps} variant="light" layout="inline" />
+          ) : null
+        }
+        yearSwitcher={
+          years.length > 0 ? (
+            <AcademicYearSwitcher years={years} currentYearId={currentYearId} />
+          ) : undefined
+        }
+      />
+      <MobileNav
+        title={schoolName}
+        items={allItems}
         brandColor={brandColor}
         userName={sidebarUserName}
         userRole={displayRole}
-        settingsHref={settingsHref}
         sectionSwitcher={
           showSectionSwitcher ? <SectionSwitcher {...sectionSwitcherProps} variant="light" /> : null
         }
       />
-      <div className="flex flex-1 flex-col overflow-hidden lg:rounded-[20px] lg:bg-app-shell lg:shadow-[0_4px_20px_rgba(15,23,42,.06)]">
-        <TopBar
-          userName={sidebarUserName}
-          userRole={displayRole}
-          brandColor={brandColor}
-          frequentItems={navConfig.frequent}
-          moreSections={navConfig.sections}
-          settingsHref={settingsHref}
-          yearSwitcher={
-            years.length > 0 ? (
-              <AcademicYearSwitcher years={years} currentYearId={currentYearId} />
-            ) : undefined
-          }
-        />
-        <MobileNav
-          title={schoolName}
-          items={allItems}
-          brandColor={brandColor}
-          userName={sidebarUserName}
-          userRole={displayRole}
-          sectionSwitcher={
-            showSectionSwitcher ? <SectionSwitcher {...sectionSwitcherProps} variant="light" /> : null
-          }
-        />
-        <main className="flex-1 overflow-y-auto p-4 pb-24 lg:p-8 lg:pb-8">
-          <div className="mb-4">
-            <Breadcrumbs homeHref={dashboardHref} />
+      <main className="flex-1 overflow-y-auto p-4 pb-24 lg:p-8 lg:pb-8">
+        <div className="mb-4">
+          <Breadcrumbs homeHref={dashboardHref} />
+        </div>
+        {years.find((y) => y.id === currentYearId)?.status === "draft" && (
+          <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <strong>Draft year:</strong> You are configuring a year that is not yet active. Changes here will not affect the live school until you activate this year from the{" "}
+            <a href="/admin/academics" className="underline">Academics page</a>.
           </div>
-          {years.find((y) => y.id === currentYearId)?.status === "draft" && (
-            <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              <strong>Draft year:</strong> You are configuring a year that is not yet active. Changes here will not affect the live school until you activate this year from the{" "}
-              <a href="/admin/academics" className="underline">Academics page</a>.
-            </div>
-          )}
-          {children}
-        </main>
-      </div>
+        )}
+        {children}
+      </main>
     </div>
   );
 }
