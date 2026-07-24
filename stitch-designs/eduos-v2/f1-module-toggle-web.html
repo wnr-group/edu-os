@@ -1,0 +1,329 @@
+<title>Edu-OS &middot; Module Toggle (platform admin)</title>
+<style>
+  :root{
+    --accent:#4F46E5; --accent-2:#1D4ED8; --accent-weak:#EEF1FE; --accent-ink:#4338CA;
+    --ground-a:#EAECF9; --ground-b:#F6F5FC; --card:#FFFFFF;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A0B4; --line:#EBECF4;
+    --good:#10B981; --good-weak:#E7F7F0; --warn:#F59E0B; --warn-weak:#FDF3E2;
+    --crit:#EF4444; --crit-weak:#FCECEC; --info:#3B82F6;
+    --shadow:0 4px 20px rgba(29,78,216,.07); --r:16px; --r-md:12px; --r-sm:10px; --r-pill:999px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;line-height:1.45;
+    background:radial-gradient(1200px 500px at 100% -5%,#E7E3FB,transparent 60%),linear-gradient(180deg,var(--ground-a),var(--ground-b) 42%)}
+  .i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .i.sm{width:15px;height:15px}
+  /* top nav (platform admin: Dashboard / Schools) */
+  .topnav{display:flex;align-items:center;gap:22px;height:64px;padding:0 26px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  .logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:#fff;box-shadow:var(--shadow)}
+  .mainnav{display:flex;align-items:center;gap:4px}
+  .mainnav a{position:relative;padding:9px 13px;border-radius:9px;color:var(--ink-2);text-decoration:none;font-size:14px;font-weight:500}
+  .mainnav a:hover{color:var(--ink);background:var(--accent-weak)}
+  .mainnav a.on{color:var(--accent-ink);font-weight:650}
+  .mainnav a.on::after{content:"";position:absolute;left:13px;right:13px;bottom:-19px;height:2.5px;border-radius:2px;background:var(--accent)}
+  .grow{flex:1}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
+  /* page */
+  .wrap{max-width:1200px;margin:0 auto;padding:20px 26px 48px;display:flex;flex-direction:column;gap:16px}
+  .back{display:inline-flex;align-items:center;gap:8px;color:var(--ink-2);font-size:13px;font-weight:500;text-decoration:none}
+  .head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .head h1{margin:0;font-size:24px;letter-spacing:-.5px;font-weight:760}
+  .head .badge{font-size:11px;font-weight:700;color:var(--good);background:var(--good-weak);padding:4px 10px;border-radius:var(--r-pill)}
+  .head .sub{width:100%;color:var(--ink-3);font-size:12.5px;margin-top:2px}
+  .head .r{margin-left:auto;display:flex;gap:9px}
+  .btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:9px;border:1px solid transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .btn.primary{background:var(--accent);color:#fff;box-shadow:var(--shadow)} .btn.primary:hover{background:var(--accent-ink)}
+  .btn.ghost{background:var(--card);border-color:var(--line);color:var(--ink-2)} .btn.ghost:hover{color:var(--ink)}
+  .btn.danger{background:var(--card);border-color:var(--crit-weak);color:var(--crit)}
+  .btn.sm{height:31px;padding:0 11px;font-size:12.5px}
+  /* tabs */
+  .tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-top:2px}
+  .tab{padding:11px 4px;margin:0 8px;color:var(--ink-3);font-size:14px;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;text-decoration:none}
+  .tab:first-child{margin-left:0}
+  .tab.on{color:var(--accent-ink);border-bottom-color:var(--accent)}
+  /* kpis */
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+  .kpi{display:flex;align-items:center;gap:13px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:15px 16px;box-shadow:var(--shadow)}
+  .kpi .tile{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;background:var(--accent-weak);color:var(--accent-ink);flex:none}
+  .kpi .v{font-size:21px;font-weight:770;letter-spacing:-.4px;line-height:1}
+  .kpi .l{font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin-top:5px}
+  /* panel */
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+  .ph{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .ph h3{margin:0;font-size:15.5px;letter-spacing:-.2px;font-weight:660}
+  .ph .count{font-size:12px;font-weight:700;color:var(--accent-ink);background:var(--accent-weak);padding:4px 10px;border-radius:var(--r-pill)}
+  .ph .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:var(--ground-b);color:var(--ink-3);font-size:13px;min-width:190px;margin-left:auto}
+  .auditnote{display:flex;align-items:center;gap:9px;padding:11px 20px;background:var(--warn-weak);color:#8a5a00;font-size:12.5px;font-weight:500;border-bottom:1px solid var(--line)}
+  .body{padding:8px 20px 18px}
+  .grp{margin-top:14px}
+  .grp:first-child{margin-top:4px}
+  .grp .gl{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);padding:10px 0 4px}
+  .grp .gl .gc{color:var(--ink-3);font-weight:600;letter-spacing:0;text-transform:none}
+  .mrow{display:grid;grid-template-columns:38px 1fr auto;gap:14px;align-items:center;padding:13px 0;border-bottom:1px solid var(--line)}
+  .mrow:last-child{border-bottom:0}
+  .mtile{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--ground-b);color:var(--ink-2);border:1px solid var(--line)}
+  .mrow.off .mtile{color:var(--ink-3)}
+  .mname{font-size:14px;font-weight:650;display:flex;align-items:center;gap:9px}
+  .mdesc{color:var(--ink-3);font-size:12px;margin-top:2px}
+  .dep{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--info);background:var(--info-weak,#E9F1FE);padding:2px 8px;border-radius:var(--r-pill)}
+  .lockchip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:var(--good);background:var(--good-weak);padding:2px 8px;border-radius:var(--r-pill)}
+  .newchip{font-size:10px;font-weight:800;letter-spacing:.04em;color:var(--accent-ink);background:var(--accent-weak);padding:2px 7px;border-radius:var(--r-pill)}
+  /* switch */
+  .sw{width:42px;height:24px;border-radius:999px;background:#D7D9E6;position:relative;cursor:pointer;transition:background .16s;flex:none;border:0;padding:0}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(16,18,40,.28);transition:transform .16s}
+  .sw.on{background:var(--accent)} .sw.on::after{transform:translateX(18px)}
+  .sw.locked{background:var(--good);opacity:.5;cursor:not-allowed} .sw.locked::after{transform:translateX(18px)}
+  .sw.disabled{opacity:.45;cursor:not-allowed}
+  .swwrap{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+  .swwrap .st{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3)}
+  .swwrap .st.on{color:var(--accent-ink)}
+  /* gateway config */
+  .gwcfg{margin:0 0 6px 52px;padding:16px 18px;background:var(--ground-b);border:1px solid var(--line);border-radius:13px}
+  .gwcfg .gwh{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .gwcfg .gwh b{font-size:13.5px}
+  .statuspill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:var(--r-pill)}
+  .sp-ok{color:var(--good);background:var(--good-weak)} .sp-no{color:var(--ink-3);background:var(--card);border:1px solid var(--line)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:11.5px;font-weight:600;color:var(--ink-2);display:flex;align-items:center;gap:6px}
+  .field .req{color:var(--crit)}
+  .field input{height:37px;border:1px solid var(--line);border-radius:9px;background:var(--card);padding:0 11px;font-size:13px;font-family:inherit;color:var(--ink)}
+  .field input::placeholder{color:var(--ink-3)}
+  .field .hint{font-size:11px;color:var(--ink-3)}
+  .field .secret{display:flex;gap:8px}
+  .field .secret input{flex:1;letter-spacing:.12em}
+  .modeseg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:3px;gap:2px}
+  .modeseg button{border:0;background:none;font-family:inherit;font-size:12px;font-weight:600;color:var(--ink-3);padding:6px 13px;border-radius:6px;cursor:pointer}
+  .modeseg button.on{background:var(--accent-weak);color:var(--accent-ink)}
+  .seclock{display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--ink-2);background:var(--card);border:1px dashed var(--line);border-radius:9px;padding:10px 12px;margin:14px 0}
+  .seclock b{color:var(--ink)}
+  .gwactions{display:flex;gap:9px;justify-content:flex-end}
+  @media (max-width:1000px){.kpis{grid-template-columns:repeat(3,1fr)}.grid2{grid-template-columns:1fr}.gwcfg{margin-left:0}}
+  @media (max-width:720px){.mainnav{display:none}.kpis{grid-template-columns:repeat(2,1fr)}.ph .search{display:none}}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-cap" viewBox="0 0 24 24"><path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="ic-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></symbol>
+  <symbol id="ic-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
+  <symbol id="ic-mega" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 9a3 3 0 0 1 0 6"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></symbol>
+  <symbol id="ic-check2" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="ic-cap2" viewBox="0 0 24 24"><path d="M4 15l4-5 4 3 4-7 4 5"/><path d="M3 20h18"/></symbol>
+  <symbol id="ic-flag" viewBox="0 0 24 24"><path d="M4 21V4h13l-2 4 2 4H4"/></symbol>
+  <symbol id="ic-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="ic-link" viewBox="0 0 24 24"><path d="M9 15l6-6"/><path d="M10 6l1-1a4 4 0 0 1 6 6l-1 1"/><path d="M14 18l-1 1a4 4 0 0 1-6-6l1-1"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="ic-msg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="ic-img" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></symbol>
+  <symbol id="ic-quiz" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 4.5 1.5c0 1.5-2 2-2 3"/><line x1="12" y1="17" x2="12" y2="17"/></symbol>
+  <symbol id="ic-pin" viewBox="0 0 24 24"><path d="M12 21s7-6 7-11a7 7 0 0 0-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+</defs></svg>
+
+<header class="topnav">
+  <div class="logo"><svg width="21" height="21"><use href="#ic-cap"/></svg></div>
+  <nav class="mainnav"><a href="#">Dashboard</a><a href="#" class="on">Schools</a></nav>
+  <div class="grow"></div>
+  <div class="avatar">DI</div>
+</header>
+
+<div class="wrap">
+  <a class="back" href="#"><svg class="i sm"><use href="#ic-flag"/></svg> Back to Schools</a>
+  <div class="head">
+    <h1>Demo School</h1><span class="badge">Active</span>
+    <div class="r"><button class="btn danger">Deactivate School</button><button class="btn ghost">View as&hellip;</button></div>
+    <div class="sub">demo@example.com &middot; school1.lvh.me</div>
+  </div>
+
+  <div class="tabs">
+    <a class="tab" href="#">Overview</a>
+    <a class="tab" href="#">Users</a>
+    <a class="tab" href="#">Bulk Import</a>
+    <a class="tab on" href="#">Modules</a>
+  </div>
+
+  <!-- context kpis (same as real school detail) -->
+  <div class="kpis">
+    <div class="kpi"><div class="tile"><svg class="i"><use href="#ic-shield"/></svg></div><div><div class="v">14</div><div class="l">Modules on</div></div></div>
+    <div class="kpi"><div class="tile"><svg class="i"><use href="#ic-user"/></svg></div><div><div class="v">5</div><div class="l">Teachers</div></div></div>
+    <div class="kpi"><div class="tile"><svg class="i"><use href="#ic-cap"/></svg></div><div><div class="v">940</div><div class="l">Students</div></div></div>
+    <div class="kpi"><div class="tile"><svg class="i"><use href="#ic-user"/></svg></div><div><div class="v">3</div><div class="l">Parents</div></div></div>
+    <div class="kpi"><div class="tile"><svg class="i"><use href="#ic-card"/></svg></div><div><div class="v">Test</div><div class="l">Payments mode</div></div></div>
+  </div>
+
+  <!-- MODULE TOGGLE CONSOLE -->
+  <section class="panel">
+    <div class="ph">
+      <h3>Modules</h3><span class="count" id="cnt">14 of 18 enabled</span>
+      <div class="search"><svg class="i sm"><use href="#ic-flag"/></svg> Search modules&hellip;</div>
+    </div>
+    <div class="auditnote"><svg class="i sm"><use href="#ic-shield"/></svg> Turning a module off hides it from this school immediately and blocks its data writes. Every change is written to the audit log.</div>
+
+    <div class="body">
+      <!-- CORE -->
+      <div class="grp">
+        <div class="gl">Core <span class="gc">&middot; structural, always on</span></div>
+        <div class="mrow">
+          <div class="mtile"><svg class="i"><use href="#ic-cap"/></svg></div>
+          <div><div class="mname">Students &amp; Enrollment <span class="lockchip"><svg class="i sm"><use href="#ic-lock"/></svg> Always on</span></div><div class="mdesc">Student records, classes, sections &mdash; the backbone every module reads.</div></div>
+          <div class="swwrap"><button class="sw locked" disabled></button></div>
+        </div>
+        <div class="mrow">
+          <div class="mtile"><svg class="i"><use href="#ic-user"/></svg></div>
+          <div><div class="mname">Teachers &amp; Staff <span class="lockchip"><svg class="i sm"><use href="#ic-lock"/></svg> Always on</span></div><div class="mdesc">Staff accounts, roles and section assignments.</div></div>
+          <div class="swwrap"><button class="sw locked" disabled></button></div>
+        </div>
+        <div class="mrow">
+          <div class="mtile"><svg class="i"><use href="#ic-clock"/></svg></div>
+          <div><div class="mname">Timetable</div><div class="mdesc">Period schedule per section; drives teacher scoping.</div></div>
+          <div class="swwrap"><span class="st on">On</span><button class="sw on"></button></div>
+        </div>
+      </div>
+
+      <!-- ACADEMICS -->
+      <div class="grp">
+        <div class="gl">Academics</div>
+        <div class="mrow">
+          <div class="mtile"><svg class="i"><use href="#ic-cal"/></svg></div>
+          <div><div class="mname">Attendance</div><div class="mdesc">Daily attendance marking and summaries.</div></div>
+          <div class="swwrap"><span class="st on">On</span><button class="sw on"></button></div>
+        </div>
+        <div class="mrow">
+          <div class="mtile"><svg class="i"><use href="#ic-pin"/></svg></div>
+          <div><div class="mname">Geo Attendance <span class="newchip">NEW</span></div><div class="mdesc">Validate teacher location against the school geofence when marking.</div></div>
+          <div class="swwrap"><span class="st on">On</span><button class="sw on"></button></div>
+        </div>
+        <div class="mrow">
+          <div class="mtile"><svg class="i"><use href="#ic-book"/></svg></div>
+          <div><div class="mname">Homework</div><div class="mdesc">Assignments, submissions, grading and feedback.</div></div>
+          <div class="swwrap"><span class="st on">On</span><button class="sw on"></button></div>
+        </div>
+        <div class="mrow">
+          <div class="mtile"><svg class="i"><use href="#ic-cap2"/></svg></div>
+          <div><div class="mname">Exams &amp; Results</div><div class="mdesc">Exam marks, grades and report cards.</div></div>
+          <div class="swwrap"><span class="st on">On</span><button class="sw on"></button></div>
+        </div>
+        <div class="mrow">
+          <div class="mtile"><svg class="i"><use href="#ic-cal"/></svg></div>
+          <div><div class="mname">Exam Schedule <span class="newchip">NEW</span></div><div class="mdesc">Datesheet with rooms &amp; invigilators; clash detection.</div></div>
+          <div class="swwrap"><span class="st on">On</span><button class="sw on"></button></div>
+        </div>
+      </div>
+
+      <!-- OPERATIONS -->
+      <div class="grp">
+        <div class="gl">Operations</div>
+        <div class="mrow">
+          <div class="mtile"><svg class="i"><use href="#ic-cap"/></svg></div>
+          <div><div class="mname">Admissions <span class="newchip">NEW</span></div><div class="mdesc">Public enquiry form &rarr; application pipeline &rarr; convert to student.</div></div>
+          <div class="swwrap"><span class="st on">On</span><button class="sw on"></button></div>
+        </div>
+        <div class="mrow">
+          <div class="mtile"><svg class="i"><use href="#ic-file"/></svg></div>
+          <div><div class="mname">KYC Documents <span class="newchip">NEW</span></div><div class="mdesc">Per-student document vault, verification &amp; expiry tracking.</div></div>
+          <div class="swwrap"><span class="st on">On</span><button class="sw on"></button></div>
+        </div>
+        <div class="mrow">
+          <div class="mtile"><svg class="i"><use href="#ic-check2"/></svg></div>
+          <div><div class="mname">Leave <span class="newchip">NEW</span></div><div class="mdesc">Leave requests, approval workflow and calendar.</div></div>
+          <div class="swwrap"><span class="st on">On</span><button class="sw on"></button></div>
+        </div>
+        <div class="mrow off">
+          <div class="mtile"><svg class="i"><use href="#ic-quiz"/></svg></div>
+          <div><div class="mname">Testing / Quizzes <span class="newchip">NEW</span></div><div class="mdesc">Live &amp; async quizzes with auto-grading and leaderboards.</div></div>
+          <div class="swwrap"><span class="st">Off</span><button class="sw"></button></div>
+        </div>
+      </div>
+
+      <!-- FINANCE -->
+      <div class="grp">
+        <div class="gl">Finance</div>
+        <div class="mrow">
+          <div class="mtile"><svg class="i"><use href="#ic-card"/></svg></div>
+          <div><div class="mname">Fees</div><div class="mdesc">Fee structures, invoices, receipts and outstanding tracking.</div></div>
+          <div class="swwrap"><span class="st on">On</span><button class="sw on"></button></div>
+        </div>
+        <div class="mrow">
+          <div class="mtile"><svg class="i"><use href="#ic-link"/></svg></div>
+          <div><div class="mname">Online Payments <span class="newchip">NEW</span></div><div class="mdesc">Razorpay collection in the parent app. Off &rarr; fees are recorded offline only; no pay UI, gateway blocked server-side.</div></div>
+          <div class="swwrap"><span class="st on">On</span><button class="sw on"></button></div>
+        </div>
+
+        <!-- Razorpay gateway config — appears when Online Payments is on -->
+        <div class="gwcfg">
+          <div class="gwh"><svg class="i"><use href="#ic-link"/></svg><b>Razorpay gateway</b>
+            <span class="statuspill sp-ok">Connected</span>
+            <span class="statuspill" style="color:var(--warn);background:var(--warn-weak)">Test mode</span>
+            <button class="btn ghost sm" style="margin-left:auto">Switch to live &hellip;</button>
+          </div>
+          <div class="grid2">
+            <div class="field"><label>Key ID <span class="req">*</span></label><input type="text" value="rzp_test_1A2b3C4d5E6f7G" /><span class="hint">Public key. Mode is detected from the prefix &mdash; <b>rzp_test_</b> = test (no real money), <b>rzp_live_</b> = live.</span></div>
+            <div class="field"><label>Key Secret <span class="req">*</span></label><div class="secret"><input type="password" value="setsetsetsetset" /><button class="btn ghost sm">Replace</button></div><span class="hint">Stored encrypted &middot; shown masked once saved.</span></div>
+            <div class="field"><label>Webhook Secret <span class="req">*</span></label><div class="secret"><input type="password" value="setsetsetset" /><button class="btn ghost sm">Replace</button></div><span class="hint">Verifies Razorpay webhook signatures.</span></div>
+            <div class="field"><label>Account / display name</label><input type="text" value="Demo School" /><span class="hint">Shown to parents on the payment sheet.</span></div>
+          </div>
+          <div class="seclock"><svg class="i sm"><use href="#ic-lock"/></svg><div><b>Secrets are stored in the encrypted vault</b> and used only server-side in the payment functions &mdash; never sent to the browser or returned by the API.</div></div>
+          <div class="gwactions"><button class="btn ghost">Test connection</button><button class="btn primary">Save gateway</button></div>
+        </div>
+      </div>
+
+      <!-- COMMUNICATION -->
+      <div class="grp">
+        <div class="gl">Communication</div>
+        <div class="mrow">
+          <div class="mtile"><svg class="i"><use href="#ic-mega"/></svg></div>
+          <div><div class="mname">Announcements</div><div class="mdesc">School / class / section broadcasts.</div></div>
+          <div class="swwrap"><span class="st on">On</span><button class="sw on"></button></div>
+        </div>
+        <div class="mrow">
+          <div class="mtile"><svg class="i"><use href="#ic-img"/></svg></div>
+          <div><div class="mname">Gallery</div><div class="mdesc">Event photo albums for parents.</div></div>
+          <div class="swwrap"><span class="st on">On</span><button class="sw on"></button></div>
+        </div>
+        <div class="mrow">
+          <div class="mtile"><svg class="i"><use href="#ic-msg"/></svg></div>
+          <div><div class="mname">Feedback</div><div class="mdesc">Parent feedback threads to staff.</div></div>
+          <div class="swwrap"><span class="st on">On</span><button class="sw on"></button></div>
+        </div>
+      </div>
+
+      <!-- INTELLIGENCE -->
+      <div class="grp">
+        <div class="gl">Intelligence</div>
+        <div class="mrow off">
+          <div class="mtile"><svg class="i"><use href="#ic-cap2"/></svg></div>
+          <div><div class="mname">Insights &amp; Interventions <span class="newchip">NEW</span></div>
+            <div class="mdesc">Deterministic risk signals + action queue. <span class="dep"><svg class="i sm"><use href="#ic-link"/></svg> Uses Attendance, Exams &amp; Fees</span></div></div>
+          <div class="swwrap"><span class="st">Off</span><button class="sw"></button></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</div>
+
+<script>
+  function recount(){
+    const on = document.querySelectorAll('.sw.on, .sw.locked').length;
+    const total = document.querySelectorAll('.sw').length;
+    document.getElementById('cnt').textContent = on + ' of ' + total + ' enabled';
+  }
+  document.querySelectorAll('.sw').forEach(sw=>{
+    if(sw.classList.contains('locked')||sw.disabled) return;
+    sw.addEventListener('click',()=>{
+      sw.classList.toggle('on');
+      const st = sw.parentElement.querySelector('.st');
+      const isOn = sw.classList.contains('on');
+      st.textContent = isOn?'On':'Off'; st.classList.toggle('on',isOn);
+      sw.closest('.mrow').classList.toggle('off',!isOn);
+      recount();
+    });
+  });
+  recount();
+</script>

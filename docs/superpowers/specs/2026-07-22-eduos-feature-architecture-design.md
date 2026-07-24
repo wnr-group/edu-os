@@ -552,3 +552,26 @@ recorded offline/manual only. Per-school opt-in.
 application marked `payment_pending` until confirmed when fee > 0, else straight to `enquiry`. Entrance test = manual
 score field in v1 (applicants have no login; live-Testing integration is fast-follow). **Dependency:** application
 fee > 0 requires `online_payments` ON; if OFF, fee forced to ₹0 / offline, never blocks submission.
+
+**D11 — Psychometric instrument = RIASEC v1** (Holland career codes). Full 48-item bank + scoring/norms in
+`2026-07-24-eduos-insights-algorithms.md §1`. Data-driven (`psychometric_instruments`) so Big-Five/Learning-Styles
+drop in later without code.
+
+**D12 — KYC:** seeded default document-type set per school (Indian-standard: Birth cert, Aadhaar, TC, marksheet,
+photo, etc.), verification by `school_admin`+`principal` only, **bulk verification** (`verify_documents(ids[])` +
+multi-select UI).
+
+**D13 — Geo attendance + Exam schedule locked:** teacher marks section (teacher-device GPS); out-of-bounds soft-flagged
+not blocked; geofence set by school_admin, default radius 150 m, multi-campus; `no_gps` still saves. Exam schedule:
+invigilators from teacher pool, DB clash-detection trigger (room/invigilator/section overlap), publish notifies + re-notify on edit.
+
+**D14 — Per-school Razorpay gateway credentials.** Each school collects into its OWN Razorpay account, so the
+`online_payments` module carries a **gateway config**: `key_id` (public — client uses it to open checkout, may live on
+`schools`/config), `key_secret` + `webhook_secret` (**secrets → Supabase Vault, encrypted, server-only** in
+`create-razorpay-order`/`razorpay-webhook`; NEVER returned to client — API shows masked/write-only) + display name.
+**Mode (test/live) is DERIVED from the `key_id` prefix** (`rzp_test_` = sandbox/no real money, `rzp_live_` = real) and
+shown as a READ-ONLY badge — NOT an independent toggle (a manual toggle could desync from the actual key). "Going live"
+= a guided "Switch to live" flow where the school pastes live keys → Test connection → confirm → Save. Config UI appears
+when `online_payments` is ON (platform-admin school detail; same secure component also exposed to school_admin settings).
+A "Test connection" server action validates keys. Until configured, online payments show "not configured" and stay
+blocked. Handling secret values = Vault only; never plaintext columns, never client.

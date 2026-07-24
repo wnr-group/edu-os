@@ -1,326 +1,325 @@
-<title>Edu-OS · Insights (web)</title>
+<title>Edu-OS &middot; Insights (action cockpit)</title>
 <style>
   :root{
     --accent:#4F46E5; --accent-2:#1D4ED8; --accent-weak:#EEF1FE; --accent-ink:#4338CA;
-    --ground-a:#EDEFFA; --ground-b:#F7F6FC; --card:#FFFFFF;
-    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A0B4; --line:#ECEDF5;
+    --ground-a:#EAECF9; --ground-b:#F6F5FC; --card:#FFFFFF;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A0B4; --line:#EBECF4;
     --good:#10B981; --good-weak:#E7F7F0; --warn:#F59E0B; --warn-weak:#FDF3E2;
-    --crit:#EF4444; --crit-weak:#FCECEC; --info:#3B82F6;
-    --shadow:0 4px 20px rgba(29,78,216,.07); --shadow-lg:0 12px 40px rgba(29,78,216,.12);
+    --crit:#EF4444; --crit-weak:#FCECEC; --info:#3B82F6; --info-weak:#E9F1FE;
+    --shadow:0 4px 20px rgba(29,78,216,.07); --shadow-lg:0 12px 40px rgba(29,78,216,.13);
     --r:16px; --r-md:12px; --r-sm:10px; --r-pill:999px;
     --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   }
-  /* Light-only, matching the production app (no dark auto-switch). */
   *{box-sizing:border-box}
   body{margin:0;min-height:100vh;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;
     font-variant-numeric:tabular-nums;line-height:1.45;
-    background:linear-gradient(180deg,var(--ground-a),var(--ground-b) 46%,var(--ground-b))}
-  /* ---------- primary top nav ---------- */
-  .topnav{display:flex;align-items:center;gap:22px;height:64px;padding:0 26px;background:var(--card);
-    border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
-  .logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--accent),var(--accent-2));
-    display:grid;place-items:center;color:#fff;box-shadow:var(--shadow)}
+    background:radial-gradient(1200px 500px at 100% -5%,#E7E3FB,transparent 60%),linear-gradient(180deg,var(--ground-a),var(--ground-b) 42%)}
+  .i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .i.sm{width:15px;height:15px}.i.lg{width:19px;height:19px}
+  /* top nav */
+  .topnav{display:flex;align-items:center;gap:22px;height:64px;padding:0 26px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  .logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:#fff;box-shadow:var(--shadow)}
   .mainnav{display:flex;align-items:center;gap:4px}
   .mainnav a{position:relative;padding:9px 13px;border-radius:9px;color:var(--ink-2);text-decoration:none;font-size:14px;font-weight:500}
   .mainnav a:hover{color:var(--ink);background:var(--accent-weak)}
   .mainnav a.on{color:var(--accent-ink);font-weight:650}
   .mainnav a.on::after{content:"";position:absolute;left:13px;right:13px;bottom:-19px;height:2.5px;border-radius:2px;background:var(--accent)}
-  .selsec{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 13px;border:1px solid var(--line);
-    border-radius:10px;background:var(--card);color:var(--ink-3);font-size:13.5px;min-width:172px}
+  .selsec{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 13px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink-3);font-size:13.5px;min-width:168px}
   .grow{flex:1}
-  .ybtn{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 13px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink-2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
-  .search{display:flex;align-items:center;gap:9px;height:36px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink-3);font-size:13px;min-width:210px}
-  .search kbd{margin-left:auto;font-size:11px;background:var(--ground-a);border:1px solid var(--line);border-radius:5px;padding:1px 5px;color:var(--ink-3);font-family:inherit}
-  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;cursor:pointer}
-  .iconbtn{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink-2);cursor:pointer;display:grid;place-items:center;font-family:inherit}
-  /* ---------- page ---------- */
-  .wrap{max-width:1320px;margin:0 auto;padding:22px 26px 48px;display:flex;flex-direction:column;gap:20px}
+  .ybtn,.search{height:36px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:13px;font-family:inherit}
+  .ybtn{display:inline-flex;align-items:center;gap:8px;padding:0 13px;color:var(--ink-2);font-weight:600;cursor:pointer}
+  .search{display:flex;align-items:center;gap:9px;padding:0 12px;color:var(--ink-3);min-width:200px}
+  .search kbd{margin-left:auto;font-size:11px;background:var(--ground-a);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-family:inherit}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
+  /* layout */
+  .wrap{max-width:1340px;margin:0 auto;padding:22px 26px 48px;display:flex;flex-direction:column;gap:18px}
   .crumb{font-size:12.5px;color:var(--ink-3);font-weight:500}
-  .head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:-6px}
-  .head h1{margin:0;font-size:28px;letter-spacing:-.7px;font-weight:750}
+  .head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:-4px}
+  .head h1{margin:0;font-size:27px;letter-spacing:-.7px;font-weight:760}
   .head p{margin:4px 0 0;color:var(--ink-3);font-size:13.5px}
-  .head .tag{margin-left:auto;display:flex;gap:9px;align-items:center}
-  .vtag{font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--accent-ink);background:var(--accent-weak);padding:6px 10px;border-radius:var(--r-pill)}
-  .btn{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 15px;border-radius:10px;border:1px solid transparent;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit}
-  .btn.primary{background:var(--accent);color:#fff;box-shadow:var(--shadow)}
-  .btn.primary:hover{background:var(--accent-ink)}
-  .btn.ghost{background:var(--card);border-color:var(--line);color:var(--ink-2)}
-  .btn.ghost:hover{color:var(--ink);border-color:var(--ink-3)}
-  /* KPI cards */
-  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-  .kpi{display:flex;align-items:center;gap:15px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 18px;box-shadow:var(--shadow)}
-  .kpi .tile{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;flex-shrink:0}
-  .kpi .v{font-size:26px;font-weight:780;letter-spacing:-.5px;line-height:1}
-  .kpi .l{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-top:7px}
-  .t-crit{background:var(--crit-weak);color:var(--crit)} .t-warn{background:var(--warn-weak);color:var(--warn)}
-  .t-info{background:#E9F1FE;color:var(--info)} .t-acc{background:var(--accent-weak);color:var(--accent-ink)}
-  /* charts row */
-  .charts{display:grid;grid-template-columns:1.6fr 1fr;gap:16px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
-  .card .ch{display:flex;align-items:center;gap:10px;padding:16px 18px 10px}
-  .card .ch h3{margin:0;font-size:15px;letter-spacing:-.2px;font-weight:650}
-  .card .cb{padding:6px 18px 18px}
-  .bars-chart{display:flex;align-items:flex-end;gap:16px;height:170px;padding-top:8px}
-  .bcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end}
-  .bcol .stack{width:34px;border-radius:7px 7px 3px 3px;background:linear-gradient(180deg,var(--accent),var(--accent-2));position:relative}
-  .bcol .stack.mut{background:var(--accent-weak)}
-  .bcol small{font-size:11px;color:var(--ink-3)}
-  .donut{display:flex;align-items:center;gap:18px;padding:6px 0}
-  .legend{display:flex;flex-direction:column;gap:9px;font-size:12.5px}
-  .legend div{display:flex;align-items:center;gap:8px;color:var(--ink-2)}
-  .legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
-  /* split board + detail */
-  .split{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,1.32fr);gap:16px;align-items:start}
-  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
-  .ph{display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid var(--line)}
-  .ph h3{margin:0;font-size:15px;letter-spacing:-.2px;font-weight:650}
-  .ph .muted{color:var(--ink-3);font-size:12.5px;margin-left:auto}
-  .row{display:grid;grid-template-columns:38px 1fr auto;gap:13px;align-items:center;padding:13px 18px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .12s}
-  .row:last-child{border-bottom:0}
-  .row:hover{background:var(--ground-b)}
-  .row.sel{background:var(--accent-weak)}
-  .av{width:38px;height:38px;border-radius:11px;background:var(--accent-weak);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:13px}
-  .who b{font-size:14px;font-weight:650}
-  .who span{display:block;color:var(--ink-3);font-size:11.5px}
-  .who .reason{color:var(--ink-2);font-size:11.5px;margin-top:2px}
-  .badges{display:flex;gap:6px}
-  .pill{font-size:10.5px;font-weight:700;letter-spacing:.02em;padding:4px 9px;border-radius:var(--r-pill);white-space:nowrap}
-  .p-crit{color:var(--crit);background:var(--crit-weak)} .p-warn{color:var(--warn);background:var(--warn-weak)} .p-good{color:var(--good);background:var(--good-weak)} .p-mut{color:var(--ink-3);background:var(--ground-a)}
+  .head .r{margin-left:auto;display:flex;gap:9px;align-items:center}
+  .vtag{font-size:11px;font-weight:700;color:var(--accent-ink);background:var(--accent-weak);padding:6px 10px;border-radius:var(--r-pill)}
+  .btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:9px;border:1px solid transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .btn.primary{background:var(--accent);color:#fff;box-shadow:var(--shadow)} .btn.primary:hover{background:var(--accent-ink)}
+  .btn.ghost{background:var(--card);border-color:var(--line);color:var(--ink-2)} .btn.ghost:hover{color:var(--ink);border-color:var(--ink-3)}
+  .btn.sm{height:32px;padding:0 12px;font-size:12.5px;border-radius:8px}
+  /* IMPACT strip */
+  .impact{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .imp{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .imp .k{font-size:11.5px;color:var(--ink-3);font-weight:600;letter-spacing:.02em;display:flex;align-items:center;gap:7px}
+  .imp .v{font-size:26px;font-weight:780;letter-spacing:-.6px;margin-top:9px;display:flex;align-items:baseline;gap:8px}
+  .imp .sub{font-size:11.5px;color:var(--ink-3);margin-top:5px}
+  .imp .up{font-size:12px;font-weight:700;color:var(--good);display:inline-flex;align-items:center;gap:3px}
+  .imp.hero{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border:0}
+  .imp.hero .k,.imp.hero .sub{color:rgba(255,255,255,.85)} .imp.hero .v{color:#fff}
+  .imp.hero .sub b{color:#fff}
+  .dotk{width:8px;height:8px;border-radius:50%;flex:none}
+  /* segmented */
+  .seg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:4px;gap:2px;box-shadow:var(--shadow)}
+  .seg button{border:0;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink-3);padding:8px 14px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:7px}
+  .seg button.on{background:var(--accent-weak);color:var(--accent-ink)}
+  .seg .cnt{font-size:11px;background:var(--ground-a);color:var(--ink-2);border-radius:var(--r-pill);padding:1px 7px;font-weight:700}
+  .seg button.on .cnt{background:#fff;color:var(--accent-ink)}
+  /* split */
+  .split{display:grid;grid-template-columns:minmax(0,1.28fr) minmax(0,1fr);gap:16px;align-items:start}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+  .ph{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .ph h3{margin:0;font-size:15px;letter-spacing:-.2px;font-weight:660}
+  .filters{display:flex;gap:7px;margin-left:auto;flex-wrap:wrap}
+  .fchip{font-size:12px;font-weight:600;color:var(--ink-2);background:var(--ground-b);border:1px solid var(--line);padding:5px 10px;border-radius:var(--r-pill);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+  .fchip.on{background:var(--accent-weak);color:var(--accent-ink);border-color:transparent}
+  .fchip b{font-weight:700}
+  .bulkbar{display:flex;align-items:center;gap:10px;padding:10px 18px;background:var(--accent-weak);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--accent-ink);font-weight:600}
+  /* action queue rows */
+  .qrow{display:grid;grid-template-columns:4px 34px 1fr auto;gap:13px;align-items:center;padding:13px 18px 13px 0;border-bottom:1px solid var(--line);cursor:pointer}
+  .qrow:last-child{border-bottom:0}
+  .qrow:hover{background:var(--ground-b)}
+  .qrow.sel{background:var(--accent-weak)}
+  .qstripe{align-self:stretch;border-radius:0 3px 3px 0}
+  .qs-crit{background:var(--crit)} .qs-warn{background:var(--warn)}
+  .av{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:700;font-size:12px}
+  .a-blue{background:#E4E9FF;color:#4338CA}.a-green{background:#DEF6EC;color:#0B7A55}.a-amber{background:#FCEFD6;color:#B4740B}.a-pink{background:#FCE7F0;color:#B83280}.a-cyan{background:#DFF3F7;color:#0E7490}
+  .qwho{min-width:0}
+  .qwho b{font-size:14px;font-weight:650}
+  .qwho .iss{color:var(--ink-2);font-size:12px;margin-top:2px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .sev{font-size:10px;font-weight:800;letter-spacing:.04em;padding:2px 7px;border-radius:var(--r-pill)}
+  .sev-crit{color:var(--crit);background:var(--crit-weak)}.sev-warn{color:var(--warn);background:var(--warn-weak)}
+  .meta{color:var(--ink-3);font-size:11px}
+  .qact{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .status{font-size:11px;font-weight:700;padding:3px 9px;border-radius:var(--r-pill);white-space:nowrap}
+  .st-new{color:var(--crit);background:var(--crit-weak)} .st-prog{color:var(--info);background:var(--info-weak)} .st-snooze{color:var(--ink-3);background:var(--ground-a)} .st-done{color:var(--good);background:var(--good-weak)}
   /* detail */
-  .dhead{display:flex;align-items:center;gap:14px;padding:18px}
-  .dhead .av{width:48px;height:48px;font-size:16px}
-  .dhead b{font-size:17px;letter-spacing:-.3px;font-weight:700}
-  .dhead span{color:var(--ink-3);font-size:12.5px}
-  .adv{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink-3);margin-top:4px}
-  .dot{width:6px;height:6px;border-radius:50%;background:var(--good)}
+  .dhead{display:flex;align-items:center;gap:14px;padding:16px 18px;border-bottom:1px solid var(--line)}
+  .dhead .av{width:46px;height:46px;font-size:15px}
+  .dhead b{font-size:16px;letter-spacing:-.3px;font-weight:700}
+  .dhead span{color:var(--ink-3);font-size:12px}
+  .adv{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--ink-3);margin-top:4px}
   .tabs{display:flex;gap:4px;padding:0 16px;border-bottom:1px solid var(--line)}
   .tab{border:0;background:none;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink-3);padding:11px 13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
   .tab.on{color:var(--accent-ink);border-bottom-color:var(--accent)}
-  .tabwrap{padding:18px}
-  .pane{display:none;flex-direction:column;gap:15px}
-  .pane.on{display:flex}
-  .icard{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--card)}
-  .ic-h{display:flex;align-items:center;gap:10px;padding:13px 15px;background:var(--ground-b);border-bottom:1px solid var(--line)}
-  .ic-h .t{font-weight:650;font-size:14px}
+  .tabwrap{padding:16px;display:flex;flex-direction:column;gap:14px}
+  .icard{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .ic-h{display:flex;align-items:center;gap:9px;padding:12px 15px;background:var(--ground-b);border-bottom:1px solid var(--line)}
+  .ic-h .t{font-weight:650;font-size:13.5px}
+  .ic-h .chic{color:var(--ink-2)}
   .ic-b{padding:15px}
   .risklabel{margin-left:auto;font-size:11px;font-weight:800;letter-spacing:.04em;padding:5px 11px;border-radius:var(--r-pill)}
-  .scorebar{height:9px;border-radius:var(--r-pill);background:var(--ground-a);overflow:hidden;margin:2px 0 14px}
-  .scorebar>i{display:block;height:100%;border-radius:inherit}
-  .factors{display:flex;flex-direction:column;gap:11px}
-  .factor{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
-  .factor .fl{font-size:13px;color:var(--ink-2)} .factor .fl b{color:var(--ink);font-weight:650}
-  .fmini{height:6px;width:130px;border-radius:var(--r-pill);background:var(--ground-a);overflow:hidden}
-  .fmini>i{display:block;height:100%}
-  .action{display:flex;align-items:flex-start;gap:12px;margin-top:15px;padding:13px 14px;border-radius:12px;background:var(--accent-weak);border:1px solid color-mix(in srgb,var(--accent) 20%,transparent)}
-  .action .lab{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--accent-ink);font-weight:700}
-  .action .txt{font-size:14px;color:var(--ink);font-weight:650;margin-top:2px}
+  .scorebar{height:9px;border-radius:var(--r-pill);background:var(--ground-a);overflow:hidden;margin:2px 0 13px}
+  .scorebar>i{display:block;height:100%}
+  .factors{display:flex;flex-direction:column;gap:10px}
+  .factor{display:grid;grid-template-columns:1fr 120px;gap:12px;align-items:center}
+  .factor .fl{font-size:12.5px;color:var(--ink-2)} .factor .fl b{color:var(--ink);font-weight:650}
+  .fmini{height:6px;border-radius:var(--r-pill);background:var(--ground-a);overflow:hidden}.fmini>i{display:block;height:100%}
+  /* ACTION block */
+  .actbox{margin-top:14px;border:1px solid color-mix(in srgb,var(--accent) 22%,transparent);border-radius:12px;overflow:hidden}
+  .actbox .top{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--accent-weak)}
+  .actbox .lab{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent-ink);font-weight:800}
+  .actbox .txt{font-size:14px;color:var(--ink);font-weight:700;margin-top:2px}
+  .actbox .cta{margin-left:auto;display:flex;gap:8px}
+  .actbox .impactline{display:flex;align-items:center;gap:9px;padding:10px 14px;font-size:12px;color:var(--ink-2);background:var(--card)}
+  .actbox .impactline b{color:var(--good)}
+  .actbox .impactline .tgt{color:var(--accent-ink)}
   .subj{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px dashed var(--line);font-size:13.5px}
   .subj:last-child{border-bottom:0}.subj .nm{font-weight:600}.subj .pct{color:var(--ink-2)}
-  .code{display:flex;align-items:center;gap:14px}
-  .code .big{font-size:38px;font-weight:820;letter-spacing:3px;color:var(--accent-ink)}
-  .bars{display:flex;flex-direction:column;gap:9px;margin-top:8px}
-  .barrow{display:grid;grid-template-columns:118px 1fr 32px;gap:11px;align-items:center;font-size:12.5px}
-  .barrow .bt{color:var(--ink-2)}
-  .bar{height:9px;border-radius:var(--r-pill);background:var(--ground-a);overflow:hidden}
-  .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
-  .careers{display:flex;flex-wrap:wrap;gap:8px;margin-top:5px}
-  .careers span{font-size:11.5px;font-weight:600;color:var(--ink-2);background:var(--ground-b);border:1px solid var(--line);padding:6px 11px;border-radius:var(--r-pill)}
-  .note{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:var(--ink-2);background:var(--ground-b);border:1px dashed var(--line);border-radius:12px;padding:12px 14px}
-  .note b{color:var(--ink)}
-  svg{display:block}
-  @media (max-width:1080px){.kpis{grid-template-columns:repeat(2,1fr)}.charts{grid-template-columns:1fr}.split{grid-template-columns:1fr}}
+  .pill{font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:var(--r-pill);white-space:nowrap}
+  .p-crit{color:var(--crit);background:var(--crit-weak)}.p-warn{color:var(--warn);background:var(--warn-weak)}.p-good{color:var(--good);background:var(--good-weak)}.p-mut{color:var(--ink-3);background:var(--ground-a)}
+  /* intervention timeline */
+  .tl{display:flex;flex-direction:column;gap:0}
+  .tli{display:grid;grid-template-columns:16px 1fr;gap:12px;padding:9px 0}
+  .tli .rail{display:flex;flex-direction:column;align-items:center}
+  .tli .rail i{width:9px;height:9px;border-radius:50%;background:var(--accent);margin-top:4px}
+  .tli .rail s{flex:1;width:2px;background:var(--line);margin-top:3px}
+  .tli:last-child .rail s{display:none}
+  .tli .c b{font-size:12.5px;font-weight:650}
+  .tli .c span{display:block;color:var(--ink-3);font-size:11.5px;margin-top:1px}
+  .tli .c .out{color:var(--good);font-weight:600}
+  .note{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--ink-2);background:var(--ground-b);border:1px dashed var(--line);border-radius:12px;padding:11px 13px}
+  .note b{color:var(--ink)} .note .chic{color:var(--ink-3);margin-top:1px}
+  @media (max-width:1120px){.impact{grid-template-columns:repeat(2,1fr)}.split{grid-template-columns:1fr}}
   @media (max-width:820px){.mainnav,.selsec,.search{display:none}}
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
-<!-- PRIMARY TOP NAV -->
+<!-- icon sprite &mdash; lucide paths, symbols carry viewBox so <use> scales correctly -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
+  <symbol id="ic-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></symbol>
+  <symbol id="ic-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-refresh" viewBox="0 0 24 24"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></symbol>
+  <symbol id="ic-trendup" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></symbol>
+  <symbol id="ic-trenddown" viewBox="0 0 24 24"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="ic-pencil" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol>
+  <symbol id="ic-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></symbol>
+  <symbol id="ic-note" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="12" y1="17" x2="8" y2="17"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+</defs></svg>
+
 <header class="topnav">
   <div class="logo"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg></div>
-  <nav class="mainnav">
-    <a href="#">Dashboard</a>
-    <a href="#">Students</a>
-    <a href="#">Teachers</a>
-    <a href="#">Classes</a>
-    <a href="#">Timetable</a>
-    <a href="#" class="on">Insights</a>
-    <a href="#">More ▾</a>
-  </nav>
-  <div class="selsec">Select section… ▾</div>
+  <nav class="mainnav"><a href="#">Dashboard</a><a href="#">Students</a><a href="#">Teachers</a><a href="#">Classes</a><a href="#">Timetable</a><a href="#" class="on">Insights</a><a href="#">More &#9662;</a></nav>
+  <div class="selsec">Select section&hellip; &#9662;</div>
   <div class="grow"></div>
-  <button class="ybtn">2026–27 ▾</button>
-  <div class="search">🔍 Search… <kbd>⌘K</kbd></div>
-  <button class="iconbtn" title="Notifications">🔔</button>
-  <div class="avatar">DL</div>
+  <button class="ybtn">2026&ndash;27 &#9662;</button>
+  <div class="search"><svg class="i sm"><use href="#ic-search"/></svg> Search&hellip; <kbd>&#8984;K</kbd></div>
+  <div class="avatar">DI</div>
 </header>
 
 <div class="wrap">
   <div>
-    <div class="crumb">Dashboard › Insights</div>
+    <div class="crumb">Dashboard &rsaquo; Insights</div>
     <div class="head">
-      <div>
-        <h1>Insights</h1>
-        <p>Deterministic risk signals · last recomputed today 02:00 IST · advisory only</p>
-      </div>
-      <div class="tag">
-        <span class="vtag">PARAMS v1</span>
-        <button class="btn ghost">Class: All ▾</button>
-        <button class="btn primary">↻ Recompute now</button>
-      </div>
+      <div><h1>Insights &amp; Interventions</h1><p>Spot at-risk students early, act in one click, and track whether it worked &mdash; deterministic, advisory.</p></div>
+      <div class="r"><span class="vtag">PARAMS v1</span><button class="btn ghost"><svg class="i sm"><use href="#ic-refresh"/></svg> Recompute</button></div>
     </div>
   </div>
 
-  <!-- KPI ROW (matches KpiCard: tinted icon tile + value + uppercase label) -->
-  <div class="kpis">
-    <div class="kpi"><div class="tile t-crit"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></div><div><div class="v">12</div><div class="l">High-risk students</div></div></div>
-    <div class="kpi"><div class="tile t-warn"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div><div class="v">28</div><div class="l">Medium-risk</div></div></div>
-    <div class="kpi"><div class="tile t-info"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></div><div><div class="v">17</div><div class="l">Attendance alerts</div></div></div>
-    <div class="kpi"><div class="tile t-acc"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 4h16v12H5.2L4 18V4Z"/></svg></div><div><div class="v">9</div><div class="l">Comms drafts to review</div></div></div>
+  <!-- IMPACT: outcomes, not vanity counts -->
+  <div class="impact">
+    <div class="imp"><div class="k"><span class="dotk" style="background:var(--crit)"></span> Needs action</div><div class="v">23</div><div class="sub">9 calls &middot; 7 fee reminders &middot; 5 remedials &middot; 2 docs</div></div>
+    <div class="imp"><div class="k"><span class="dotk" style="background:var(--info)"></span> In progress</div><div class="v">8</div><div class="sub">awaiting outcome &middot; 3 overdue follow-ups</div></div>
+    <div class="imp"><div class="k"><span class="dotk" style="background:var(--good)"></span> Resolved this month</div><div class="v">14 <span class="up"><svg class="i sm"><use href="#ic-trendup"/></svg> 40%</span></div><div class="sub">vs 10 last month</div></div>
+    <div class="imp hero"><div class="k"><svg class="i sm"><use href="#ic-trendup"/></svg> Proven impact this term</div><div class="v">+12%</div><div class="sub"><b>avg attendance recovered</b> after a parent call &middot; &#8377;1.2L fees recovered after reminders</div></div>
   </div>
 
-  <!-- CHARTS ROW (native feel: bar + donut like the dashboard) -->
-  <div class="charts">
-    <section class="card">
-      <div class="ch"><h3>Risk band by class</h3><span style="margin-left:auto;font-size:12px;color:var(--ink-3)">this term</span></div>
-      <div class="cb">
-        <div class="bars-chart">
-          <div class="bcol"><div class="stack" style="height:38%"></div><small>Cl 6</small></div>
-          <div class="bcol"><div class="stack" style="height:54%"></div><small>Cl 7</small></div>
-          <div class="bcol"><div class="stack" style="height:82%"></div><small>Cl 8</small></div>
-          <div class="bcol"><div class="stack" style="height:46%"></div><small>Cl 9</small></div>
-          <div class="bcol"><div class="stack" style="height:66%"></div><small>Cl 10</small></div>
-          <div class="bcol"><div class="stack mut" style="height:30%"></div><small>Cl 11</small></div>
-          <div class="bcol"><div class="stack mut" style="height:24%"></div><small>Cl 12</small></div>
-        </div>
-      </div>
-    </section>
-    <section class="card">
-      <div class="ch"><h3>Risk distribution</h3></div>
-      <div class="cb">
-        <div class="donut">
-          <svg width="132" height="132" viewBox="0 0 42 42">
-            <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--good-weak)" stroke-width="6"/>
-            <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--crit)" stroke-width="6" stroke-dasharray="12 88" stroke-dashoffset="25"/>
-            <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--warn)" stroke-width="6" stroke-dasharray="28 72" stroke-dashoffset="13"/>
-            <text x="21" y="20" text-anchor="middle" font-size="7" font-weight="700" fill="var(--ink)">960</text>
-            <text x="21" y="26.5" text-anchor="middle" font-size="3.4" fill="var(--ink-3)">students</text>
-          </svg>
-          <div class="legend">
-            <div><i style="background:var(--crit)"></i> High · 12</div>
-            <div><i style="background:var(--warn)"></i> Medium · 28</div>
-            <div><i style="background:var(--good)"></i> Healthy · 920</div>
-          </div>
-        </div>
-      </div>
-    </section>
+  <div class="seg">
+    <button class="on"><svg class="i sm"><use href="#ic-target"/></svg> Action queue <span class="cnt">23</span></button>
+    <button><svg class="i sm"><use href="#ic-users"/></svg> All students <span class="cnt">960</span></button>
+    <button><svg class="i sm"><use href="#ic-refresh"/></svg> Interventions <span class="cnt">31</span></button>
   </div>
 
-  <!-- BOARD + DETAIL -->
   <div class="split">
+    <!-- ACTION QUEUE -->
     <section class="panel">
-      <div class="ph"><h3>Students needing attention</h3><span class="muted">40 flagged · by risk</span></div>
-      <div id="board">
-        <div class="row sel"><div class="av">RS</div><div class="who"><b>Rahul Sharma</b><span>Class 8 · B · Roll 14</span><div class="reason">18% attendance drop · Math trending down</div></div><div class="badges"><span class="pill p-crit">ATTN HIGH</span><span class="pill p-warn">PERF MED</span></div></div>
-        <div class="row"><div class="av">PM</div><div class="who"><b>Priya Menon</b><span>Class 10 · A · Roll 3</span><div class="reason">Fees overdue 2 cycles · 3 partials</div></div><div class="badges"><span class="pill p-crit">FEE HIGH</span></div></div>
-        <div class="row"><div class="av">AK</div><div class="who"><b>Arjun Kumar</b><span>Class 9 · C · Roll 21</span><div class="reason">Missed 5 consecutive days</div></div><div class="badges"><span class="pill p-crit">ATTN HIGH</span></div></div>
-        <div class="row"><div class="av">SF</div><div class="who"><b>Sara Fernandes</b><span>Class 8 · A · Roll 9</span><div class="reason">Science &amp; Math below pass forecast</div></div><div class="badges"><span class="pill p-warn">PERF MED</span><span class="pill p-warn">FEE MED</span></div></div>
-        <div class="row"><div class="av">DV</div><div class="who"><b>Dev Varma</b><span>Class 7 · B · Roll 30</span><div class="reason">Recurring Monday absences</div></div><div class="badges"><span class="pill p-warn">ATTN MED</span></div></div>
+      <div class="ph">
+        <h3>Action queue</h3>
+        <div class="filters">
+          <span class="fchip on">All <b>23</b></span>
+          <span class="fchip"><svg class="i sm"><use href="#ic-phone"/></svg> Calls <b>9</b></span>
+          <span class="fchip"><svg class="i sm"><use href="#ic-card"/></svg> Fees <b>7</b></span>
+          <span class="fchip"><svg class="i sm"><use href="#ic-book"/></svg> Remedials <b>5</b></span>
+          <span class="fchip"><svg class="i sm"><use href="#ic-file"/></svg> Docs <b>2</b></span>
+        </div>
+      </div>
+      <div class="bulkbar"><svg class="i sm"><use href="#ic-check"/></svg> 9 fee-risk parents selected &middot; <button class="btn primary sm">Draft reminders to all 9</button> <span style="color:var(--ink-3);font-weight:500">then review &amp; send</span></div>
+
+      <div class="qrow sel">
+        <span class="qstripe qs-crit"></span><div class="av a-blue">RS</div>
+        <div class="qwho"><b>Rahul Sharma</b><div class="iss"><span class="sev sev-crit">HIGH</span> Attendance dropping &mdash; 18% down, missed 6 Mondays <span class="meta">&middot; Cls 8-B</span></div></div>
+        <div class="qact"><button class="btn primary sm"><svg class="i sm"><use href="#ic-phone"/></svg> Call parent</button><span class="status st-new">New &middot; due today</span></div>
+      </div>
+      <div class="qrow">
+        <span class="qstripe qs-crit"></span><div class="av a-pink">PM</div>
+        <div class="qwho"><b>Priya Menon</b><div class="iss"><span class="sev sev-crit">HIGH</span> Fees overdue 2 cycles &middot; 3 partials <span class="meta">&middot; Cls 10-A</span></div></div>
+        <div class="qact"><button class="btn ghost sm">Follow up</button><span class="status st-prog">Reminder sent 2d ago</span></div>
+      </div>
+      <div class="qrow">
+        <span class="qstripe qs-crit"></span><div class="av a-green">AK</div>
+        <div class="qwho"><b>Arjun Kumar</b><div class="iss"><span class="sev sev-crit">HIGH</span> 5 consecutive absences <span class="meta">&middot; Cls 9-C</span></div></div>
+        <div class="qact"><button class="btn primary sm"><svg class="i sm"><use href="#ic-phone"/></svg> Call parent</button><span class="status st-new">New &middot; due today</span></div>
+      </div>
+      <div class="qrow">
+        <span class="qstripe qs-warn"></span><div class="av a-amber">SF</div>
+        <div class="qwho"><b>Sara Fernandes</b><div class="iss"><span class="sev sev-warn">MED</span> Math &amp; Science below pass forecast <span class="meta">&middot; Cls 8-A</span></div></div>
+        <div class="qact"><button class="btn primary sm"><svg class="i sm"><use href="#ic-book"/></svg> Assign remedial</button><span class="status st-new">New &middot; this week</span></div>
+      </div>
+      <div class="qrow">
+        <span class="qstripe qs-warn"></span><div class="av a-cyan">DV</div>
+        <div class="qwho"><b>Dev Varma</b><div class="iss"><span class="sev sev-warn">MED</span> Recurring Monday absence <span class="meta">&middot; Cls 7-B</span></div></div>
+        <div class="qact"><button class="btn ghost sm">Notify parent</button><span class="status st-snooze">Snoozed &rarr; Mon</span></div>
+      </div>
+      <div class="qrow">
+        <span class="qstripe qs-warn"></span><div class="av a-blue">NG</div>
+        <div class="qwho"><b>Neha Gupta</b><div class="iss"><span class="sev sev-warn">MED</span> KYC: Transfer Certificate expiring in 6 days <span class="meta">&middot; Cls 6-A</span></div></div>
+        <div class="qact"><button class="btn ghost sm">Request doc</button><span class="status st-new">New</span></div>
       </div>
     </section>
 
+    <!-- DETAIL -->
     <section class="panel">
       <div class="dhead">
-        <div class="av">RS</div>
-        <div style="flex:1"><b>Rahul Sharma</b> <span>· Class 8-B · Roll 14 · Parent: M. Sharma</span>
-          <div class="adv"><span class="dot"></span> Advisory — no automated action. Messages are drafted for your approval.</div>
+        <div class="av a-blue">RS</div>
+        <div style="flex:1"><b>Rahul Sharma</b> <span>&middot; Cls 8-B &middot; Roll 14 &middot; Parent M. Sharma &middot; +91 98765 43210</span>
+          <div class="adv"><span class="dotk" style="background:var(--good)"></span> Advisory &mdash; nothing is sent or changed without your action.</div>
         </div>
+        <button class="btn ghost sm">Open profile</button>
       </div>
-      <div class="tabs">
-        <button class="tab on" data-t="risk">Risk</button>
-        <button class="tab" data-t="riasec">RIASEC</button>
-        <button class="tab" data-t="report">Report analysis</button>
-      </div>
-      <div class="tabwrap">
-        <div class="pane on" data-p="risk">
-          <div class="icard">
-            <div class="ic-h"><span>📉</span><span class="t">Attendance Risk</span><span class="risklabel" style="color:var(--crit);background:var(--crit-weak)">HIGH · 68</span></div>
-            <div class="ic-b">
-              <div class="scorebar"><i style="width:68%;background:var(--crit)"></i></div>
-              <div class="factors">
-                <div class="factor"><div class="fl"><b>18%</b> attendance drop <span style="color:var(--ink-3)">(last 15d vs prior)</span></div><div class="fmini"><i style="width:72%;background:var(--crit)"></i></div></div>
-                <div class="factor"><div class="fl">Missed <b>6 Mondays</b> this term</div><div class="fmini"><i style="width:60%;background:var(--warn)"></i></div></div>
-                <div class="factor"><div class="fl"><b>72%</b> present overall</div><div class="fmini"><i style="width:40%;background:var(--warn)"></i></div></div>
-                <div class="factor"><div class="fl"><b>3</b> consecutive absences</div><div class="fmini"><i style="width:50%;background:var(--warn)"></i></div></div>
-              </div>
-              <div class="action"><div><div class="lab">Recommended action</div><div class="txt">Call parent within 48 hours.</div></div><button class="btn ghost" style="margin-left:auto">Draft SMS</button></div>
+      <div class="tabs"><button class="tab on" data-t="risk">Risk &amp; actions</button><button class="tab" data-t="riasec">RIASEC</button><button class="tab" data-t="report">Report</button></div>
+
+      <div class="tabwrap pane on" data-p="risk">
+        <div class="icard">
+          <div class="ic-h"><svg class="i chic"><use href="#ic-trenddown"/></svg><span class="t">Attendance Risk</span><span class="risklabel" style="color:var(--crit);background:var(--crit-weak)">HIGH &middot; 68</span></div>
+          <div class="ic-b">
+            <div class="scorebar"><i style="width:68%;background:var(--crit)"></i></div>
+            <div class="factors">
+              <div class="factor"><div class="fl"><b>18%</b> attendance drop <span style="color:var(--ink-3)">(15d vs prior)</span></div><div class="fmini"><i style="width:72%;background:var(--crit)"></i></div></div>
+              <div class="factor"><div class="fl">Missed <b>6 Mondays</b> this term</div><div class="fmini"><i style="width:60%;background:var(--warn)"></i></div></div>
+              <div class="factor"><div class="fl"><b>72%</b> present overall</div><div class="fmini"><i style="width:40%;background:var(--warn)"></i></div></div>
             </div>
-          </div>
-          <div class="icard">
-            <div class="ic-h"><span>📈</span><span class="t">Performance Forecast</span><span style="margin-left:auto;font-size:12.5px;color:var(--ink-3)">current avg 61%</span></div>
-            <div class="ic-b">
-              <div class="subj"><span class="nm">Mathematics</span><span class="pct">58% → 52%</span><span class="pill p-crit">HIGH RISK</span></div>
-              <div class="subj"><span class="nm">Science</span><span class="pct">64% → 64%</span><span class="pill p-mut">STABLE</span></div>
-              <div class="subj"><span class="nm">English</span><span class="pct">61% → 67%</span><span class="pill p-good">IMPROVING</span></div>
-              <div class="action"><div><div class="lab">Recommended action</div><div class="txt">Conduct 3 remedial classes in Mathematics.</div></div><button class="btn ghost" style="margin-left:auto">Assign</button></div>
-            </div>
-          </div>
-          <div class="icard">
-            <div class="ic-h"><span>💳</span><span class="t">Fee-Default Risk</span><span class="risklabel" style="color:var(--good);background:var(--good-weak)">LOW · 0.21</span></div>
-            <div class="ic-b">
-              <div class="factors">
-                <div class="factor"><div class="fl">Outstanding <b>8%</b> of billed</div><div class="fmini"><i style="width:8%;background:var(--good)"></i></div></div>
-                <div class="factor"><div class="fl"><b>0</b> late payments this year</div><div class="fmini"><i style="width:6%;background:var(--good)"></i></div></div>
-              </div>
-              <div class="note" style="margin-top:13px">✓ <div><b>No action needed.</b> Payment history is healthy.</div></div>
+            <div class="actbox">
+              <div class="top"><div><div class="lab">Recommended action</div><div class="txt">Call parent within 48 hours</div></div>
+                <div class="cta"><button class="btn ghost sm"><svg class="i sm"><use href="#ic-pencil"/></svg> Draft SMS</button><button class="btn primary sm"><svg class="i sm"><use href="#ic-phone"/></svg> Call now</button></div></div>
+              <div class="impactline"><svg class="i sm tgt"><use href="#ic-target"/></svg><span>Similar early calls recovered <b>~60%</b> of cases to healthy attendance within 3 weeks.</span> <button class="btn ghost sm" style="margin-left:auto">Log outcome</button></div>
             </div>
           </div>
         </div>
 
-        <div class="pane" data-p="riasec">
-          <div class="icard">
-            <div class="ic-h"><span>🧭</span><span class="t">RIASEC Career Profile</span><span style="margin-left:auto;font-size:12.5px;color:var(--ink-3)">48 items · taken 12 Jul</span></div>
-            <div class="ic-b">
-              <div class="code"><div class="big">SAE</div><div style="font-size:13px;color:var(--ink-2)">Social · Artistic · Enterprising<br><span style="color:var(--ink-3)">People-oriented, creative, persuasive</span></div></div>
-              <div class="bars">
-                <div class="barrow"><span class="bt">Social</span><span class="bar"><i style="width:88%"></i></span><span class="pct">88</span></div>
-                <div class="barrow"><span class="bt">Artistic</span><span class="bar"><i style="width:81%"></i></span><span class="pct">81</span></div>
-                <div class="barrow"><span class="bt">Enterprising</span><span class="bar"><i style="width:74%"></i></span><span class="pct">74</span></div>
-                <div class="barrow"><span class="bt">Investigative</span><span class="bar"><i style="width:52%"></i></span><span class="pct">52</span></div>
-                <div class="barrow"><span class="bt">Conventional</span><span class="bar"><i style="width:39%"></i></span><span class="pct">39</span></div>
-                <div class="barrow"><span class="bt">Realistic</span><span class="bar"><i style="width:28%"></i></span><span class="pct">28</span></div>
-              </div>
-              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:600;margin:15px 0 3px">Suggested directions</div>
-              <div class="careers"><span>Teaching</span><span>Counselling</span><span>Content &amp; Design</span><span>Media</span><span>HR / People</span><span>Public Relations</span></div>
+        <div class="icard">
+          <div class="ic-h"><svg class="i chic"><use href="#ic-trendup"/></svg><span class="t">Performance Forecast</span><span style="margin-left:auto;font-size:12px;color:var(--ink-3)">current avg 61%</span></div>
+          <div class="ic-b">
+            <div class="subj"><span class="nm">Mathematics</span><span class="pct">58% &rarr; 52%</span><span class="pill p-crit">HIGH RISK</span></div>
+            <div class="subj"><span class="nm">Science</span><span class="pct">64% &rarr; 64%</span><span class="pill p-mut">STABLE</span></div>
+            <div class="subj"><span class="nm">English</span><span class="pct">61% &rarr; 67%</span><span class="pill p-good">IMPROVING</span></div>
+            <div class="actbox">
+              <div class="top"><div><div class="lab">Recommended action</div><div class="txt">Assign 3 remedial classes in Mathematics</div></div>
+                <div class="cta"><button class="btn primary sm"><svg class="i sm"><use href="#ic-book"/></svg> Assign remedial</button></div></div>
+              <div class="impactline"><svg class="i sm tgt"><use href="#ic-target"/></svg><span>Projected to clear the <b>35% pass mark</b> in ~3 sessions if started this week.</span></div>
             </div>
           </div>
-          <div class="note">🧮 <div>Scored by fixed keying — sum per type → percentile vs norm table. Deterministic &amp; reproducible. <b>No AI inference.</b></div></div>
         </div>
 
-        <div class="pane" data-p="report">
-          <div class="icard">
-            <div class="ic-h"><span>📄</span><span class="t">Report-Card Analysis</span><span style="margin-left:auto;font-size:12.5px;color:var(--ink-3)">Term 1 · vs Class 8-B</span></div>
-            <div class="ic-b">
-              <div class="subj"><span class="nm">English</span><span class="pct">67% · 82nd pctl</span><span class="pill p-good">STRENGTH</span></div>
-              <div class="subj"><span class="nm">Science</span><span class="pct">64% · 61st pctl</span><span class="pill p-mut">ON TRACK</span></div>
-              <div class="subj"><span class="nm">Mathematics</span><span class="pct">58% · 24th pctl</span><span class="pill p-crit">FOCUS</span></div>
-              <div class="subj"><span class="nm">Social Studies</span><span class="pct">55% · 31st · ▼10</span><span class="pill p-warn">DECLINING</span></div>
-              <div class="note" style="margin-top:13px">📝 <div><b>Narrative (auto-composed):</b> Rahul ranks 18/34 overall with strong, consistent English. Mathematics is the primary focus area, down 6 points and below the class median. Social Studies has declined since the last exam and should be monitored.</div></div>
+        <div class="icard">
+          <div class="ic-h"><svg class="i chic"><use href="#ic-clock"/></svg><span class="t">Intervention history</span></div>
+          <div class="ic-b">
+            <div class="tl">
+              <div class="tli"><div class="rail"><i></i><s></s></div><div class="c"><b>Class teacher noted low focus</b><span>08 Jul &middot; Ms. Rao &middot; flagged in homeroom review</span></div></div>
+              <div class="tli"><div class="rail"><i style="background:var(--good)"></i></div><div class="c"><b>No parent contact yet</b><span class="out">This is the first recommended action &mdash; act now to start the loop.</span></div></div>
             </div>
           </div>
         </div>
+      </div>
+
+      <div class="tabwrap pane" data-p="riasec" style="display:none">
+        <div class="icard"><div class="ic-h"><svg class="i chic"><use href="#ic-compass"/></svg><span class="t">RIASEC &middot; career profile</span><span style="margin-left:auto;font-size:12px;color:var(--ink-3)">code SAE</span></div>
+          <div class="ic-b"><div class="note"><svg class="i chic"><use href="#ic-compass"/></svg><div><b>Top fit:</b> Social &middot; Artistic &middot; Enterprising. <b>Suggested:</b> Teaching, Counselling, Media/Design. <span style="color:var(--ink-3)">Full scoring in the student profile.</span></div></div>
+            <div class="actbox"><div class="top"><div><div class="lab">Recommended action</div><div class="txt">Share career guidance sheet at the next PTM</div></div><div class="cta"><button class="btn primary sm">Generate sheet</button></div></div></div>
+          </div></div>
+      </div>
+      <div class="tabwrap pane" data-p="report" style="display:none">
+        <div class="icard"><div class="ic-h"><svg class="i chic"><use href="#ic-note"/></svg><span class="t">Report-card analysis &middot; Term 1</span></div>
+          <div class="ic-b"><div class="note"><svg class="i chic"><use href="#ic-note"/></svg><div><b>Focus:</b> Mathematics (24th pctl, down 6). <b>Strength:</b> English (82nd pctl). Social Studies declining.</div></div>
+            <div class="actbox"><div class="top"><div><div class="lab">Recommended action</div><div class="txt">Add teacher remark + attach analysis to report card</div></div><div class="cta"><button class="btn primary sm">Attach to report</button></div></div></div>
+          </div></div>
       </div>
     </section>
   </div>
 
-  <div class="note">⚖️ <div><b>Advisory engine.</b> All scores are deterministic math (see <b>insights-algorithms.md §6</b>) — attendance weights 0.40 / 0.25 / 0.20 / 0.15, fee logistic, RIASEC keying. Nothing here messages a parent or changes a record without a staff action.</div></div>
+  <div class="note"><svg class="i chic"><use href="#ic-shield"/></svg><div><b>Advisory engine &mdash; deterministic, not AI.</b> Every score, factor and recommendation is fixed math (see <b>insights-algorithms.md &sect;6</b>). Actions are one-click but always leave a human in the loop; outcomes are logged so the queue knows what's resolved and impact is measured &mdash; never auto-sent.</div></div>
 </div>
 
 <script>
   document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
     document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
-    document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
-    t.classList.add('on');document.querySelector('.pane[data-p="'+t.dataset.t+'"]').classList.add('on');
+    document.querySelectorAll('.pane').forEach(x=>{x.classList.remove('on');x.style.display='none';});
+    t.classList.add('on');const p=document.querySelector('.pane[data-p="'+t.dataset.t+'"]');p.classList.add('on');p.style.display='flex';
   }));
-  document.querySelectorAll('.row').forEach(r=>r.addEventListener('click',()=>{
-    document.querySelectorAll('.row').forEach(x=>x.classList.remove('sel'));r.classList.add('sel');
+  document.querySelectorAll('.qrow').forEach(r=>r.addEventListener('click',e=>{
+    if(e.target.closest('button'))return;
+    document.querySelectorAll('.qrow').forEach(x=>x.classList.remove('sel'));r.classList.add('sel');
   }));
 </script>
