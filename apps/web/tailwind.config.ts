@@ -92,6 +92,24 @@ const config: Config = {
           "0%": { transform: "scaleX(0)" },
           "100%": { transform: "scaleX(1)" },
         },
+        "spin-slow": {
+          "0%": { transform: "rotate(0deg)" },
+          "100%": { transform: "rotate(360deg)" },
+        },
+        "gradient-x": {
+          "0%, 100%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+        },
+        "dash-travel": {
+          "0%": { left: "-10%", opacity: "0" },
+          "10%": { opacity: "1" },
+          "90%": { opacity: "1" },
+          "100%": { left: "110%", opacity: "0" },
+        },
+        "ring-glow": {
+          "0%, 100%": { boxShadow: "0 0 0px 0px rgba(114,169,226,0)" },
+          "50%": { boxShadow: "0 0 36px 6px rgba(114,169,226,0.45)" },
+        },
       },
       animation: {
         "fade-in-up": "fade-in-up 0.4s ease-out forwards",
@@ -104,6 +122,10 @@ const config: Config = {
         "icon-pulse": "icon-pulse 3.5s ease-in-out infinite",
         "page-in": "page-in 500ms cubic-bezier(0.25, 1, 0.5, 1) both",
         "nav-underline": "nav-underline 280ms cubic-bezier(0.25, 1, 0.5, 1) forwards",
+        "spin-slow": "spin-slow 6s linear infinite",
+        "gradient-x": "gradient-x 4s ease infinite",
+        "dash-travel": "dash-travel 2.6s ease-in-out infinite",
+        "ring-glow": "ring-glow 3.2s ease-in-out infinite",
       },
     },
   },

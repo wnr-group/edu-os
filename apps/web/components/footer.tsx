@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Globe, Mail, MessageCircle, Rss } from "lucide-react";
+import { Globe, Mail, MessageCircle, Rss, GraduationCap } from "lucide-react";
 import { AnimateOnScroll } from "@/components/animate-on-scroll";
 
 const CONTACT = {
@@ -12,8 +12,8 @@ const CONTACT = {
 
 function LogoMark({ className = "h-7 w-7" }: { className?: string }) {
   return (
-    <span className={`relative block overflow-hidden rounded-lg ${className}`}>
-      <Image src="/logo.jpg" alt="EduOS logo" fill sizes="32px" className="object-contain" />
+    <span className={`grid flex-shrink-0 place-items-center rounded-lg bg-[#0C2A57] ${className}`}>
+      <GraduationCap className="h-[60%] w-[60%] text-[#72A9E2]" />
     </span>
   );
 }
