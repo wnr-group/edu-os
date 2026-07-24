@@ -491,3 +491,64 @@ modules, then the two heavy modules (real-time testing, insights) last when thei
 | Polymorphic documents/leave | one UI + one RLS pattern | need hard FK / per-type divergence |
 | Soft-flag geo violations | humane to real GPS | proven abuse pattern |
 | Public admission via isolated Edge Fn | only unauth write, needs throttle | move to managed form service |
+
+---
+
+## 11. Grilling decision log — ticketization (updated live)
+
+Resolved decisions from the `grill-me` pass. Jira tickets reference this section.
+
+**D1 — Ticket system.** Jira, site `w-n-r.atlassian.net` (cloudId `0b18d4fa-22b1-4a4e-8e52-77b7c9a99f65`),
+project **ERP** (id `10267`; git history uses `ERP-*` keys). Hierarchy: **one Epic per sub-project → Story/Task
+per seam → Subtask**. Every issue description links back to this repo spec (context lives in-repo, tickets refer to it).
+Issue types available in ERP: Epic, Story, Task, Feature, Bug, Subtask.
+
+**D2 — Feature-flag shape.** Flat coarse keys, **one boolean per module**, in `schools.features_enabled` JSONB
+(no nesting). The registry enumerates **every module — existing AND new** (attendance, fees, homework, exams/results,
+timetable, announcements, gallery, discipline, feedback, bonafide, communication/notifications, report-cards +
+admissions, kyc_documents, testing, leave, insights, attendance_geo, exam_schedule). Toggle governs the whole platform.
+
+**D3 — Enforcement rollout = option (B).** Register all keys now + super-admin console covers 100% of modules;
+existing modules default `ON`; **new modules are DB-enforced (RLS + RPC `feature_enabled()` guard) from birth**;
+existing modules are retrofitted behind the gate **incrementally**, each as its own "gate + RLS test" ticket.
+No big-bang RLS rewrite.
+
+**D4 — RLS / write-scope conventions (from codebase; tickets MUST follow).**
+- Scope comes from transaction-local GUCs set by `scope_pre_request()` (migration 038): helpers
+  `get_my_school_id()` and `get_my_role()` (both `STABLE SECURITY DEFINER SET search_path=''`).
+- Policy naming: `"<table>_select" | "<table>_insert" | "<table>_update"` (FOR each verb).
+- Tenant predicate: `school_id = public.get_my_school_id()`; admin override `public.get_my_role() = 'super_admin'`.
+- Teacher write-scoping via SECURITY DEFINER helpers `teaches_section(uuid)`, `teaches_student(uuid)`,
+  `teaches_class(uuid)` — derived from the **active** academic year (`section_assignments` homeroom OR `timetable`
+  period). New teacher-written tables reuse these, not ad-hoc joins.
+- New feature gate helper: `feature_enabled(school_id uuid, key text) RETURNS boolean STABLE SECURITY DEFINER` —
+  added as an extra predicate in new modules' `USING`/`WITH CHECK`. New tables: add `school_id`, `ENABLE RLS`,
+  the three policies, and an **RLS isolation test** before merge (spec §9).
+- Migrations are sequential `20240001NNNNNN_*.sql`; next free index continues the series.
+
+**D5 — Insights params.** Global versioned defaults (weights/thresholds/coefficients in code, `params_hash` per run).
+Single per-school override: **pass mark** (`school_insight_params.pass_mark`). **Advisory-only** — insights never
+auto-act; Parent-Comms always drafts/queues for staff review, never fires autonomously on a flag.
+
+**D6 — Testing v1 scope.** Both modes (live + async, shared schema). Standalone/formative by default with an
+**optional teacher-triggered "push to gradebook"** (creates `exam`+`exam_results` on demand, never automatic).
+Objective types auto-graded (mcq/multi/tf/numeric); `short` type is captured and marked pending-manual-grade
+(grading UI is a fast-follow ticket).
+
+**D7 — UX-first ticketing.** After grilling yields full feature clarity, produce **Stitch UX screens per module**
+(repo already has `stitch-designs/`; Stitch MCP available) as the implementation reference. Jira tickets link BOTH
+this spec AND the Stitch screens. Order: grill → Stitch UX → Jira tickets → implement.
+
+**D8 — Leave attendance semantics.** Add `excused` to `attendance_status` enum. Approved leave writes `excused`;
+excluded from the attendance-% denominator AND ignored by the attendance-risk engine (§6.1). All attendance
+rollups updated to treat `excused` as not-counted. (Per-school "count sanctioned leave toward 75%-rule" variant
+is a later toggle, not v1.)
+
+**D9 — Online payments (Razorpay) is a feature flag** (`online_payments`). Flag OFF ⇒ no online-payment UI on
+mobile/web AND payment RPCs + `create-razorpay-order`/`razorpay-webhook` Edge Functions reject server-side; fees
+recorded offline/manual only. Per-school opt-in.
+
+**D10 — Admissions fee/test.** Optional per-school application fee (default ₹0) via existing Razorpay order+webhook;
+application marked `payment_pending` until confirmed when fee > 0, else straight to `enquiry`. Entrance test = manual
+score field in v1 (applicants have no login; live-Testing integration is fast-follow). **Dependency:** application
+fee > 0 requires `online_payments` ON; if OFF, fee forced to ₹0 / offline, never blocks submission.
