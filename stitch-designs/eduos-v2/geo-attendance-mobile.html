@@ -1,0 +1,221 @@
+<title>Edu-OS &middot; Geo attendance (teacher, mobile)</title>
+<style>
+  :root{
+    --accent:#4F46E5; --accent-2:#1D4ED8; --accent-weak:#EEF1FE; --accent-ink:#4338CA;
+    --ground-a:#EAECF9; --ground-b:#F6F5FC; --card:#FFFFFF;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A0B4; --line:#EBECF4;
+    --good:#10B981; --good-weak:#E7F7F0; --warn:#F59E0B; --warn-weak:#FDF3E2;
+    --crit:#EF4444; --crit-weak:#FCECEC; --info:#3B82F6; --info-weak:#E9F1FE;
+    --shadow:0 4px 20px rgba(29,78,216,.07); --shadow-lg:0 12px 40px rgba(29,78,216,.13);
+    --r:16px; --r-md:12px; --r-sm:10px; --r-pill:999px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;line-height:1.45;padding:34px 20px 60px;
+    background:radial-gradient(1200px 500px at 100% -5%,#E7E3FB,transparent 60%),linear-gradient(180deg,var(--ground-a),var(--ground-b) 42%)}
+  .i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .i.sm{width:14px;height:14px}.i.lg{width:20px;height:20px}
+  /* page intro */
+  .lead{max-width:900px;margin:0 auto 26px}
+  .lead .crumb{font-size:12.5px;color:var(--accent-ink);font-weight:600;letter-spacing:.02em}
+  .lead h1{margin:6px 0 0;font-size:26px;letter-spacing:-.6px;font-weight:770}
+  .lead p{margin:6px 0 0;color:var(--ink-2);font-size:14px;max-width:640px}
+  .decl{display:inline-flex;gap:8px;align-items:center;margin-top:14px;font-size:12px;font-weight:600;color:var(--accent-ink);background:var(--accent-weak);padding:7px 12px;border-radius:var(--r-pill)}
+  /* device rail */
+  .rail{display:flex;gap:34px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
+  .device-wrap{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .cap{font-size:12px;font-weight:700;color:var(--ink-2);display:flex;align-items:center;gap:8px}
+  .cap .dot{width:8px;height:8px;border-radius:50%}
+  .phone{width:352px;height:720px;background:var(--card);border-radius:42px;padding:11px;
+    box-shadow:0 30px 70px rgba(29,78,216,.16),0 4px 14px rgba(15,23,42,.08);border:1px solid #E4E5F2;position:relative}
+  .screen{position:relative;width:100%;height:100%;border-radius:32px;overflow:hidden;background:
+    linear-gradient(180deg,#F4F5FC,#EEEFF8);display:flex;flex-direction:column}
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:26px;background:var(--card);border-radius:0 0 16px 16px;z-index:30}
+  /* status bar */
+  .sbar{height:38px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 22px 5px;font-size:12px;font-weight:650;color:var(--ink);z-index:20}
+  .sbar .rt{display:flex;gap:5px;align-items:center}
+  /* app header */
+  .ahead{background:var(--card);padding:10px 16px 12px;border-bottom:1px solid var(--line);z-index:10}
+  .ahead .row1{display:flex;align-items:center;gap:11px}
+  .ava{width:38px;height:38px;border-radius:12px;background:#E4E9FF;color:#4338CA;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+  .ahead h2{margin:0;font-size:17px;font-weight:730;letter-spacing:-.3px}
+  .ahead .sub{font-size:11.5px;color:var(--ink-3);margin-top:1px}
+  .bell{margin-left:auto;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--ink-2);background:var(--ground-b)}
+  /* GEO CHIP -- the star */
+  .geochip{display:flex;align-items:center;gap:10px;margin-top:11px;padding:10px 12px;border-radius:13px;font-size:12.5px;font-weight:650;position:relative;overflow:hidden}
+  .geochip .ico{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none}
+  .geochip .txt{line-height:1.25}
+  .geochip .txt b{font-weight:750;font-size:13px;display:block}
+  .geochip .txt span{color:var(--ink-3);font-size:11px;font-weight:500}
+  .geochip .pulse{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.05em;padding:3px 9px;border-radius:var(--r-pill)}
+  .g-in{background:var(--good-weak);color:#0B7A55}.g-in .ico{background:#CDEFE0;color:#0B7A55}.g-in .pulse{background:#CDEFE0;color:#0B7A55}
+  .g-out{background:var(--warn-weak);color:#9A6408}.g-out .ico{background:#FBE4BE;color:#9A6408}.g-out .pulse{background:#FBE4BE;color:#9A6408}
+  .g-no{background:#EEF0F6;color:#5A657A}.g-no .ico{background:#E0E3EC;color:#5A657A}.g-no .pulse{background:#E0E3EC;color:#5A657A}
+  /* body scroll */
+  .scroll{flex:1;overflow:hidden;position:relative;padding:14px 16px 0}
+  .selrow{display:flex;gap:9px;margin-bottom:12px}
+  .sel{flex:1;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:8px 11px}
+  .sel .l{font-size:9.5px;font-weight:800;letter-spacing:.06em;color:var(--ink-3);text-transform:uppercase}
+  .sel .v{font-size:13px;font-weight:600;margin-top:2px;display:flex;align-items:center;gap:6px}
+  .sel .v svg{margin-left:auto;color:var(--ink-3)}
+  .segbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+  .segbar .found{font-size:12px;font-weight:600;color:var(--ink-2);display:flex;align-items:center;gap:7px}
+  .segbar .found i{width:7px;height:7px;border-radius:50%;background:var(--accent);display:block}
+  .allp{font-size:12px;font-weight:700;color:var(--accent-ink);background:var(--accent-weak);border:0;padding:6px 11px;border-radius:var(--r-pill);display:inline-flex;align-items:center;gap:6px;font-family:inherit}
+  /* roster */
+  .stu{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:9px 11px;display:flex;align-items:center;gap:10px;margin-bottom:8px;box-shadow:var(--shadow)}
+  .stu .sa{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-weight:700;font-size:12px;flex:none;position:relative}
+  .sa .rn{position:absolute;bottom:-6px;right:-5px;background:var(--card);border:1px solid var(--line);border-radius:6px;font-size:8.5px;font-weight:800;padding:0 3px;color:var(--ink-3)}
+  .a-blue{background:#E4E9FF;color:#4338CA}.a-green{background:#DEF6EC;color:#0B7A55}.a-amber{background:#FCEFD6;color:#B4740B}.a-pink{background:#FCE7F0;color:#B83280}.a-cyan{background:#DFF3F7;color:#0E7490}
+  .stu .nm{min-width:0;flex:1}
+  .stu .nm b{font-size:13.5px;font-weight:640;display:block;line-height:1.2}
+  .stu .nm span{font-size:11px;color:var(--ink-3)}
+  .pal{display:inline-flex;background:var(--ground-b);border:1px solid var(--line);border-radius:9px;padding:2px;gap:1px}
+  .pal b{font-size:11px;font-weight:700;color:var(--ink-3);padding:5px 9px;border-radius:7px;cursor:pointer}
+  .pal b.p-on{background:var(--good);color:#fff}.pal b.a-on{background:var(--crit);color:#fff}.pal b.l-on{background:var(--warn);color:#fff}
+  /* tally */
+  .tally{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-radius:16px;padding:13px 15px;color:#fff;margin-top:4px;box-shadow:var(--shadow-lg)}
+  .tally .th{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:650;opacity:.95}
+  .tally .th span{font-size:10px;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:var(--r-pill)}
+  .tally .g{display:grid;grid-template-columns:repeat(3,1fr);margin-top:9px}
+  .tally .g div{text-align:center}
+  .tally .g .n{font-size:22px;font-weight:780;letter-spacing:-.5px}
+  .tally .g .k{font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.75}
+  .tally .g .mid{border-left:1px solid rgba(255,255,255,.18);border-right:1px solid rgba(255,255,255,.18)}
+  /* off-campus explainer note */
+  .flagnote{display:flex;gap:9px;align-items:flex-start;font-size:11px;color:#9A6408;background:var(--warn-weak);border:1px dashed #F0CE90;border-radius:12px;padding:9px 11px;margin-top:10px}
+  .flagnote svg{color:#B4740B;margin-top:1px}
+  .flagnote b{color:#7A4E06}
+  /* submit + nav */
+  .submit{position:absolute;left:16px;right:16px;bottom:74px;z-index:15}
+  .submit button{width:100%;border:0;font-family:inherit;background:var(--accent);color:#fff;padding:13px;border-radius:14px;font-size:14.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:var(--shadow-lg)}
+  .submit .hint{text-align:center;font-size:10.5px;color:var(--ink-3);margin-top:7px;font-weight:500}
+  .nav{position:absolute;left:0;right:0;bottom:0;height:64px;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:center;padding-bottom:8px;z-index:16}
+  .nav a{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:var(--ink-3);text-decoration:none}
+  .nav a.on{color:var(--accent-ink)}
+  .nav a.on .ni{background:var(--accent-weak)}
+  .nav .ni{width:34px;height:26px;border-radius:9px;display:grid;place-items:center}
+  .fade{position:absolute;left:0;right:0;bottom:64px;height:120px;background:linear-gradient(180deg,transparent,#EEEFF8 68%);pointer-events:none;z-index:14}
+  @media (max-width:820px){.rail{gap:24px}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-pin" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-nogps" viewBox="0 0 24 24"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></symbol>
+  <symbol id="ic-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol>
+  <symbol id="ic-checkall" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol>
+  <symbol id="ic-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+  <symbol id="ic-home" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+  <symbol id="ic-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+  <symbol id="ic-wallet" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+</defs></svg>
+
+<div class="lead">
+  <div class="crumb">SUB-PROJECT #2 &middot; GEO ATTENDANCE</div>
+  <h1>Teacher marking &mdash; passive geo</h1>
+  <p>The daily marking screen is unchanged; geo rides along quietly. One GPS reading is taken <b>at Submit</b> and stamped on the whole batch. Off-campus never blocks &mdash; it&rsquo;s silently flagged for the principal to review.</p>
+  <span class="decl"><svg class="i sm"><use href="#ic-shield"/></svg> Records &amp; flags &mdash; never blocks marking</span>
+</div>
+
+<div class="rail">
+
+  <!-- ON CAMPUS -->
+  <div class="device-wrap">
+    <div class="cap"><span class="dot" style="background:var(--good)"></span> On campus &mdash; the normal case</div>
+    <div class="phone"><div class="screen"><div class="notch"></div>
+      <div class="sbar"><span>9:24</span><div class="rt"><svg class="i sm"><use href="#ic-pin"/></svg><span>5G</span><span>&#9646;&#9646;&#9646;&#9646;</span></div></div>
+      <div class="ahead">
+        <div class="row1">
+          <div class="ava">MR</div>
+          <div><h2>Attendance</h2><div class="sub">Class 8&ndash;B &middot; Mon, 24 Nov &middot; Forenoon</div></div>
+          <div class="bell"><svg class="i sm"><use href="#ic-bell"/></svg></div>
+        </div>
+        <div class="geochip g-in">
+          <div class="ico"><svg class="i"><use href="#ic-pin"/></svg></div>
+          <div class="txt"><b>On campus &middot; Springfield Main</b><span>42&thinsp;m from centre &middot; GPS &plusmn;8&thinsp;m</span></div>
+          <span class="pulse">VERIFIED</span>
+        </div>
+      </div>
+      <div class="scroll">
+        <div class="selrow">
+          <div class="sel"><div class="l">Section</div><div class="v">Class 8&ndash;B <svg class="i sm"><use href="#ic-chev"/></svg></div></div>
+          <div class="sel"><div class="l">Session</div><div class="v">Forenoon <svg class="i sm"><use href="#ic-chev"/></svg></div></div>
+        </div>
+        <div class="segbar"><div class="found"><i></i> 34 students</div><button class="allp"><svg class="i sm"><use href="#ic-checkall"/></svg> All present</button></div>
+
+        <div class="stu"><div class="sa a-blue">AK<span class="rn">01</span></div><div class="nm"><b>Aarav Kapoor</b><span>Roll 01</span></div><div class="pal"><b class="p-on">P</b><b>A</b><b>L</b></div></div>
+        <div class="stu"><div class="sa a-pink">DS<span class="rn">02</span></div><div class="nm"><b>Diya Sharma</b><span>Roll 02</span></div><div class="pal"><b class="p-on">P</b><b>A</b><b>L</b></div></div>
+        <div class="stu"><div class="sa a-green">IV<span class="rn">03</span></div><div class="nm"><b>Ishaan Verma</b><span>Roll 03</span></div><div class="pal"><b>P</b><b class="a-on">A</b><b>L</b></div></div>
+        <div class="stu"><div class="sa a-amber">KN<span class="rn">04</span></div><div class="nm"><b>Kavya Nair</b><span>Roll 04</span></div><div class="pal"><b class="p-on">P</b><b>A</b><b>L</b></div></div>
+        <div class="stu"><div class="sa a-cyan">RM<span class="rn">05</span></div><div class="nm"><b>Rohan Mehta</b><span>Roll 05</span></div><div class="pal"><b>P</b><b>A</b><b class="l-on">L</b></div></div>
+        <div class="tally">
+          <div class="th"><span style="opacity:1;font-weight:650">Live tally</span><span>auto</span></div>
+          <div class="g"><div><div class="n">31</div><div class="k">Present</div></div><div class="mid"><div class="n">02</div><div class="k">Absent</div></div><div><div class="n">01</div><div class="k">Late</div></div></div>
+        </div>
+        <div style="height:150px"></div>
+      </div>
+      <div class="fade"></div>
+      <div class="submit"><button><svg class="i"><use href="#ic-upload"/></svg> Submit attendance</button><div class="hint">Location stamped on submit &middot; nothing sent to parents</div></div>
+      <div class="nav">
+        <a><span class="ni"><svg class="i"><use href="#ic-home"/></svg></span>Home</a>
+        <a class="on"><span class="ni"><svg class="i"><use href="#ic-cal"/></svg></span>Attendance</a>
+        <a><span class="ni"><svg class="i"><use href="#ic-book"/></svg></span>Academics</a>
+        <a><span class="ni"><svg class="i"><use href="#ic-user"/></svg></span>Profile</a>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- OFF CAMPUS -->
+  <div class="device-wrap">
+    <div class="cap"><span class="dot" style="background:var(--warn)"></span> Off campus &mdash; flagged, still submits</div>
+    <div class="phone"><div class="screen"><div class="notch"></div>
+      <div class="sbar"><span>9:26</span><div class="rt"><svg class="i sm"><use href="#ic-pin"/></svg><span>4G</span><span>&#9646;&#9646;&#9646;&#9647;</span></div></div>
+      <div class="ahead">
+        <div class="row1">
+          <div class="ava">MR</div>
+          <div><h2>Attendance</h2><div class="sub">Class 8&ndash;B &middot; Field-trip day</div></div>
+          <div class="bell"><svg class="i sm"><use href="#ic-bell"/></svg></div>
+        </div>
+        <div class="geochip g-out">
+          <div class="ico"><svg class="i"><use href="#ic-alert"/></svg></div>
+          <div class="txt"><b>Off campus &middot; 1.4&thinsp;km away</b><span>Outside all geofences &middot; GPS &plusmn;12&thinsp;m</span></div>
+          <span class="pulse">FLAGGED</span>
+        </div>
+      </div>
+      <div class="scroll">
+        <div class="selrow">
+          <div class="sel"><div class="l">Section</div><div class="v">Class 8&ndash;B <svg class="i sm"><use href="#ic-chev"/></svg></div></div>
+          <div class="sel"><div class="l">Session</div><div class="v">Full day <svg class="i sm"><use href="#ic-chev"/></svg></div></div>
+        </div>
+        <div class="segbar"><div class="found"><i></i> 34 students</div><button class="allp"><svg class="i sm"><use href="#ic-checkall"/></svg> All present</button></div>
+
+        <div class="stu"><div class="sa a-blue">AK<span class="rn">01</span></div><div class="nm"><b>Aarav Kapoor</b><span>Roll 01</span></div><div class="pal"><b class="p-on">P</b><b>A</b><b>L</b></div></div>
+        <div class="stu"><div class="sa a-pink">DS<span class="rn">02</span></div><div class="nm"><b>Diya Sharma</b><span>Roll 02</span></div><div class="pal"><b class="p-on">P</b><b>A</b><b>L</b></div></div>
+        <div class="stu"><div class="sa a-green">IV<span class="rn">03</span></div><div class="nm"><b>Ishaan Verma</b><span>Roll 03</span></div><div class="pal"><b class="p-on">P</b><b>A</b><b>L</b></div></div>
+
+        <div class="flagnote"><svg class="i sm"><use href="#ic-alert"/></svg><div>You&rsquo;re outside the campus geofence. Marking still works &mdash; this submission is <b>tagged &ldquo;off-campus&rdquo;</b> and shows up in the principal&rsquo;s review list. No reason needed.</div></div>
+
+        <div class="tally">
+          <div class="th"><span style="opacity:1;font-weight:650">Live tally</span><span>auto</span></div>
+          <div class="g"><div><div class="n">34</div><div class="k">Present</div></div><div class="mid"><div class="n">00</div><div class="k">Absent</div></div><div><div class="n">00</div><div class="k">Late</div></div></div>
+        </div>
+        <div style="height:150px"></div>
+      </div>
+      <div class="fade"></div>
+      <div class="submit"><button style="background:var(--warn)"><svg class="i"><use href="#ic-upload"/></svg> Submit (off-campus)</button><div class="hint">Saved &amp; flagged &middot; principal can review later</div></div>
+      <div class="nav">
+        <a><span class="ni"><svg class="i"><use href="#ic-home"/></svg></span>Home</a>
+        <a class="on"><span class="ni"><svg class="i"><use href="#ic-cal"/></svg></span>Attendance</a>
+        <a><span class="ni"><svg class="i"><use href="#ic-book"/></svg></span>Academics</a>
+        <a><span class="ni"><svg class="i"><use href="#ic-user"/></svg></span>Profile</a>
+      </div>
+    </div></div>
+  </div>
+
+</div>

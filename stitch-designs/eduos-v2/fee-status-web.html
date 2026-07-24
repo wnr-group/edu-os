@@ -1,0 +1,245 @@
+<title>Edu-OS &middot; Fee status (admin)</title>
+<style>
+  :root{
+    --accent:#4F46E5; --accent-2:#1D4ED8; --accent-weak:#EEF1FE; --accent-ink:#4338CA;
+    --ground-a:#EAECF9; --ground-b:#F6F5FC; --card:#FFFFFF;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A0B4; --line:#EBECF4;
+    --good:#10B981; --good-weak:#E7F7F0; --warn:#F59E0B; --warn-weak:#FDF3E2;
+    --crit:#EF4444; --crit-weak:#FCECEC; --info:#3B82F6; --info-weak:#E9F1FE;
+    --shadow:0 4px 20px rgba(29,78,216,.07); --shadow-lg:0 12px 40px rgba(29,78,216,.13);
+    --r:16px; --r-md:12px; --r-sm:10px; --r-pill:999px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;line-height:1.45;
+    background:radial-gradient(1200px 500px at 100% -5%,#E7E3FB,transparent 60%),linear-gradient(180deg,var(--ground-a),var(--ground-b) 42%)}
+  .i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .i.sm{width:15px;height:15px}.i.lg{width:19px;height:19px}
+  .topnav{display:flex;align-items:center;gap:22px;height:64px;padding:0 26px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  .logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:#fff;box-shadow:var(--shadow)}
+  .mainnav{display:flex;align-items:center;gap:4px}
+  .mainnav a{position:relative;padding:9px 13px;border-radius:9px;color:var(--ink-2);text-decoration:none;font-size:14px;font-weight:500}
+  .mainnav a:hover{color:var(--ink);background:var(--accent-weak)}
+  .mainnav a.on{color:var(--accent-ink);font-weight:650}
+  .mainnav a.on::after{content:"";position:absolute;left:13px;right:13px;bottom:-19px;height:2.5px;border-radius:2px;background:var(--accent)}
+  .selsec{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 13px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink-3);font-size:13.5px;min-width:168px}
+  .grow{flex:1}
+  .ybtn,.search{height:36px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:13px;font-family:inherit}
+  .ybtn{display:inline-flex;align-items:center;gap:8px;padding:0 13px;color:var(--ink-2);font-weight:600;cursor:pointer}
+  .search{display:flex;align-items:center;gap:9px;padding:0 12px;color:var(--ink-3);min-width:200px}
+  .search kbd{margin-left:auto;font-size:11px;background:var(--ground-a);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-family:inherit}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
+  .wrap{max-width:1340px;margin:0 auto;padding:22px 26px 48px;display:flex;flex-direction:column;gap:16px}
+  .crumb{font-size:12.5px;color:var(--ink-3);font-weight:500}
+  .head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:-4px}
+  .head h1{margin:0;font-size:27px;letter-spacing:-.7px;font-weight:760}
+  .head p{margin:4px 0 0;color:var(--ink-3);font-size:13.5px}
+  .head .r{margin-left:auto;display:flex;gap:9px;align-items:center}
+  .btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:9px;border:1px solid transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .btn.primary{background:var(--accent);color:#fff;box-shadow:var(--shadow)} .btn.primary:hover{background:var(--accent-ink)}
+  .btn.ghost{background:var(--card);border-color:var(--line);color:var(--ink-2)} .btn.ghost:hover{color:var(--ink);border-color:var(--ink-3)}
+  .btn.sm{height:32px;padding:0 12px;font-size:12.5px;border-radius:8px}
+  .fchip{font-size:12px;font-weight:600;color:var(--ink-2);background:var(--card);border:1px solid var(--line);padding:6px 11px;border-radius:var(--r-pill);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+  .fchip.on{background:var(--accent-weak);color:var(--accent-ink);border-color:transparent}
+  .fchip b{font-weight:700}
+  /* KPI strip */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .kpi .k{font-size:11.5px;color:var(--ink-3);font-weight:600;display:flex;align-items:center;gap:8px}
+  .kpi .k .ico{width:26px;height:26px;border-radius:8px;display:grid;place-items:center}
+  .kpi .v{font-size:26px;font-weight:780;letter-spacing:-.6px;margin-top:11px}
+  .kpi .sub{font-size:11.5px;color:var(--ink-3);margin-top:5px}
+  .ic-blue{background:var(--accent-weak);color:var(--accent-ink)}.ic-green{background:var(--good-weak);color:#0B7A55}.ic-amber{background:var(--warn-weak);color:#B4740B}.ic-crit{background:var(--crit-weak);color:var(--crit)}
+  .kpi.hero{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border:0}
+  .kpi.hero .k,.kpi.hero .sub{color:rgba(255,255,255,.85)}.kpi.hero .k .ico{background:rgba(255,255,255,.2);color:#fff}
+  .prog{height:7px;border-radius:var(--r-pill);background:rgba(255,255,255,.25);overflow:hidden;margin-top:12px}
+  .prog>i{display:block;height:100%;background:#fff}
+  /* outcome strip */
+  .outcome{display:flex;align-items:center;gap:18px;background:var(--good-weak);border:1px solid #CDEFE0;border-radius:13px;padding:11px 16px;flex-wrap:wrap}
+  .outcome .oi{display:flex;align-items:center;gap:9px;font-size:12.5px;color:#0B7A55;font-weight:600}
+  .outcome .oi b{color:#065F46;font-weight:750}
+  .outcome .div{width:1px;height:20px;background:#BEE7D6}
+  /* panel */
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+  .ph{display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .ph h3{margin:0;font-size:15px;font-weight:660}
+  .seg{display:inline-flex;background:var(--ground-b);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+  .seg button{border:0;background:none;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--ink-3);padding:6px 12px;border-radius:7px;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .seg button.on{background:var(--card);color:var(--accent-ink);box-shadow:var(--shadow)}
+  .seg .cnt{font-size:10.5px;background:var(--ground-a);color:var(--ink-2);border-radius:var(--r-pill);padding:1px 7px;font-weight:700}
+  .seg button.on .cnt{background:var(--accent-weak);color:var(--accent-ink)}
+  .ph .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .sortby{font-size:12px;color:var(--ink-3);display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:6px 10px;font-weight:600}
+  /* bulk bar */
+  .bulkbar{display:flex;align-items:center;gap:12px;padding:10px 18px;background:var(--accent-weak);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--accent-ink);font-weight:600}
+  .bulkbar .muted{color:var(--ink-3);font-weight:500;margin-left:auto}
+  /* table */
+  table{width:100%;border-collapse:collapse}
+  thead th{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);text-align:left;padding:10px 18px;border-bottom:1px solid var(--line)}
+  thead th.num{text-align:right}
+  tbody td{padding:12px 18px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+  tbody td.num{text-align:right}
+  tbody tr:hover{background:var(--ground-b)}
+  tbody tr:last-child td{border-bottom:0}
+  .cbx{width:17px;height:17px;border-radius:5px;border:1.5px solid var(--ink-3);display:inline-grid;place-items:center;cursor:pointer;color:transparent}
+  .cbx.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  tr.sel{background:var(--accent-weak)}
+  tr.sel:hover{background:var(--accent-weak)}
+  .who{display:flex;align-items:center;gap:10px}
+  .wav{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:700;font-size:12px}
+  .a-blue{background:#E4E9FF;color:#4338CA}.a-green{background:#DEF6EC;color:#0B7A55}.a-amber{background:#FCEFD6;color:#B4740B}.a-pink{background:#FCE7F0;color:#B83280}.a-cyan{background:#DFF3F7;color:#0E7490}
+  .who b{font-weight:650;font-size:13.5px}.who span{font-size:11px;color:var(--ink-3);display:block}
+  .clspill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:var(--r-pill);background:var(--ground-a);color:var(--ink-2)}
+  .amt{font-weight:730;font-size:14px}
+  .od{font-size:11px;font-weight:800;letter-spacing:.03em;padding:3px 9px;border-radius:var(--r-pill)}
+  .od-hi{color:var(--crit);background:var(--crit-weak)}.od-md{color:var(--warn);background:var(--warn-weak)}.od-lo{color:var(--ink-3);background:var(--ground-a)}
+  .last{color:var(--ink-3);font-size:12px}
+  .rowbtn{display:flex;justify-content:flex-end;gap:7px}
+  .sent{font-size:11px;font-weight:700;color:var(--info);background:var(--info-weak);padding:5px 10px;border-radius:var(--r-pill);display:inline-flex;gap:5px;align-items:center}
+  .note{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--ink-2);background:var(--ground-b);border:1px dashed var(--line);border-radius:12px;padding:11px 13px}
+  .note b{color:var(--ink)}.note .chic{color:var(--ink-3);margin-top:1px}
+  @media (max-width:1080px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:820px){.mainnav,.selsec,.search{display:none}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="ic-wallet" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="ic-coins" viewBox="0 0 24 24"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-trendup" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+  <symbol id="ic-sort" viewBox="0 0 24 24"><path d="M11 5h10"/><path d="M11 9h7"/><path d="M11 13h4"/><path d="m3 17 3 3 3-3"/><path d="M6 18V4"/></symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
+</defs></svg>
+
+<header class="topnav">
+  <div class="logo"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg></div>
+  <nav class="mainnav"><a href="#">Dashboard</a><a href="#">Students</a><a href="#" class="on">Fees</a><a href="#">Academics</a><a href="#">Timetable</a><a href="#">More &#9662;</a></nav>
+  <div class="selsec">Springfield Public &#9662;</div>
+  <div class="grow"></div>
+  <button class="ybtn">2026&ndash;27 &#9662;</button>
+  <div class="search"><svg class="i sm"><use href="#ic-search"/></svg> Search&hellip; <kbd>&#8984;K</kbd></div>
+  <div class="avatar">DI</div>
+</header>
+
+<div class="wrap">
+  <div>
+    <div class="crumb">Fees &rsaquo; Status</div>
+    <div class="head">
+      <div><h1>Fee status</h1><p>Where collection stands right now &mdash; and a one-click nudge for the parents who owe.</p></div>
+      <div class="r">
+        <span class="fchip on">All classes</span>
+        <span class="fchip">Fee type: All</span>
+        <button class="btn ghost"><svg class="i sm"><use href="#ic-file"/></svg> Export</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="kpis">
+    <div class="kpi"><div class="k"><span class="ico ic-blue"><svg class="i sm"><use href="#ic-coins"/></svg></span> Total billed</div><div class="v">&#8377;62.4L</div><div class="sub">960 students &middot; Term 1</div></div>
+    <div class="kpi"><div class="k"><span class="ico ic-green"><svg class="i sm"><use href="#ic-check"/></svg></span> Collected</div><div class="v">&#8377;51.9L</div><div class="sub">across 1,842 payments</div></div>
+    <div class="kpi"><div class="k"><span class="ico ic-crit"><svg class="i sm"><use href="#ic-alert"/></svg></span> Outstanding</div><div class="v" style="color:var(--crit)">&#8377;10.5L</div><div class="sub">47 overdue &middot; 16 not yet due</div></div>
+    <div class="kpi hero"><div class="k"><span class="ico"><svg class="i sm"><use href="#ic-trendup"/></svg></span> Collection rate</div><div class="v">83%</div><div class="prog"><i style="width:83%"></i></div><div class="sub">+6 pts vs same time last term</div></div>
+  </div>
+
+  <!-- outcome strip -->
+  <div class="outcome">
+    <div class="oi"><svg class="i sm"><use href="#ic-trendup"/></svg> <b>&#8377;1.42L</b> collected in the last 7 days</div>
+    <div class="div"></div>
+    <div class="oi"><svg class="i sm"><use href="#ic-send"/></svg> <b>38</b> reminders sent this week</div>
+    <div class="div"></div>
+    <div class="oi"><svg class="i sm"><use href="#ic-check"/></svg> <b>22</b> paid within 48h of a reminder</div>
+  </div>
+
+  <!-- defaulters -->
+  <div class="panel">
+    <div class="ph">
+      <h3>Defaulters</h3>
+      <div class="seg">
+        <button class="on">Overdue <span class="cnt">47</span></button>
+        <button>All outstanding <span class="cnt">63</span></button>
+      </div>
+      <div class="right">
+        <span class="sortby"><svg class="i sm"><use href="#ic-sort"/></svg> Amount owed</span>
+      </div>
+    </div>
+
+    <div class="bulkbar">
+      <span class="cbx on"><svg class="i sm"><use href="#ic-check"/></svg></span>
+      12 parents selected
+      <button class="btn primary sm"><svg class="i sm"><use href="#ic-send"/></svg> Send payment reminder</button>
+      <span class="muted">App push + in-app &middot; parents can pay in one tap</span>
+    </div>
+
+    <table>
+      <thead><tr><th style="width:34px"></th><th>Student</th><th>Class</th><th class="num">Outstanding</th><th>Overdue</th><th>Last payment</th><th class="num"></th></tr></thead>
+      <tbody>
+        <tr class="sel">
+          <td><span class="cbx on"><svg class="i sm"><use href="#ic-check"/></svg></span></td>
+          <td><div class="who"><div class="wav a-pink">PM</div><div><b>Priya Menon</b><span>Roll 22 &middot; Parent +91 98765&hellip;</span></div></div></td>
+          <td><span class="clspill">10-A</span></td>
+          <td class="num"><span class="amt" style="color:var(--crit)">&#8377;28,500</span></td>
+          <td><span class="od od-hi">62 days</span></td>
+          <td class="last">14 Sep</td>
+          <td class="num"><div class="rowbtn"><button class="btn ghost sm"><svg class="i sm"><use href="#ic-send"/></svg> Remind</button></div></td>
+        </tr>
+        <tr class="sel">
+          <td><span class="cbx on"><svg class="i sm"><use href="#ic-check"/></svg></span></td>
+          <td><div class="who"><div class="wav a-blue">RS</div><div><b>Rahul Sharma</b><span>Roll 14 &middot; Parent +91 90123&hellip;</span></div></div></td>
+          <td><span class="clspill">8-B</span></td>
+          <td class="num"><span class="amt" style="color:var(--crit)">&#8377;19,000</span></td>
+          <td><span class="od od-hi">41 days</span></td>
+          <td class="last">02 Oct &middot; partial</td>
+          <td class="num"><div class="rowbtn"><span class="sent"><svg class="i sm"><use href="#ic-bell"/></svg> Reminded 3d ago</span></div></td>
+        </tr>
+        <tr>
+          <td><span class="cbx"></span></td>
+          <td><div class="who"><div class="wav a-amber">AK</div><div><b>Arjun Kumar</b><span>Roll 09 &middot; Parent +91 99887&hellip;</span></div></div></td>
+          <td><span class="clspill">9-C</span></td>
+          <td class="num"><span class="amt">&#8377;12,750</span></td>
+          <td><span class="od od-md">18 days</span></td>
+          <td class="last">28 Oct</td>
+          <td class="num"><div class="rowbtn"><button class="btn ghost sm"><svg class="i sm"><use href="#ic-send"/></svg> Remind</button></div></td>
+        </tr>
+        <tr>
+          <td><span class="cbx"></span></td>
+          <td><div class="who"><div class="wav a-green">SF</div><div><b>Sara Fernandes</b><span>Roll 31 &middot; Parent +91 91234&hellip;</span></div></div></td>
+          <td><span class="clspill">8-A</span></td>
+          <td class="num"><span class="amt">&#8377;9,000</span></td>
+          <td><span class="od od-md">11 days</span></td>
+          <td class="last">05 Nov &middot; partial</td>
+          <td class="num"><div class="rowbtn"><button class="btn ghost sm"><svg class="i sm"><use href="#ic-send"/></svg> Remind</button></div></td>
+        </tr>
+        <tr>
+          <td><span class="cbx"></span></td>
+          <td><div class="who"><div class="wav a-cyan">DV</div><div><b>Dev Varma</b><span>Roll 07 &middot; Parent +91 98111&hellip;</span></div></div></td>
+          <td><span class="clspill">7-B</span></td>
+          <td class="num"><span class="amt">&#8377;4,500</span></td>
+          <td><span class="od od-lo">3 days</span></td>
+          <td class="last">18 Nov</td>
+          <td class="num"><div class="rowbtn"><button class="btn ghost sm"><svg class="i sm"><use href="#ic-send"/></svg> Remind</button></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note"><svg class="i chic"><use href="#ic-wallet"/></svg><div><b>Facts now, prediction later.</b> Every figure is a live rollup of fee line-items &amp; payments &mdash; <b>overdue</b> is computed on read (owing &amp; past due date), never a stored status, so it&rsquo;s always accurate with no nightly job. Reminders are transactional and send directly (with a confirm). The &ldquo;likely to default&rdquo; risk score is a separate Insights feature, built on top of this later.</div></div>
+</div>
+
+<script>
+  document.querySelectorAll('.cbx').forEach(c=>{if(!c.closest('.bulkbar'))c.addEventListener('click',()=>{
+    c.classList.toggle('on');const tr=c.closest('tr');if(tr)tr.classList.toggle('sel',c.classList.contains('on'));
+    if(c.classList.contains('on'))c.innerHTML='<svg class="i sm"><use href="#ic-check"/></svg>';else c.innerHTML='';
+  })});
+  document.querySelectorAll('.seg button, .fchip').forEach(b=>b.addEventListener('click',()=>{
+    const sibs=b.classList.contains('fchip')?document.querySelectorAll('.head .fchip'):b.parentElement.querySelectorAll('button');
+    if(b.classList.contains('fchip')){b.classList.toggle('on');return;}
+    sibs.forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  }));
+</script>

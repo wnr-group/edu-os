@@ -1,0 +1,224 @@
+<title>Edu-OS &middot; Datesheet (parent, mobile)</title>
+<style>
+  :root{
+    --accent:#4F46E5; --accent-2:#1D4ED8; --accent-weak:#EEF1FE; --accent-ink:#4338CA;
+    --ground-a:#EAECF9; --ground-b:#F6F5FC; --card:#FFFFFF;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A0B4; --line:#EBECF4;
+    --good:#10B981; --good-weak:#E7F7F0; --warn:#F59E0B; --warn-weak:#FDF3E2;
+    --crit:#EF4444; --crit-weak:#FCECEC; --info:#3B82F6; --info-weak:#E9F1FE;
+    --shadow:0 4px 20px rgba(29,78,216,.07); --shadow-lg:0 12px 40px rgba(29,78,216,.13);
+    --r:16px; --r-md:12px; --r-sm:10px; --r-pill:999px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;line-height:1.45;padding:34px 20px 60px;
+    background:radial-gradient(1200px 500px at 100% -5%,#E7E3FB,transparent 60%),linear-gradient(180deg,var(--ground-a),var(--ground-b) 42%)}
+  .i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .i.sm{width:14px;height:14px}.i.lg{width:20px;height:20px}
+  .lead{max-width:900px;margin:0 auto 26px}
+  .lead .crumb{font-size:12.5px;color:var(--accent-ink);font-weight:600;letter-spacing:.02em}
+  .lead h1{margin:6px 0 0;font-size:26px;letter-spacing:-.6px;font-weight:770}
+  .lead p{margin:6px 0 0;color:var(--ink-2);font-size:14px;max-width:640px}
+  .rail{display:flex;gap:34px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
+  .device-wrap{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .cap{font-size:12px;font-weight:700;color:var(--ink-2);display:flex;align-items:center;gap:8px}
+  .cap .dot{width:8px;height:8px;border-radius:50%}
+  .phone{width:352px;height:720px;background:var(--card);border-radius:42px;padding:11px;
+    box-shadow:0 30px 70px rgba(29,78,216,.16),0 4px 14px rgba(15,23,42,.08);border:1px solid #E4E5F2;position:relative}
+  .screen{position:relative;width:100%;height:100%;border-radius:32px;overflow:hidden;background:linear-gradient(180deg,#F4F5FC,#EEEFF8);display:flex;flex-direction:column}
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:26px;background:var(--card);border-radius:0 0 16px 16px;z-index:30}
+  .sbar{height:38px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 22px 5px;font-size:12px;font-weight:650;color:var(--ink);z-index:20}
+  .sbar .rt{display:flex;gap:5px;align-items:center}
+  .ahead{background:var(--card);padding:11px 16px 13px;border-bottom:1px solid var(--line);z-index:10}
+  .ahead .row1{display:flex;align-items:center;gap:11px}
+  .ava{width:38px;height:38px;border-radius:12px;background:#FCE7F0;color:#B83280;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+  .ahead h2{margin:0;font-size:17px;font-weight:730;letter-spacing:-.3px}
+  .ahead .sub{font-size:11.5px;color:var(--ink-3);margin-top:1px}
+  .bell{margin-left:auto;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--ink-2);background:var(--ground-b)}
+  .scroll{flex:1;overflow:hidden;position:relative;padding:14px 16px 0}
+  .sect{font-size:10.5px;font-weight:800;letter-spacing:.06em;color:var(--ink-3);text-transform:uppercase;margin:2px 2px 9px;display:flex;align-items:center}
+  .sect a{margin-left:auto;color:var(--accent-ink);text-decoration:none;font-weight:700;letter-spacing:0;text-transform:none;font-size:11.5px}
+  /* home quick tiles */
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}
+  .tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:var(--shadow)}
+  .tile .ti{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;margin-bottom:9px}
+  .tile .n{font-size:19px;font-weight:770;letter-spacing:-.4px}
+  .tile .k{font-size:10.5px;color:var(--ink-3);font-weight:600;margin-top:1px}
+  .t-green .ti{background:var(--good-weak);color:#0B7A55}.t-amber .ti{background:var(--warn-weak);color:#B4740B}
+  /* THE EXAM HOME CARD (seasonal) */
+  .examcard{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-radius:18px;padding:15px 16px;color:#fff;box-shadow:var(--shadow-lg);position:relative;overflow:hidden;margin-bottom:14px}
+  .examcard::after{content:"";position:absolute;right:-30px;top:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.09)}
+  .examcard .badge{font-size:10px;font-weight:800;letter-spacing:.05em;background:rgba(255,255,255,.22);padding:4px 10px;border-radius:var(--r-pill);display:inline-flex;align-items:center;gap:6px}
+  .examcard h3{margin:11px 0 0;font-size:18px;font-weight:750;letter-spacing:-.3px}
+  .examcard .when{font-size:12.5px;opacity:.9;margin-top:3px}
+  .examcard .cd{display:flex;align-items:center;gap:9px;margin-top:13px;background:rgba(255,255,255,.14);border-radius:12px;padding:9px 11px}
+  .examcard .cd .big{font-size:22px;font-weight:790;letter-spacing:-.5px}
+  .examcard .cd .lbl{font-size:11px;opacity:.9;line-height:1.25}
+  .examcard .go{margin-left:auto;width:30px;height:30px;border-radius:50%;background:#fff;color:var(--accent-ink);display:grid;place-items:center}
+  /* ============ datesheet screen ============ */
+  .dnav{background:var(--card);padding:11px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:11px;z-index:10}
+  .back{width:34px;height:34px;border-radius:10px;background:var(--ground-b);display:grid;place-items:center;color:var(--ink-2)}
+  .dnav b{font-size:16px;font-weight:720;letter-spacing:-.2px}
+  .dnav .sub{font-size:11px;color:var(--ink-3)}
+  .examhd{background:var(--accent-weak);border:1px solid #DEE1FA;border-radius:14px;padding:12px 13px;margin-bottom:14px;display:flex;align-items:center;gap:11px}
+  .examhd .ei{width:38px;height:38px;border-radius:11px;background:#fff;color:var(--accent-ink);display:grid;place-items:center;flex:none}
+  .examhd b{font-size:14.5px;font-weight:720}
+  .examhd .m{font-size:11.5px;color:var(--accent-ink);opacity:.85;margin-top:1px}
+  .cdchip{margin-left:auto;text-align:center;background:#fff;border-radius:11px;padding:6px 11px}
+  .cdchip .n{font-size:16px;font-weight:780;color:var(--accent-ink);line-height:1}
+  .cdchip .l{font-size:9px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em}
+  /* paper rows */
+  .prow{display:grid;grid-template-columns:52px 1fr;gap:12px;padding:2px 0}
+  .pdate{text-align:center}
+  .pdate .d{font-size:20px;font-weight:770;letter-spacing:-.5px;line-height:1}
+  .pdate .mo{font-size:10px;font-weight:700;color:var(--ink-3);text-transform:uppercase}
+  .pdate .dow{font-size:9.5px;color:var(--ink-3);margin-top:2px}
+  .pcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 13px;margin-bottom:11px;box-shadow:var(--shadow);position:relative}
+  .pcard.next{border-color:var(--accent);box-shadow:0 6px 22px rgba(79,70,229,.14)}
+  .pcard .st{display:flex;align-items:center;gap:9px}
+  .pcard .sd{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+  .s1{background:#E4E9FF;color:#4338CA}.s2{background:#DEF6EC;color:#0B7A55}.s3{background:#FCEFD6;color:#B4740B}.s4{background:#FCE7F0;color:#B83280}.s5{background:#DFF3F7;color:#0E7490}
+  .pcard .sn{font-size:14.5px;font-weight:700}
+  .pcard .nextpill{margin-left:auto;font-size:9.5px;font-weight:800;letter-spacing:.04em;color:var(--accent-ink);background:var(--accent-weak);padding:3px 9px;border-radius:var(--r-pill)}
+  .pcard .updpill{margin-left:auto;font-size:9.5px;font-weight:800;letter-spacing:.04em;color:#9A6408;background:var(--warn-weak);padding:3px 9px;border-radius:var(--r-pill);display:inline-flex;align-items:center;gap:4px}
+  .pmeta{display:flex;gap:16px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+  .pmeta div{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2);font-weight:600}
+  .pmeta svg{color:var(--ink-3)}
+  .rail-line{position:absolute;left:25px;top:0;bottom:0;width:2px;background:var(--line);z-index:0}
+  .nav{position:absolute;left:0;right:0;bottom:0;height:64px;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:center;padding-bottom:8px;z-index:16}
+  .nav a{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:var(--ink-3);text-decoration:none}
+  .nav a.on{color:var(--accent-ink)}
+  .nav a.on .ni{background:var(--accent-weak)}
+  .nav .ni{width:34px;height:26px;border-radius:9px;display:grid;place-items:center}
+  .fade{position:absolute;left:0;right:0;bottom:64px;height:60px;background:linear-gradient(180deg,transparent,#EEEFF8 70%);pointer-events:none;z-index:14}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="ic-pin" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="ic-arrow" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol>
+  <symbol id="ic-back" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-home" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+  <symbol id="ic-check2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><path d="M9 15l2 2 4-4"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+  <symbol id="ic-wallet" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+</defs></svg>
+
+<div class="lead">
+  <div class="crumb">SUB-PROJECT #2 &middot; EXAM SCHEDULE</div>
+  <h1>Student datesheet &mdash; parent app</h1>
+  <p>No permanent tab &mdash; a seasonal <b>home card</b> appears only when exams are near, opening a read-only datesheet with a countdown and an &ldquo;updated&rdquo; badge when a slot changes.</p>
+</div>
+
+<div class="rail">
+
+  <!-- HOME with seasonal card -->
+  <div class="device-wrap">
+    <div class="cap"><span class="dot" style="background:var(--accent)"></span> Home &mdash; seasonal entry card</div>
+    <div class="phone"><div class="screen"><div class="notch"></div>
+      <div class="sbar"><span>8:15</span><div class="rt"><span>5G</span><span>&#9646;&#9646;&#9646;&#9646;</span></div></div>
+      <div class="ahead"><div class="row1">
+        <div class="ava">SA</div>
+        <div><h2>Hello, Meera</h2><div class="sub">Aarav &middot; Class 8&ndash;B &middot; Springfield Public</div></div>
+        <div class="bell"><svg class="i sm"><use href="#ic-bell"/></svg></div>
+      </div></div>
+      <div class="scroll">
+        <div class="sect">This week</div>
+        <!-- the star card -->
+        <div class="examcard">
+          <span class="badge"><svg class="i sm"><use href="#ic-cal"/></svg> HALF-YEARLY EXAMS</span>
+          <h3>Term 1 datesheet is out</h3>
+          <div class="when">08&ndash;16 Dec &middot; 6 papers &middot; Class 8&ndash;B</div>
+          <div class="cd">
+            <div class="big">5</div>
+            <div class="lbl"><b>days</b> until<br/>first paper</div>
+            <div class="go"><svg class="i sm"><use href="#ic-arrow"/></svg></div>
+          </div>
+        </div>
+
+        <div class="sect">Quick view</div>
+        <div class="tiles">
+          <div class="tile t-green"><div class="ti"><svg class="i sm"><use href="#ic-check2"/></svg></div><div class="n">94%</div><div class="k">Attendance</div></div>
+          <div class="tile t-amber"><div class="ti"><svg class="i sm"><use href="#ic-wallet"/></svg></div><div class="n">&#8377;4,500</div><div class="k">Fees due</div></div>
+        </div>
+        <div style="height:90px"></div>
+      </div>
+      <div class="fade"></div>
+      <div class="nav">
+        <a class="on"><span class="ni"><svg class="i"><use href="#ic-home"/></svg></span>Home</a>
+        <a><span class="ni"><svg class="i"><use href="#ic-check2"/></svg></span>Attendance</a>
+        <a><span class="ni"><svg class="i"><use href="#ic-book"/></svg></span>Academics</a>
+        <a><span class="ni"><svg class="i"><use href="#ic-wallet"/></svg></span>Fees</a>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- DATESHEET screen -->
+  <div class="device-wrap">
+    <div class="cap"><span class="dot" style="background:var(--good)"></span> Datesheet &mdash; nested under Academics</div>
+    <div class="phone"><div class="screen"><div class="notch"></div>
+      <div class="sbar"><span>8:16</span><div class="rt"><span>5G</span><span>&#9646;&#9646;&#9646;&#9646;</span></div></div>
+      <div class="dnav">
+        <div class="back"><svg class="i sm"><use href="#ic-back"/></svg></div>
+        <div><b>Datesheet</b><div class="sub">Academics &rsaquo; Exams</div></div>
+      </div>
+      <div class="scroll">
+        <div class="examhd">
+          <div class="ei"><svg class="i lg"><use href="#ic-cal"/></svg></div>
+          <div><b>Half-Yearly &middot; Term 1</b><div class="m">Class 8&ndash;B &middot; 6 papers</div></div>
+          <div class="cdchip"><div class="n">5d</div><div class="l">to go</div></div>
+        </div>
+
+        <div style="position:relative">
+          <div class="rail-line"></div>
+
+          <div class="prow">
+            <div class="pdate"><div class="d">08</div><div class="mo">Dec</div><div class="dow">Mon</div></div>
+            <div class="pcard next">
+              <div class="st"><span class="sd s1">EN</span><span class="sn">English</span><span class="nextpill">NEXT UP</span></div>
+              <div class="pmeta"><div><svg class="i sm"><use href="#ic-clock"/></svg> 09:30&ndash;11:30</div></div>
+            </div>
+          </div>
+
+          <div class="prow">
+            <div class="pdate"><div class="d">10</div><div class="mo">Dec</div><div class="dow">Wed</div></div>
+            <div class="pcard">
+              <div class="st"><span class="sd s2">MA</span><span class="sn">Mathematics</span><span class="updpill"><svg class="i sm"><use href="#ic-alert"/></svg> UPDATED</span></div>
+              <div class="pmeta"><div><svg class="i sm"><use href="#ic-clock"/></svg> 09:30&ndash;11:30</div></div>
+            </div>
+          </div>
+
+          <div class="prow">
+            <div class="pdate"><div class="d">12</div><div class="mo">Dec</div><div class="dow">Fri</div></div>
+            <div class="pcard">
+              <div class="st"><span class="sd s3">SC</span><span class="sn">Science</span></div>
+              <div class="pmeta"><div><svg class="i sm"><use href="#ic-clock"/></svg> 09:30&ndash;11:30</div></div>
+            </div>
+          </div>
+
+          <div class="prow">
+            <div class="pdate"><div class="d">15</div><div class="mo">Dec</div><div class="dow">Mon</div></div>
+            <div class="pcard">
+              <div class="st"><span class="sd s4">SS</span><span class="sn">Social Studies</span></div>
+              <div class="pmeta"><div><svg class="i sm"><use href="#ic-clock"/></svg> 09:30&ndash;11:30</div></div>
+            </div>
+          </div>
+        </div>
+        <div style="height:90px"></div>
+      </div>
+      <div class="fade"></div>
+      <div class="nav">
+        <a><span class="ni"><svg class="i"><use href="#ic-home"/></svg></span>Home</a>
+        <a><span class="ni"><svg class="i"><use href="#ic-check2"/></svg></span>Attendance</a>
+        <a class="on"><span class="ni"><svg class="i"><use href="#ic-book"/></svg></span>Academics</a>
+        <a><span class="ni"><svg class="i"><use href="#ic-wallet"/></svg></span>Fees</a>
+      </div>
+    </div></div>
+  </div>
+
+</div>

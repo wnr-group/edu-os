@@ -575,3 +575,69 @@ shown as a READ-ONLY badge — NOT an independent toggle (a manual toggle could 
 when `online_payments` is ON (platform-admin school detail; same secure component also exposed to school_admin settings).
 A "Test connection" server action validates keys. Until configured, online payments show "not configured" and stay
 blocked. Handling secret values = Vault only; never plaintext columns, never client.
+
+**D15 — Sub-project #2 UX/flow lock (Geo attendance · Exam schedule · Fee status).** Design grill 2026-07-24;
+mockup deliverable = ~5 screens on the surface each module actually lives on (web+mobile). Grounded on the real
+current surfaces (geo = fully greenfield, no GPS/RPC anywhere; exam "schedule" today is just `exams.start/end_date`;
+no persisted `overdue`, no standalone defaulter view).
+
+*Geo attendance —*
+- **Geofence setup** (web, school_admin): interactive **map pin-drop** (Leaflet + OpenStreetMap tiles — free, no
+  API key, no cost), search/drop center, drag radius circle, manual lat/lng override, multi-campus list. **Radius
+  supports large/multi-building campuses** (numeric input + slider, up to several km — not a small capped slider).
+- **Teacher marking** (mobile, extends `apps/mobile/app/(teacher)/attendance/[sectionId].tsx`): **passive geo**, one
+  GPS reading captured **at Submit** and stamped on the whole batch (teacher marks the section from one spot). Header
+  **chip** resolves `Locating… → On campus ✓ / Off campus ⚠ / No GPS`. **Submit-only** (no on-open capture). Never
+  blocks marking. No new step in the daily flow.
+- **Off-campus / no-GPS = silent flag** — no reason prompt, no confirm modal. Store `geo_status` (`inside`/`outside`/
+  `no_gps`), `gps_accuracy_m`, and measured **distance-from-campus-edge** (so review can tell "500 m off" from "40 m
+  past the fence on poor signal").
+- **Review** (web): a **dedicated lightweight "Attendance flags" page** — **principal** primary reviewer, school_admin
+  also. Nav shows a **badge count only when flags exist** (usually empty — it's an exception stream). Per-submission
+  list: teacher, when, distance-off, accuracy, map dot, **✓ Reviewed / dismiss**. Deliberately NOT an action-cockpit
+  (no KPIs/impact theater — over-designing an exception log).
+- **Offline marking DEFERRED** to its own future sub-project — v1 is online-only (matches today's online-only upsert;
+  offline = a whole reliability problem: local queue, replay, dedup vs `(student,date,session)`, conflicts).
+
+*Exam schedule —*
+- **v1 = single room + single invigilator per paper, clash-detected. Seating allocation (multi-room, seat maps)
+  DEFERRED.** Slot = `(exam_id, class_id, subject_id, exam_date, start_time, end_time, room_id?, invigilator_id?)`;
+  room + invigilator optional (can publish a datesheet before filling them). Clash trigger enforces D13's three rules
+  (room double-book / invigilator double-book / class two-papers-at-once in overlapping windows).
+- **Rooms = minimal new table** (`id, school_id, name, capacity?, is_active`), **add-on-the-fly** from the slot form
+  ("+ New room"); no heavyweight rooms-CRUD screen for v1. Capacity captured but **not enforced** (seating deferred).
+  Invigilator = **teacher-pool dropdown** (no new entity).
+- **Builder** (web, admin): **slot-list + "Add paper" drawer**, filterable/groupable by class; **inline NAMED clash
+  errors** ("Room A is booked for Class 8 English, 9:30–11:30"); **read-only calendar preview** toggle for the "does
+  this spread look sane" check (no drag-drop calendar editor). Matches the app's table-driven idioms.
+- **Publish**: build in **draft** (invisible) → first **Publish** makes live + notifies → later edits mark a slot
+  "edited · unpublished change" → **"Publish changes"** sends **one consolidated notification to affected classes only**
+  ("Class 6: Term-1 datesheet updated — Maths moved to Dec 11"). **Per-exam** granularity for v1. The pg_cron
+  "exam-tomorrow" reminder fires off the *published* datesheet, independent of edit history.
+- **Mobile view** = **home-card entry point** (appears only when an exam is published/upcoming — self-dismissing, no
+  permanent tab cost) → **nested read-only datesheet** under Academics: chronological papers grouped by exam, each row
+  = subject · date+weekday · time (**NO room shown** — see below); **countdown chip** on the next paper; **"updated"
+  badge** on changed slots. **Parent-app-only** for v1 (no distinct student login in the mobile route groups).
+- **Room is NOT shown on the parent datesheet in v1 (grill follow-up 2026-07-24).** Telling a specific parent their
+  child's hall requires a **student→hall mapping**, which is the seating allocation we deferred. A roll-number-range
+  split was considered and **rejected**: `roll_number` is `TEXT` and **nullable** in both `student_enrollments` and
+  `student_profiles` (no `NOT NULL`), so it can't deterministically key every exam-taker to a room. Likewise **multiple
+  rooms per paper** only becomes meaningful once students are split across halls — same deferred seating feature. So v1:
+  the **admin builder keeps room + invigilator per paper** (its internal record / primary hall, clash-checked), but the
+  **parent view omits room entirely** until a proper **seating sub-project** is built (which will add multi-room,
+  per-child hall resolution, and the parent-facing room together, keyed on whatever stable identifier the school then
+  standardizes on). Honest > fake: parents get subject/date/time now, never a wrong hall.
+
+*Fee status —*
+- **Operational dashboard** (web, admin), NOT a passive report: **collection KPIs** (Total billed · Collected ·
+  Outstanding · Collection % · # defaulters; filter by class + fee type) + **defaulter list** (student, class,
+  outstanding ₹, days overdue, last payment; sorted by amount/days) + **bulk-select → "Send payment reminder"** via the
+  existing SMS/push pipeline (parents are one tap from the Razorpay pay flow) + **light outcome stats** (collected last
+  7 days; reminders sent / paid-since). Reminder is **direct-send with confirm** (transactional/operational — NOT
+  routed through the D5 draft-review gate that governs *advisory* insight comms). **No predictive scoring here** — the
+  "likely to default" risk model is the Insights §6.3 engine, built LAST on top of this.
+- **Overdue = derived on read** (`get_fee_status` RPC/view), never persisted: `overdue = outstanding > 0 AND
+  due_date < today`; `days_overdue = today − due_date`; a **partial** line can still be overdue. Defaulter list
+  **defaults to overdue-only** with an "all outstanding (incl. not-yet-due)" toggle; reminders target the overdue set.
+  No new storage, **no nightly status-flip cron** (deriving on read is always correct; a midnight flip is a footgun).
+  Existing `pending|partial|paid` unchanged (it means "how much is paid"); overdue is an orthogonal *time* overlay.
