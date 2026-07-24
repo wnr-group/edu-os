@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -271,9 +271,9 @@ export function StudentFeesClient({ lineItems, payments, schoolId, studentId, fe
             <tbody className="divide-y divide-border">
               {lineItems.length === 0 ? (
                 <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">No fee line items yet.</td></tr>
-              ) : lineItems.map((li) => (
-                <>
-                  <tr key={li.id} className="hover:bg-muted/30">
+             ) : lineItems.map((li) => (
+                <Fragment key={li.id}>
+                  <tr className="hover:bg-muted/30">
                     <td className="px-4 py-3">
                       <button
                         className="font-medium text-indigo-600 hover:underline"
@@ -369,9 +369,9 @@ export function StudentFeesClient({ lineItems, payments, schoolId, studentId, fe
                           Cancel
                         </button>
                       </div>
-                    </InlineFormRow>
+                   </InlineFormRow>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -490,9 +490,9 @@ export function StudentFeesClient({ lineItems, payments, schoolId, studentId, fe
             <tbody className="divide-y divide-border">
               {payments.length === 0 ? (
                 <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">No payment transactions yet.</td></tr>
-              ) : payments.map((p) => (
-                <>
-                  <tr key={p.id} className="hover:bg-muted/30">
+             ) : payments.map((p) => (
+                <Fragment key={p.id}>
+                  <tr className="hover:bg-muted/30">
                     <td className="px-4 py-3">{new Date(p.payment_date).toLocaleDateString("en-IN")}</td>
                     <td className="px-4 py-3 tabular-nums font-medium text-emerald-700">₹{p.total_amount.toLocaleString("en-IN")}</td>
                     <td className="px-4 py-3">{METHOD_LABELS[p.payment_method] ?? p.payment_method}</td>
@@ -542,7 +542,7 @@ export function StudentFeesClient({ lineItems, payments, schoolId, studentId, fe
                       )}
                     </InlineFormRow>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>

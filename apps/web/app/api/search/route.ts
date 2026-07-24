@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       .limit(8),
     supabase
       .from("teacher_profiles")
-      .select("profile_id, profile:profiles!teacher_profiles_profile_id_fkey(full_name)")
+      .select("id, profile_id, profile:profiles!teacher_profiles_profile_id_fkey(full_name)")
       .eq("school_id", schoolId)
       .limit(8),
   ]);
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     ...teacherResults.map((t) => {
       const profile = t.profile as unknown as { full_name: string } | null;
       return {
-        id: t.profile_id,
+        id: t.id,
         type: "teacher" as const,
         name: profile?.full_name ?? "—",
         detail: "Teacher",

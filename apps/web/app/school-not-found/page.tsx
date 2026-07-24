@@ -12,6 +12,7 @@ export default function SchoolNotFound() {
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#F6F9FB] px-6 py-16 font-[family-name:var(--font-display)] text-[#0D1B2A]">
       <div className="pointer-events-none absolute left-1/2 top-1/3 h-[500px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#2B6CB0]/10 blur-[120px]" />
 
+
       <div className="relative flex flex-col items-center text-center">
         <HeroReveal delay={0}>
           <Image
@@ -24,7 +25,7 @@ export default function SchoolNotFound() {
         </HeroReveal>
 
         <HeroReveal delay={100}>
-          <span className="mt-8 inline-flex items-center gap-1.5 rounded-full border border-[#2B6CB0]/30 bg-[#2B6CB0]/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#2B6CB0]">
+          <span className="mt-8 inline-block rounded-full border border-[#2B6CB0]/30 bg-[#2B6CB0]/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#2B6CB0]">
             Error 404
           </span>
         </HeroReveal>

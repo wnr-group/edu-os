@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import {
   ArrowRight,
-  IdCard,
-  ArrowLeftRight,
-  Rocket,
+  Database,
+  Layers,
+  Sparkles,
+  LineChart,
+  HeartHandshake,
   Check,
   BarChart3,
   FileInput,
@@ -17,71 +19,78 @@ import {
 import { AnimateOnScroll } from "@/components/animate-on-scroll";
 import { HeroReveal, HeroFloat } from "@/components/hero-animations";
 import { Navbar } from "@/components/navbar";
-
-// lucide-react no longer ships brand/social icons (Twitter, Linkedin, etc. were
-// removed), so these are small local placeholders matching the existing h-4 w-4
-// icon sizing used across the footer.
-function XIcon({ className = "h-4 w-4" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
-      <path d="M18.244 2H21.5l-7.51 8.59L23 22h-6.828l-5.35-6.36L4.7 22H1.44l8.03-9.19L1 2h6.998l4.836 5.81L18.244 2Zm-1.197 18h1.803L7.03 3.89H5.1L17.047 20Z" />
-    </svg>
-  );
-}
-function LinkedInIcon({ className = "h-4 w-4" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
-      <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.15 1.45-2.15 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.38-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28ZM5.34 7.43a2.07 2.07 0 1 1 0-4.13 2.07 2.07 0 0 1 0 4.13ZM7.12 20.45H3.56V9h3.56v11.45Z" />
-    </svg>
-  );
-}
+import { Footer } from "@/components/footer";
 
 export const metadata: Metadata = {
-  title: "How It Works — EduOS Implementation Guide",
+  title: "How EduOS Works: From Student Data to Educational Intelligence",
   description:
-    "See how EduOS takes your campus live in three clear phases — institutional onboarding, secure data integration, and launch — backed by expert-led training and 24/7 support.",
+    "See exactly how EduOS turns everyday school data into meaningful insight: five steps from data collection to better decisions, backed by expert-led onboarding and 24/7 support.",
   alternates: {
     // NOTE: placeholder domain — replace once the real EduOS domain is confirmed.
     canonical: "https://eduos.com/how-it-works",
   },
 };
 
-const PHASES = [
+const STEPS = [
   {
-    phase: "PHASE 01",
-    title: "Institutional Onboarding",
+    step: "STEP 01",
+    title: "Collect Student Data",
     description:
-      "We begin with a strategic audit of your current workflows. Our specialist team sets up your unique cloud environment and configures security protocols tailored to your campus needs.",
-    items: ["Stakeholder Consultations", "Security Environment Setup"],
-    icon: IdCard,
-    iconBg: "bg-[#0D1B2A]",
-    accentText: "text-[#2B6CB0]",
-    accentBg: "bg-[#2B6CB0]",
-    hoverBorder: "hover:border-[#2B6CB0]/30",
+      "Attendance, academics, behaviour, extracurricular activities, and teacher observations are captured as they happen and become part of the student's evolving learning profile.",
+    items: ["Daily attendance & academics", "Behaviour & teacher notes"],
+    icon: Database,
+    iconBg: "bg-[#073571]",
+    accentText: "text-[#72A9E2]",
+    accentBg: "bg-[#72A9E2]",
+    hoverBorder: "hover:border-[#72A9E2]/30",
   },
   {
-    phase: "PHASE 02",
-    title: "Secure Data Integration",
+    step: "STEP 02",
+    title: "Build Learning Profile",
     description:
-      "Our proprietary migration engine securely imports student records, faculty data, and financial history. We ensure seamless synchronization with your existing legacy platforms.",
-    items: ["SIS/ERP Data Migration", "Automated Validation Checks"],
-    icon: ArrowLeftRight,
-    iconBg: "bg-[#2B6CB0]",
-    accentText: "text-[#2B6CB0]",
-    accentBg: "bg-[#2B6CB0]",
-    hoverBorder: "hover:border-[#2B6CB0]/30",
+      "EduOS organises every data point into one unified educational profile per student, replacing scattered spreadsheets and disconnected reports.",
+    items: ["Unified student record", "Continuous, not one-off"],
+    icon: Layers,
+    iconBg: "bg-[#72A9E2]",
+    accentText: "text-[#72A9E2]",
+    accentBg: "bg-[#72A9E2]",
+    hoverBorder: "hover:border-[#72A9E2]/30",
   },
   {
-    phase: "PHASE 03",
-    title: "Launch & Go Live",
+    step: "STEP 03",
+    title: "AI Intelligence Engine",
     description:
-      "Final activation includes role-based training for staff and teachers. Your digital campus officially opens with 24/7 technical monitoring and priority support.",
-    items: ["Staff Certification Workshops", "Production Launch"],
-    icon: Rocket,
-    iconBg: "bg-[#C98A2E]",
-    accentText: "text-[#C98A2E]",
-    accentBg: "bg-[#C98A2E]",
-    hoverBorder: "hover:border-[#C98A2E]/30",
+      "Our intelligence layer is designed to identify learning patterns, subject-wise strengths, and areas that may need support, surfacing what matters, not just what was recorded.",
+    items: ["Pattern & trend detection", "Responsible, privacy-first AI"],
+    icon: Sparkles,
+    iconBg: "bg-[#A87D2E]",
+    accentText: "text-[#A87D2E]",
+    accentBg: "bg-[#A87D2E]",
+    hoverBorder: "hover:border-[#A87D2E]/30",
+  },
+  {
+    step: "STEP 04",
+    title: "Generate Quality Insights",
+    description:
+      "Instead of raw reports, schools receive meaningful, educator-ready recommendations: the kind of insight that supports a conversation, not just a number on a page.",
+    items: ["Educator-ready summaries", "Early-signal, not just history"],
+    icon: LineChart,
+    iconBg: "bg-[#073571]",
+    accentText: "text-[#72A9E2]",
+    accentBg: "bg-[#72A9E2]",
+    hoverBorder: "hover:border-[#72A9E2]/30",
+  },
+  {
+    step: "STEP 05",
+    title: "Support Better Decisions",
+    description:
+      "Teachers, counsellors, and parents work from the same understanding of each learner, helping every student grow, with technology that empowers educators rather than replacing them.",
+    items: ["Shared educator + parent view", "Teachers stay at the centre"],
+    icon: HeartHandshake,
+    iconBg: "bg-[#72A9E2]",
+    accentText: "text-[#72A9E2]",
+    accentBg: "bg-[#72A9E2]",
+    hoverBorder: "hover:border-[#72A9E2]/30",
   },
 ];
 
@@ -103,151 +112,128 @@ const TRAINING_ITEMS = [
   },
 ];
 
-const FOOTER_LINKS = {
-  Product: [
-    { label: "Features", href: "/#features" },
-    { label: "Integrations", href: "#" },
-    { label: "Pricing", href: "#" },
-    { label: "Security", href: "#" },
-  ],
-  Company: [
-    { label: "About Us", href: "/about" },
-    { label: "Blog", href: "#" },
-    { label: "Careers", href: "#" },
-    { label: "Contact", href: "/#cta" },
-  ],
-  Legal: [
-    { label: "Privacy Policy", href: "/privacy" },
-    { label: "Terms of Service", href: "#" },
-    { label: "Cookie Policy", href: "#" },
-    { label: "Support Center", href: "#" },
-  ],
-};
-
 export default function HowItWorksPage() {
   return (
-    <div className="min-h-screen overflow-x-clip bg-[#F6F9FB] font-[family-name:var(--font-display)] text-[#0D1B2A]">
-      <Navbar active="How It Works" />
+    <div className="min-h-screen overflow-x-clip bg-[#F6FAFD] font-[family-name:var(--font-display)] text-[#073571]">
+      <Navbar active="How EduOS Works" />
 
       {/* ── HERO ── */}
-      <section className="relative overflow-hidden bg-[#EEF3F8] px-5 py-16 md:px-6 md:py-20 lg:py-28">
-        <div className="pointer-events-none absolute left-1/2 top-0 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-[#2B6CB0]/10 blur-[120px]" />
-        <div className="relative mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[1fr_1.1fr] lg:gap-16">
-          {/* Left */}
-          <div>
+      <section className="relative h-[calc(100vh-73px)] w-full overflow-hidden bg-[#052247]">
+        <HeroFloat delay={100} className="absolute inset-0">
+          <Image
+            src="/sample.jpg"
+            alt="EduOS dashboard preview showing key metrics, schedule, and campus overview"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
+          />
+          {/* Navy gradient overlay — left side, for text readability, blending into the image */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#052247] via-[#052247]/80 to-transparent sm:via-[#052247]/70" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#052247]/50 via-transparent to-transparent" />
+        </HeroFloat>
+
+        <div className="pointer-events-none absolute -left-24 top-1/3 h-72 w-72 animate-glow-pulse rounded-full bg-[#72A9E2]/10 blur-[110px]" />
+
+        <div className="relative flex h-full items-center px-6 sm:px-10 md:px-14 lg:px-16 xl:px-20">
+          <div className="max-w-xl">
             <HeroReveal delay={100}>
-              <span className="inline-block rounded-full bg-[#2B6CB0]/15 px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest text-[#2B6CB0] md:text-xs">
-                Implementation Guide
+              <span className="inline-block rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest text-[#AFC6E8] backdrop-blur-sm md:text-xs">
+                Data → Intelligence → Action
               </span>
             </HeroReveal>
             <HeroReveal delay={200}>
-              <h1 className="mt-5 text-3xl font-extrabold leading-[1.15] tracking-tight text-[#0D1B2A] sm:text-4xl lg:text-5xl">
-                Modernizing your campus is a{" "}
-                <span className="text-[#2B6CB0]">seamless journey.</span>
+              <h1 className="mt-5 text-3xl font-extrabold leading-[1.15] tracking-tight text-white sm:text-4xl lg:text-5xl">
+                From everyday school data to{" "}
+                <span className="text-[#72A9E2]">educational intelligence.</span>
               </h1>
             </HeroReveal>
             <HeroReveal delay={350}>
-              <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 md:mt-6 md:text-lg">
-                We&apos;ve refined our implementation process into three clear phases. From
-                initial setup to full operations, our team ensures your transition to EduOS
-                is efficient, secure, and intuitive.
+              <p className="mt-4 max-w-xl text-base leading-relaxed text-white/80 md:mt-6 md:text-lg">
+                EduOS doesn&apos;t simply collect information, it turns scattered records
+                into a living picture of every learner. Here&apos;s exactly how data becomes
+                a decision, in five steps.
               </p>
             </HeroReveal>
             <HeroReveal delay={500}>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row md:mt-10">
                 <a
                   href="#phases"
-                  className="flex w-full items-center justify-center gap-2 rounded-full bg-[#0D1B2A] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#0D1B2A]/15 transition-all duration-300 hover:scale-[1.03] hover:bg-[#16283b] active:scale-[0.97] sm:w-auto"
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-[#72A9E2] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-black/20 transition-all duration-300 hover:scale-[1.03] hover:bg-[#4A82BE] active:scale-[0.97] sm:w-auto"
                 >
-                  Start Journey <ArrowRight className="h-4 w-4" />
+                  See the 5 Steps <ArrowRight className="h-4 w-4" />
                 </a>
                 <a
                   href="/eduos-brochure.pdf"
-                  className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-[#0D1B2A] transition-all duration-300 hover:scale-[1.03] hover:border-slate-400 hover:bg-slate-50 active:scale-[0.97] sm:w-auto"
+                  className="flex w-full items-center justify-center gap-2 rounded-full border border-white/30 bg-white/5 px-6 py-3 text-sm font-semibold text-white backdrop-blur-sm transition-all duration-300 hover:scale-[1.03] hover:bg-white/15 active:scale-[0.97] sm:w-auto"
                 >
                   View Documentation
                 </a>
               </div>
             </HeroReveal>
           </div>
-
-          {/* Right — device mockup, stacked below text on mobile/tablet, beside it on desktop */}
-          <HeroFloat delay={400} className="relative flex justify-center lg:justify-end">
-            <div className="relative w-full max-w-xl lg:max-w-none">
-              <div className="rounded-[2rem] border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-300/50 sm:p-4">
-                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-                  <Image
-                    src="/sample.jpg"
-                    alt="EduOS How It Works dashboard preview showing key metrics, schedule, and campus overview"
-                    fill
-                    priority
-                    sizes="(min-width: 1024px) 55vw, (min-width: 640px) 85vw, 100vw"
-                    className="object-cover"
-                  />
-                </div>
-              </div>
-            </div>
-          </HeroFloat>
         </div>
       </section>
 
-      {/* ── 3-STEP SUCCESS PATH ── */}
-      <section id="phases" className="bg-[#EEF3F8] px-5 pb-20 pt-4 md:px-6 md:pb-28">
+      {/* ── 5-STEP INTELLIGENCE JOURNEY ── */}
+      <section id="phases" className="bg-[#EEF4FB] px-5 pb-20 pt-4 md:px-6 md:pb-28">
         <div className="mx-auto max-w-3xl text-center">
           <AnimateOnScroll delay={0}>
-            <h2 className="text-3xl font-extrabold tracking-tight text-[#0D1B2A] sm:text-4xl">
-              The 3-Step Success Path
+            <h2 className="text-3xl font-extrabold tracking-tight text-[#073571] sm:text-4xl">
+              The 5-Step Intelligence Journey
             </h2>
           </AnimateOnScroll>
           <AnimateOnScroll delay={120}>
             <p className="mt-4 text-sm text-slate-600 md:text-base">
-              Our standardized rollout protocol ensures zero downtime and 100% data integrity
-              for your educational institution.
+              Every insight EduOS surfaces follows the same disciplined path, from a single
+              attendance mark to a recommendation a teacher can act on.
             </p>
           </AnimateOnScroll>
         </div>
 
-        <div className="relative mx-auto mt-14 max-w-7xl">
-          {/* Dashed connector — desktop only, sits behind the cards */}
-          <div className="pointer-events-none absolute left-0 right-0 top-[52px] hidden border-t-2 border-dashed border-slate-300 lg:block" />
+        <div className="relative mx-auto mt-16 max-w-4xl">
+          {/* Connector line, running the full length of the journey */}
+          <div className="pointer-events-none absolute bottom-4 left-7 top-4 w-px bg-slate-300 sm:left-9" />
 
-          <div className="relative grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {PHASES.map((phase, i) => {
+          <div className="flex flex-col gap-8">
+            {STEPS.map((phase, i) => {
               const Icon = phase.icon;
               return (
-                <AnimateOnScroll key={phase.phase} delay={i * 150}>
-                  <div
-                    className={`group rounded-2xl border border-slate-200 bg-white p-6 transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-xl hover:shadow-slate-300/40 ${phase.hoverBorder} sm:p-7`}
-                  >
+                <AnimateOnScroll key={phase.step} delay={i * 130}>
+                  <div className="group relative flex gap-5 sm:gap-7">
                     <span
-                      className={`grid h-14 w-14 place-items-center rounded-xl ${phase.iconBg} transition-transform duration-300 group-hover:scale-105`}
+                      className={`relative z-10 grid h-14 w-14 flex-shrink-0 place-items-center rounded-full ${phase.iconBg} shadow-lg shadow-slate-300/30 ring-4 ring-[#EEF4FB] transition-transform duration-300 group-hover:scale-110 sm:h-[72px] sm:w-[72px]`}
                     >
-                      <Icon className="h-6 w-6 text-white" />
+                      <Icon className="h-6 w-6 text-white sm:h-7 sm:w-7" />
                     </span>
-                    <p className={`mt-6 text-xs font-bold uppercase tracking-widest ${phase.accentText}`}>
-                      {phase.phase}
-                    </p>
-                    <h3 className="mt-2 text-xl font-bold text-[#0D1B2A] lg:text-2xl">
-                      {phase.title}
-                    </h3>
-                    <p className="mt-3 text-sm leading-relaxed text-slate-600 lg:text-base">
-                      {phase.description}
-                    </p>
-                    <ul className="mt-5 space-y-2.5">
-                      {phase.items.map((item) => (
-                        <li
-                          key={item}
-                          className="flex items-center gap-2.5 text-sm font-medium text-[#0D1B2A]"
-                        >
-                          <span
-                            className={`grid h-5 w-5 flex-shrink-0 place-items-center rounded-full ${phase.accentBg}`}
+
+                    <div className="flex-1 rounded-2xl border border-slate-200 bg-white p-6 transition-all duration-300 ease-out group-hover:-translate-y-1 group-hover:shadow-xl group-hover:shadow-slate-300/40 sm:p-7">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <p className={`text-xs font-bold uppercase tracking-widest ${phase.accentText}`}>
+                          {phase.step}
+                        </p>
+                        <span className="h-1 w-1 rounded-full bg-slate-300" />
+                        <h3 className="text-xl font-bold text-[#073571] lg:text-2xl">{phase.title}</h3>
+                      </div>
+                      <p className="mt-3 text-sm leading-relaxed text-slate-600 lg:text-base">
+                        {phase.description}
+                      </p>
+                      <ul className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+                        {phase.items.map((item) => (
+                          <li
+                            key={item}
+                            className="flex items-center gap-2 text-sm font-medium text-[#073571]"
                           >
-                            <Check className="h-3 w-3 text-white" strokeWidth={3} />
-                          </span>
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
+                            <span
+                              className={`grid h-5 w-5 flex-shrink-0 place-items-center rounded-full ${phase.accentBg}`}
+                            >
+                              <Check className="h-3 w-3 text-white" strokeWidth={3} />
+                            </span>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
                 </AnimateOnScroll>
               );
@@ -255,13 +241,12 @@ export default function HowItWorksPage() {
           </div>
         </div>
       </section>
-
       {/* ── POWERFUL INTEGRATION INFRASTRUCTURE ── */}
-      <section className="bg-[#F6F9FB] px-5 py-16 md:px-6 md:py-24">
+      <section className="bg-[#F6FAFD] px-5 py-16 md:px-6 md:py-24">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <AnimateOnScroll delay={0} className="max-w-xl">
-              <h2 className="text-3xl font-extrabold tracking-tight text-[#0D1B2A] sm:text-4xl">
+              <h2 className="text-3xl font-extrabold tracking-tight text-[#073571] sm:text-4xl">
                 Powerful Integration Infrastructure
               </h2>
               <p className="mt-4 text-sm text-slate-600 md:text-base">
@@ -272,7 +257,7 @@ export default function HowItWorksPage() {
             <AnimateOnScroll delay={120}>
               <a
                 href="/api-docs"
-                className="inline-flex flex-shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white px-6 py-3 text-center text-sm font-bold text-[#0D1B2A] transition-all duration-300 hover:scale-[1.03] hover:border-slate-400 hover:bg-slate-50 active:scale-[0.97]"
+                className="inline-flex flex-shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white px-6 py-3 text-center text-sm font-bold text-[#073571] transition-all duration-300 hover:scale-[1.03] hover:border-slate-400 hover:bg-slate-50 active:scale-[0.97]"
               >
                 Explore API Specs
               </a>
@@ -282,17 +267,17 @@ export default function HowItWorksPage() {
           <div className="mt-10 grid grid-cols-1 gap-5 lg:grid-cols-12 lg:items-stretch lg:gap-6">
             {/* Unified Data Core */}
             <AnimateOnScroll delay={0} className="lg:col-span-7">
-              <div className="group flex h-full flex-col justify-between rounded-2xl bg-[#0D1B2A] p-6 transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-lg hover:shadow-[#2B6CB0]/20 sm:p-7">
+              <div className="group flex h-full flex-col justify-between rounded-2xl bg-[#073571] p-6 transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-lg hover:shadow-[#72A9E2]/20 sm:p-7">
                 <div>
                   <h3 className="text-xl font-bold text-white lg:text-2xl">Unified Data Core</h3>
-                  <p className="mt-3 max-w-md text-sm leading-relaxed text-[#B9CBDF] lg:text-base">
+                  <p className="mt-3 max-w-md text-sm leading-relaxed text-[#AFC6E8] lg:text-base">
                     Consolidate disparate data sources into a single, high-fidelity truth
                     source. Real-time sync ensures everyone from administrators to parents
                     sees current information.
                   </p>
                 </div>
                 <div className="mt-8 flex items-center gap-3 rounded-xl bg-white/10 px-4 py-3.5">
-                  <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg bg-[#2B6CB0] transition-transform duration-300 group-hover:scale-105">
+                  <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg bg-[#72A9E2] transition-transform duration-300 group-hover:scale-105">
                     <BarChart3 className="h-4 w-4 text-white" />
                   </span>
                   <div className="flex-1">
@@ -300,12 +285,12 @@ export default function HowItWorksPage() {
                       <span className="text-[11px] font-semibold uppercase tracking-wide text-white">
                         Sync Progress
                       </span>
-                      <span className="text-[11px] font-semibold text-[#8FB4DA]">
+                      <span className="text-[11px] font-semibold text-[#9CC1EA]">
                         88% Complete
                       </span>
                     </div>
                     <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/15">
-                      <div className="h-full w-[88%] rounded-full bg-[#2B6CB0]" />
+                      <div className="h-full w-[88%] rounded-full bg-[#72A9E2]" />
                     </div>
                   </div>
                 </div>
@@ -315,9 +300,9 @@ export default function HowItWorksPage() {
             {/* Right column: Legacy Support + Bank-Grade Security + 100% Cloud-Native */}
             <div className="flex flex-col gap-5 lg:col-span-5">
               <AnimateOnScroll delay={150}>
-                <div className="group flex items-center justify-between gap-4 rounded-2xl bg-[#DCE9FB] p-6 transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-lg hover:shadow-slate-300/30 sm:p-7">
+                <div className="group flex items-center justify-between gap-4 rounded-2xl bg-[#DCEAFB] p-6 transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-lg hover:shadow-slate-300/30 sm:p-7">
                   <div>
-                    <h3 className="text-lg font-bold text-[#0D1B2A] lg:text-xl">
+                    <h3 className="text-lg font-bold text-[#073571] lg:text-xl">
                       Legacy Support
                     </h3>
                     <p className="mt-2 text-sm leading-relaxed text-slate-600">
@@ -326,22 +311,22 @@ export default function HowItWorksPage() {
                     </p>
                   </div>
                   <span className="grid h-16 w-16 flex-shrink-0 place-items-center rounded-2xl bg-white shadow-sm transition-transform duration-300 group-hover:scale-105">
-                    <FileInput className="h-6 w-6 text-[#0D1B2A]" />
+                    <FileInput className="h-6 w-6 text-[#073571]" />
                   </span>
                 </div>
               </AnimateOnScroll>
 
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <AnimateOnScroll delay={250}>
-                  <div className="group flex h-full flex-col items-center justify-center gap-3 rounded-2xl bg-[#FBDFA6] p-6 text-center transition-all duration-300 ease-out hover:scale-[1.03] hover:shadow-lg hover:shadow-slate-300/30 sm:p-7">
-                    <Shield className="h-7 w-7 text-[#0D1B2A] transition-transform duration-300 group-hover:scale-110" />
-                    <p className="text-base font-bold text-[#0D1B2A]">Bank-Grade Security</p>
+                  <div className="group flex h-full flex-col items-center justify-center gap-3 rounded-2xl bg-[#E8D6A8] p-6 text-center transition-all duration-300 ease-out hover:scale-[1.03] hover:shadow-lg hover:shadow-slate-300/30 sm:p-7">
+                    <Shield className="h-7 w-7 text-[#073571] transition-transform duration-300 group-hover:scale-110" />
+                    <p className="text-base font-bold text-[#073571]">Bank-Grade Security</p>
                   </div>
                 </AnimateOnScroll>
                 <AnimateOnScroll delay={350}>
                   <div className="group flex h-full flex-col items-center justify-center gap-3 rounded-2xl bg-[#AFD2F7] p-6 text-center transition-all duration-300 ease-out hover:scale-[1.03] hover:shadow-lg hover:shadow-slate-300/30 sm:p-7">
-                    <CloudCheck className="h-7 w-7 text-[#0D1B2A] transition-transform duration-300 group-hover:scale-110" />
-                    <p className="text-base font-bold text-[#0D1B2A]">100% Cloud-Native</p>
+                    <CloudCheck className="h-7 w-7 text-[#073571] transition-transform duration-300 group-hover:scale-110" />
+                    <p className="text-base font-bold text-[#073571]">100% Cloud-Native</p>
                   </div>
                 </AnimateOnScroll>
               </div>
@@ -369,12 +354,12 @@ export default function HowItWorksPage() {
           {/* Text — first on mobile, last on tablet/desktop */}
           <div className="order-1 md:order-2">
             <AnimateOnScroll from="right" delay={0}>
-              <h2 className="text-3xl font-extrabold tracking-tight text-[#0D1B2A] sm:text-4xl">
+              <h2 className="text-3xl font-extrabold tracking-tight text-[#073571] sm:text-4xl">
                 Expert-Led Training &amp; Success
               </h2>
               <p className="mt-4 text-sm leading-relaxed text-slate-600 md:text-base">
                 We don&apos;t just hand you the keys. Our EduSuccess&trade; program provides
-                comprehensive training modules for every user level—from system
+                comprehensive training modules for every user level, from system
                 administrators to student teachers.
               </p>
             </AnimateOnScroll>
@@ -385,11 +370,11 @@ export default function HowItWorksPage() {
                 return (
                   <AnimateOnScroll key={item.title} delay={120 + i * 120}>
                     <div className="group flex items-start gap-4">
-                      <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-[#EEF3F8] transition-transform duration-300 group-hover:scale-105">
-                        <Icon className="h-5 w-5 text-[#0D1B2A]" />
+                      <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-[#EEF4FB] transition-transform duration-300 group-hover:scale-105">
+                        <Icon className="h-5 w-5 text-[#073571]" />
                       </span>
                       <div>
-                        <h3 className="text-base font-bold text-[#0D1B2A]">{item.title}</h3>
+                        <h3 className="text-base font-bold text-[#073571]">{item.title}</h3>
                         <p className="mt-1 text-sm leading-relaxed text-slate-600">
                           {item.description}
                         </p>
@@ -404,88 +389,34 @@ export default function HowItWorksPage() {
       </section>
 
       {/* ── CTA ── */}
-      <section id="cta" className="bg-[#0D1B2A] px-5 py-16 md:px-6 md:py-24">
+      <section id="cta" className="bg-[#073571] px-5 py-16 md:px-6 md:py-24">
         <AnimateOnScroll from="scale" className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl lg:text-5xl">
-            Ready to upgrade your institutional operations?
+            Ready to see your students&apos; stories come to life?
           </h2>
-          <p className="mt-4 text-sm text-[#B9CBDF] md:text-lg">
-            Schedule a personalized discovery session to see how EduOS can specifically
-            benefit your school&apos;s unique ecosystem.
+          <p className="mt-4 text-sm text-[#AFC6E8] md:text-lg">
+            Book a personalised demo to see how EduOS turns your school&apos;s everyday
+            data into insight that helps every learner grow.
           </p>
           <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <a
-              href="mailto:balaji.p2prhel@gmail.com?subject=Book%20a%20Demo"
-              className="w-full rounded-full bg-[#2B6CB0] px-8 py-3 text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.03] hover:bg-[#245a91] active:scale-[0.97] sm:w-auto"
+              href="mailto:admin@wnradvisory.com?subject=Book%20a%20Demo"
+              className="w-full rounded-full bg-[#72A9E2] px-8 py-3 text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.03] hover:bg-[#2E5C96] active:scale-[0.97] sm:w-auto"
             >
               Book a Demo
             </a>
            <a 
-              href="mailto:balaji.p2prhel@gmail.com?subject=Talk%20to%20Sales"
+              href="mailto:admin@wnradvisory.com?subject=Request%20a%20Proposal"
               className="w-full rounded-full border border-white/30 bg-transparent px-8 py-3 text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.03] hover:bg-white/10 active:scale-[0.97] sm:w-auto"
             >
-              Talk to Sales
+              Request a Proposal
             </a>
           </div>
         </AnimateOnScroll>
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="bg-[#0D1B2A] px-5 pb-8 pt-14 md:px-6 md:pt-16">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid grid-cols-1 gap-10 md:grid-cols-4">
-            <div>
-              <span className="text-lg font-bold text-white">EduOS</span>
-              <p className="mt-4 text-sm leading-relaxed text-[#8FA3BC]">
-                Empowering institutions with modern, secure, and intuitive management systems
-                since 2018.
-              </p>
-            </div>
-
-            {Object.entries(FOOTER_LINKS).map(([heading, links]) => (
-              <div key={heading}>
-                <h4 className="text-sm font-bold text-white">{heading}</h4>
-                <ul className="mt-4 space-y-3">
-                  {links.map((link) => (
-                    <li key={link.label}>
-                      <a
-                        href={link.href}
-                        className="text-sm text-[#8FA3BC] transition-colors hover:text-white"
-                      >
-                        {link.label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 text-xs text-[#8FA3BC] md:flex-row">
-            <p>© {new Date().getFullYear()} EduOS Management Systems. All rights reserved.</p>
-            <div className="flex items-center gap-4">
-              <a
-                href="#"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="X (Twitter)"
-                className="transition-colors hover:text-white"
-              >
-                <XIcon />
-              </a>
-              <a
-                href="#"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="LinkedIn"
-                className="transition-colors hover:text-white"
-              >
-                <LinkedInIcon />
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer variant="how-it-works" />
     </div>
   );
 }

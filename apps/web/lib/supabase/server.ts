@@ -19,9 +19,9 @@ export async function createServerSupabaseClient() {
   const host = headersList.get("host") ?? "";
   const isLvh = host.includes("lvh.me");
   const isBalaji = host.includes("balajierp.com");
+  const isEduos = host.includes("eduos.com");
   const isConnectmyskool = host.includes("connectmyskool.com");
-  const cookieDomain = isLvh ? ".lvh.me" : isBalaji ? ".balajierp.com" : isConnectmyskool ? ".connectmyskool.com" : undefined;
-
+  const cookieDomain = isLvh ? ".lvh.me" : isBalaji ? ".balajierp.com" : isEduos ? ".eduos.com" : isConnectmyskool ? ".connectmyskool.com" : undefined;
   // Forward the scoping headers set by middleware so PostgREST's
   // scope_pre_request() hook can resolve get_my_school_id()/get_my_role() GUCs
   // that the RLS policies depend on. Without this, RLS denies all web users.

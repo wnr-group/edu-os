@@ -3,11 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Bell, LayoutGrid, LayoutDashboard, GraduationCap, LogOut } from "lucide-react";
+import { Menu, X, LayoutGrid, LayoutDashboard, GraduationCap, LogOut } from "lucide-react";
 import { ICON_MAP, ROLE_LABELS, lighten } from "@/components/sidebar";
 import type { NavItem } from "@/components/sidebar";
 import { formatSegment } from "@/components/top-bar";
 import { createClient } from "@/lib/supabase";
+import { CommandSearch } from "@/components/command-search";
 
 interface MobileNavProps {
   title: string;
@@ -16,16 +17,17 @@ interface MobileNavProps {
   userName?: string;
   userRole?: string;
   sectionSwitcher?: React.ReactNode;
-  notificationCount?: number;
-  showNotifications?: boolean;
+  /** CommandSearch queries school-scoped data — set to false outside a
+   * school context (e.g. Platform Admin), same as TopBar's showSearch. */
+  showSearch?: boolean;
 }
 
 /**
- * Mobile-only navigation: top bar (hamburger + page title + notifications),
- * a slide-out drawer with the full nav (reuses Sidebar's icon map/colors so
- * the two never drift apart), and a bottom tab bar with the first 3 nav
- * items + "More" (opens the same drawer). Hidden at `lg` and above, where
- * `Sidebar`/`TopBar` take over.
+ * Mobile-only navigation: top bar (hamburger + page title), a slide-out
+ * drawer with the full flat nav (reuses Sidebar's icon map/colors so the
+ * two never drift apart), and a bottom tab bar with the first 3 nav items
+ * + "More" (opens the same drawer). Hidden at `lg` and above, where the
+ * `TopBar` takes over.
  */
 export function MobileNav({
   title,
@@ -34,8 +36,7 @@ export function MobileNav({
   userName,
   userRole,
   sectionSwitcher,
-  notificationCount = 0,
-  showNotifications = true,
+  showSearch = true,
 }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -65,22 +66,7 @@ export function MobileNav({
           <Menu className="h-5 w-5" />
         </button>
         <span className="truncate text-sm font-semibold text-foreground">{pageTitle}</span>
-        {showNotifications ? (
-          <button
-            type="button"
-            aria-label="Notifications"
-            className="relative -mr-1.5 rounded-lg p-1.5 text-muted-foreground"
-          >
-            <Bell className="h-5 w-5" />
-            {notificationCount > 0 && (
-              <span className="absolute right-0.5 top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-destructive text-[9px] font-semibold text-destructive-foreground">
-                {notificationCount}
-              </span>
-            )}
-          </button>
-        ) : (
-          <span className="w-8" />
-        )}
+        {showSearch ? <CommandSearch userRole={userRole ?? ""} iconOnly /> : <span className="w-8" />}
       </header>
 
       {/* Slide-out drawer */}

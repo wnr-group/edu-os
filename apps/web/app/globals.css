@@ -10,7 +10,10 @@
     --card-foreground: 240 10% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 10%;
-    --primary: 239 84% 67%;
+    /* App primary blue — matches the nav rail/top bar icon accent
+       (#1d4ed8) so buttons, links, and focus rings across the app use the
+       same blue instead of the old indigo/purple default. */
+    --primary: 224 76% 48%;
     --primary-foreground: 0 0% 100%;
     --secondary: 240 5% 96%;
     --secondary-foreground: 240 6% 10%;
@@ -22,7 +25,7 @@
     --destructive-foreground: 0 0% 100%;
     --border: 240 6% 90%;
     --input: 240 6% 90%;
-    --ring: 239 84% 67%;
+    --ring: 224 76% 48%;
     --radius: 0.5rem;
   }
 
@@ -31,13 +34,35 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply text-foreground antialiased;
+    /* Global application canvas: a very light grayish-white (matches the
+       login/onboarding screens' #F6F9FB) so that pages which apply their
+       own gradient/brand treatment (Dashboard, Students, School, etc. via
+       .bg-app-shell) stand out with more depth against a neutral backdrop,
+       instead of blending into a site-wide blue gradient. */
+    background-color: #f6f9fb;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
+
+/* Staggered animation delays */
 /* Staggered animation delays */
 @layer utilities {
+  /* Subtle premium gradient built from the theme's own --primary hue (239°),
+     used as the canvas behind every authenticated page (Dashboard, Students,
+     Teachers, Homework, etc. all render on top of this via their own white
+     card components) and in the thin gutter around the content panel.
+     Stays light enough (93%+ lightness) that white cards/borders/text keep
+     full contrast — this tints the empty space, not the content itself. */
+  .bg-app-shell {
+    background-color: #ffffff;
+    background-image: linear-gradient(135deg, #ffffff 0%, hsl(239 85% 97%) 28%, hsl(239 88% 93%) 60%, hsl(239, 93%, 89%) 100%);
+  }
+  .dark .bg-app-shell {
+    background-image: none;
+  }
+
   .stagger-1 { animation-delay: 0ms; }
   .stagger-2 { animation-delay: 60ms; }
   .stagger-3 { animation-delay: 120ms; }

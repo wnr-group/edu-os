@@ -4,9 +4,10 @@ import { cookies, headers } from "next/headers";
 import { createServerSupabaseClient } from "../../lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getActiveRoles, topRole } from "@/lib/auth/roles";
-import { Sidebar } from "@/components/sidebar";
+import { NAV_CONFIG, allNavItems } from "@/lib/nav-config";
 import { TopBar } from "@/components/top-bar";
 import { MobileNav } from "@/components/mobile-nav";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { SectionSwitcher } from "@/components/section-switcher";
 import type { SectionOption } from "@/components/section-switcher";
 import { AcademicYearSwitcher } from "@/components/academic-year-switcher";
@@ -15,72 +16,14 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+
+
 const SCHOOL_ROLES = [
   "super_admin",
   "school_admin",
   "principal",
   "teacher",
 ] as const;
-
-const NAV_ITEMS: Record<string, { label: string; href: string }[]> = {
-  school_admin: [
-    { label: "Dashboard",      href: "/admin/dashboard" },
-    { label: "Teachers",       href: "/admin/teachers" },
-    { label: "Students",       href: "/admin/students" },
-    { label: "Classes",        href: "/admin/classes" },
-    { label: "Subjects",       href: "/admin/subjects" },
-    { label: "Timetable",      href: "/admin/timetable" },
-    { label: "Academics",      href: "/admin/academics" },
-    { label: "Fees",           href: "/admin/fees" },
-    { label: "Fee Types",      href: "/admin/settings/fee-types" },
-    { label: "Syllabus",       href: "/admin/syllabus" },
-    { label: "Announcements",  href: "/admin/announcements" },
-    { label: "Gallery",        href: "/admin/gallery" },
-    { label: "Discipline",     href: "/admin/discipline" },
-    { label: "Feedback",       href: "/admin/feedback" },
-    { label: "Reports",        href: "/admin/reports" },
-    { label: "Report Cards",   href: "/admin/report-cards" },
-    { label: "Certificates",   href: "/admin/certificates" },
-    { label: "Settings",       href: "/admin/settings" },
-  ],
-  teacher: [
-    { label: "Dashboard",  href: "/teacher/dashboard" },
-    { label: "Students",   href: "/teacher/students" },
-    { label: "Attendance", href: "/teacher/attendance" },
-    { label: "Homework",   href: "/teacher/homework" },
-    { label: "Results",    href: "/teacher/results" },
-    { label: "Discipline", href: "/teacher/discipline" },
-    { label: "Fees",       href: "/teacher/fees" },
-    { label: "Feedback",   href: "/teacher/feedback" },
-  ],
-  teacher_no_feedback: [
-    { label: "Dashboard",  href: "/teacher/dashboard" },
-    { label: "Students",   href: "/teacher/students" },
-    { label: "Attendance", href: "/teacher/attendance" },
-    { label: "Homework",   href: "/teacher/homework" },
-    { label: "Results",    href: "/teacher/results" },
-    { label: "Discipline", href: "/teacher/discipline" },
-    { label: "Fees",       href: "/teacher/fees" },
-  ],
-  principal: [
-    { label: "Dashboard",     href: "/principal/dashboard" },
-    { label: "Announcements", href: "/principal/announcements" },
-    { label: "Discipline",    href: "/principal/discipline" },
-    { label: "Feedback",      href: "/principal/feedback" },
-    { label: "Reports",       href: "/principal/reports" },
-    { label: "Certificates",  href: "/principal/certificates" },
-  ],
-  super_admin: [
-    { label: "Dashboard", href: "/platform-admin/dashboard" },
-    { label: "Schools",   href: "/platform-admin/schools" },
-  ],
-};
-
-const EXIT_URLS: Record<string, string> = {
-  school_admin: "/admin/dashboard",
-  super_admin: "/admin/dashboard",
-  principal: "/principal/dashboard",
-};
 
 export default async function SchoolLayout({
   children,
@@ -208,23 +151,37 @@ export default async function SchoolLayout({
     if (ctProfile?.full_name) sidebarUserName = ctProfile.full_name;
   }
 
-  // Nav items switch to teacher view when a section is active (for non-teacher roles)
-  let navItems: { label: string; href: string }[];
+  // Nav config switches to the teacher variant when a section is active
+  // (for non-teacher roles), same as before — just resolved from
+  // lib/nav-config's role → {frequent, sections} map instead of a flat list.
+  let navKey: string;
   let displayRole: string;
 
   if (inTeacherContext) {
-    navItems = NAV_ITEMS.teacher_no_feedback;
+    navKey = "teacher_no_feedback";
     displayRole = "teacher";
   } else if (realRole === "teacher") {
-    navItems = NAV_ITEMS.teacher;
+    navKey = "teacher";
     displayRole = "teacher";
   } else {
     // super_admin visiting a school subdomain gets the school_admin nav
-    const navRole = realRole === "super_admin" ? "school_admin" : realRole;
-    navItems = NAV_ITEMS[navRole] ?? [];
+    navKey = realRole === "super_admin" ? "school_admin" : realRole;
     displayRole = realRole;
   }
 
+  const navConfig = NAV_CONFIG[navKey] ?? { frequent: [], sections: [] };
+// Mobile has no top nav, so its drawer/bottom-tab-bar needs every page,
+// frequent + sectioned, flattened into one list (the original pattern).
+const allItems = allNavItems(navConfig);
+const dashboardHref = navConfig.frequent[0]?.href ?? "/login";
+// Only School Admin has a Settings page today.
+const settingsHref = displayRole === "school_admin" ? "/admin/settings" : undefined;
+
+  const EXIT_URLS: Record<string, string> = {
+    school_admin: "/admin/dashboard",
+    super_admin: "/admin/dashboard",
+    principal: "/principal/dashboard",
+  };
   const exitUrl = EXIT_URLS[realRole];
   const showSectionSwitcher = sections.length > 0 || realRole === "teacher";
   const sectionSwitcherProps = {
@@ -235,10 +192,30 @@ export default async function SchoolLayout({
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-muted lg:gap-[14px] lg:bg-[#eceef2] lg:p-[14px]">
-      <Sidebar
+    <div className="flex h-screen flex-col overflow-hidden bg-app-shell">
+      <TopBar
         title={schoolName}
-        items={navItems}
+        logoHref={dashboardHref}
+        userName={sidebarUserName}
+        userRole={displayRole}
+        brandColor={brandColor}
+        frequentItems={navConfig.frequent}
+        moreSections={navConfig.sections}
+        settingsHref={settingsHref}
+        sectionSwitcher={
+          showSectionSwitcher ? (
+            <SectionSwitcher {...sectionSwitcherProps} variant="light" layout="inline" />
+          ) : null
+        }
+        yearSwitcher={
+          years.length > 0 ? (
+            <AcademicYearSwitcher years={years} currentYearId={currentYearId} />
+          ) : undefined
+        }
+      />
+      <MobileNav
+        title={schoolName}
+        items={allItems}
         brandColor={brandColor}
         userName={sidebarUserName}
         userRole={displayRole}
@@ -246,37 +223,18 @@ export default async function SchoolLayout({
           showSectionSwitcher ? <SectionSwitcher {...sectionSwitcherProps} variant="light" /> : null
         }
       />
-      <div className="flex flex-1 flex-col overflow-hidden lg:rounded-[20px] lg:bg-white lg:shadow-[0_4px_20px_rgba(15,23,42,.06)]">
-        <TopBar
-          userName={sidebarUserName}
-          userRole={displayRole}
-          brandColor={brandColor}
-          yearSwitcher={
-            years.length > 0 ? (
-              <AcademicYearSwitcher years={years} currentYearId={currentYearId} />
-            ) : undefined
-          }
-        />
-        <MobileNav
-          title={schoolName}
-          items={navItems}
-          brandColor={brandColor}
-          userName={sidebarUserName}
-          userRole={displayRole}
-          sectionSwitcher={
-            showSectionSwitcher ? <SectionSwitcher {...sectionSwitcherProps} variant="light" /> : null
-          }
-        />
-        <main className="flex-1 overflow-y-auto p-4 pb-24 lg:p-8 lg:pb-8">
-          {years.find((y) => y.id === currentYearId)?.status === "draft" && (
-            <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              <strong>Draft year:</strong> You are configuring a year that is not yet active. Changes here will not affect the live school until you activate this year from the{" "}
-              <a href="/admin/academics" className="underline">Academics page</a>.
-            </div>
-          )}
-          {children}
-        </main>
-      </div>
+      <main className="flex-1 overflow-y-auto p-4 pb-24 lg:p-8 lg:pb-8">
+        <div className="mb-4">
+          <Breadcrumbs homeHref={dashboardHref} />
+        </div>
+        {years.find((y) => y.id === currentYearId)?.status === "draft" && (
+          <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <strong>Draft year:</strong> You are configuring a year that is not yet active. Changes here will not affect the live school until you activate this year from the{" "}
+            <a href="/admin/academics" className="underline">Academics page</a>.
+          </div>
+        )}
+        {children}
+      </main>
     </div>
   );
 }

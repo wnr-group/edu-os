@@ -13,9 +13,13 @@ interface SearchResult {
 
 interface CommandSearchProps {
   userRole: string;
+  /** Icon-only trigger for tight spaces (e.g. the sidebar's collapsed icon rail). */
+  compact?: boolean;
+  /** Plain square icon button (e.g. the mobile top bar's right-hand slot). */
+  iconOnly?: boolean;
 }
 
-export function CommandSearch({ userRole }: CommandSearchProps) {
+export function CommandSearch({ userRole, compact = false, iconOnly = false }: CommandSearchProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -25,6 +29,11 @@ export function CommandSearch({ userRole }: CommandSearchProps) {
   const router = useRouter();
 
   const rolePrefix = userRole === "teacher" ? "/teacher" : userRole === "principal" ? "/principal" : "/admin";
+// Teachers must not be able to search for or view other teachers (product
+// decision, not just a routing gap) — restrict teacher results to Admin/
+// Super Admin only. Principal has no teacher-detail route either, so it
+// stays restricted to students as before.
+const canViewTeacherResults = rolePrefix === "/admin";
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -60,7 +69,8 @@ export function CommandSearch({ userRole }: CommandSearchProps) {
     fetch(`/api/search?q=${encodeURIComponent(query)}`, { signal: controller.signal })
       .then((res) => res.json())
       .then((data) => {
-        setResults(data.results ?? []);
+        const raw: SearchResult[] = data.results ?? [];
+        setResults(canViewTeacherResults ? raw : raw.filter((r) => r.type !== "teacher"));
         setActiveIndex(0);
       })
       .catch(() => {})
@@ -93,6 +103,35 @@ export function CommandSearch({ userRole }: CommandSearchProps) {
   }
 
   if (!open) {
+    if (iconOnly) {
+      return (
+        <button
+          onClick={() => setOpen(true)}
+          title="Search"
+          aria-label="Search"
+          className="-mr-1.5 rounded-lg p-1.5 text-foreground"
+        >
+          <Search className="h-5 w-5" />
+        </button>
+      );
+    }
+    if (compact) {
+      return (
+        <button
+          onClick={() => setOpen(true)}
+          title="Search"
+          aria-label="Search"
+          className="flex h-[46px] w-full items-center gap-[14px] rounded-[14px] px-[15px] text-[#94a3b8] transition-colors hover:bg-slate-50 hover:text-foreground"
+        >
+          <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center">
+            <Search className="h-[19px] w-[19px]" />
+          </span>
+          <span className="whitespace-nowrap text-[14.5px] font-medium text-[#475569] opacity-0 -translate-x-1 transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0">
+            Search...
+          </span>
+        </button>
+      );
+    }
     return (
       <button
         onClick={() => setOpen(true)}
@@ -118,7 +157,7 @@ export function CommandSearch({ userRole }: CommandSearchProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyNav}
-            placeholder="Search students or teachers..."
+            placeholder={canViewTeacherResults ? "Search students or teachers..." : "Search students..."}
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground">

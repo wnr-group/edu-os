@@ -1,2 +1,8 @@
-GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role, authenticated;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role, authenticated;
+select
+    ur.user_id,
+    ur.role,
+    au.email
+from user_roles ur
+left join auth.users au
+    on au.id = ur.user_id
+where ur.role = 'principal';

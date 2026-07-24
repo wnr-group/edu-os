@@ -3,8 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 
 const PUBLIC_PATHS = ["/login", "/auth/callback", "/download-app"];
-const PLATFORM_ADMIN_DOMAINS = ["admin.balajierp.com", "core.lvh.me", "core.connectmyskool.com"];
-const MARKETING_DOMAINS = ["connectmyskool.com", "www.connectmyskool.com", "lvh.me"];
+const PLATFORM_ADMIN_DOMAINS = ["admin.balajierp.com", "core.lvh.me", "core.connectmyskool.com", "core.eduos.com"];
+const MARKETING_DOMAINS = ["connectmyskool.com", "www.connectmyskool.com", "eduos.com", "www.eduos.com", "lvh.me"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -68,7 +68,9 @@ export async function middleware(request: NextRequest) {
           const isLvh = host.includes("lvh.me");
           const isBalaji = host.includes("balajierp.com");
           const isConnectmyskool = host.includes("connectmyskool.com");
-          const cookieDomain = isLvh ? ".lvh.me" : isBalaji ? ".balajierp.com" : isConnectmyskool ? ".connectmyskool.com" : undefined;
+          const isEduos = host.includes("eduos.com");
+          const cookieDomain = isLvh ? ".lvh.me" : isBalaji ? ".balajierp.com" : isEduos ? ".eduos.com" : isConnectmyskool ? ".connectmyskool.com" : undefined;
+
 
           // Set all cookies on the request first, then create ONE response and
           // set all cookies on it. Creating a new NextResponse inside the loop
@@ -169,10 +171,12 @@ export async function middleware(request: NextRequest) {
     const cookieDomain = host.includes("lvh.me")
       ? ".lvh.me"
       : host.includes("balajierp.com")
-      ? ".balajierp.com"
-      : host.includes("connectmyskool.com")
-      ? ".connectmyskool.com"
-      : undefined;
+        ? ".balajierp.com"
+        : host.includes("eduos.com")
+          ? ".eduos.com"
+          : host.includes("connectmyskool.com")
+            ? ".connectmyskool.com"
+            : undefined;
     const scopeCookie = { path: "/", sameSite: "lax" as const, domain: cookieDomain };
     response.cookies.set("x-school-id", schoolId, scopeCookie);
     response.cookies.set("x-active-role", role, scopeCookie);

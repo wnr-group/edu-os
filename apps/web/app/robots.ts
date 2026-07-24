@@ -17,6 +17,6 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: "https://connectmyskool.com/sitemap.xml",
+     sitemap: "https://eduos.com/sitemap.xml",
   };
 }

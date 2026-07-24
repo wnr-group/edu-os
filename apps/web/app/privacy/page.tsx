@@ -1,26 +1,27 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Footer } from "@/components/footer";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "ConnectMySkool privacy policy — how we collect, use, and protect your data.",
-  alternates: { canonical: "https://connectmyskool.com/privacy" },
+  description: "EduOS privacy policy — how we collect, use, and protect your data.",
+  alternates: { canonical: "https://eduos.com/privacy" },
 };
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-[#0D1B2A] px-6 py-16 text-slate-300">
+    <div className="min-h-screen bg-[#073571] px-6 py-16 text-slate-300">
       <article className="mx-auto max-w-3xl">
-        <Link href="/" className="text-sm text-[#1BABB4] hover:underline">&larr; Back to Home</Link>
+        <Link href="/" className="text-sm text-[#72A9E2] hover:underline">&larr; Back to Home</Link>
         <h1 className="mt-8 text-3xl font-extrabold text-white">Privacy Policy</h1>
         <p className="mt-2 text-sm text-slate-400">Last updated: 16 June 2026</p>
 
         <section className="mt-10 space-y-6 text-sm leading-relaxed">
           <div>
             <p>
-              ConnectMySkool (&ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;the app&rdquo;) provides a school
+              EduOS (&ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;the app&rdquo;) provides a school
               management platform consisting of a web portal for school staff and a mobile application for parents
-              and teachers. This policy explains what information we collect through the ConnectMySkool mobile app
+              and teachers. This policy explains what information we collect through the EduOS mobile app
               and website, how we use it, and the choices you have.
             </p>
           </div>
@@ -67,7 +68,7 @@ export default function PrivacyPage() {
           <div>
             <h2 className="text-lg font-bold text-white">3. Children&apos;s Information</h2>
             <p className="mt-2">
-              ConnectMySkool is used by schools to manage student information. The app itself is intended for use by
+              EduOS is used by schools to manage student information. The app itself is intended for use by
               adults (school staff, teachers, and parents/guardians); student records are entered and controlled by
               the school. We act as a processor of student data on behalf of the school and do not knowingly allow
               children to create their own accounts or collect data directly from children. A school or parent may
@@ -120,13 +121,16 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-bold text-white">8. Contact</h2>
             <p className="mt-2">
               For privacy-related inquiries, or to request access or deletion of your data, contact us at{" "}
-              <a href="mailto:balaji.p2prhel@gmail.com" className="text-[#1BABB4] hover:underline">
-                balaji.p2prhel@gmail.com
+              <a href="mailto:admin@wnradvisory.com" className="text-[#72A9E2] hover:underline">
+                admin@wnradvisory.com
               </a>.
             </p>
           </div>
         </section>
       </article>
+      <div className="mt-16">
+        <Footer variant="legal" />
+      </div>
     </div>
   );
 }
