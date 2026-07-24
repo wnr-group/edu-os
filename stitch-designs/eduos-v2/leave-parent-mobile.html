@@ -1,0 +1,195 @@
+<title>Edu-OS &middot; Leave (parent, mobile)</title>
+<style>
+  :root{
+    --accent:#4F46E5; --accent-2:#1D4ED8; --accent-weak:#EEF1FE; --accent-ink:#4338CA;
+    --ground-a:#EAECF9; --ground-b:#F6F5FC; --card:#FFFFFF;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A0B4; --line:#EBECF4;
+    --good:#10B981; --good-weak:#E7F7F0; --warn:#F59E0B; --warn-weak:#FDF3E2;
+    --crit:#EF4444; --crit-weak:#FCECEC; --info:#3B82F6; --info-weak:#E9F1FE;
+    --shadow:0 4px 20px rgba(29,78,216,.07); --shadow-lg:0 12px 40px rgba(29,78,216,.13);
+    --r:16px; --r-md:12px; --r-sm:10px; --r-pill:999px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;line-height:1.45;padding:34px 20px 60px;
+    background:radial-gradient(1200px 500px at 100% -5%,#E7E3FB,transparent 60%),linear-gradient(180deg,var(--ground-a),var(--ground-b) 42%)}
+  .i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .i.sm{width:14px;height:14px}.i.lg{width:20px;height:20px}
+  .lead{max-width:900px;margin:0 auto 26px}
+  .lead .crumb{font-size:12.5px;color:var(--accent-ink);font-weight:600;letter-spacing:.02em}
+  .lead h1{margin:6px 0 0;font-size:26px;letter-spacing:-.6px;font-weight:770}
+  .lead p{margin:6px 0 0;color:var(--ink-2);font-size:14px;max-width:640px}
+  .rail{display:flex;gap:34px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
+  .device-wrap{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .cap{font-size:12px;font-weight:700;color:var(--ink-2);display:flex;align-items:center;gap:8px}
+  .cap .dot{width:8px;height:8px;border-radius:50%}
+  .phone{width:352px;height:720px;background:var(--card);border-radius:42px;padding:11px;
+    box-shadow:0 30px 70px rgba(29,78,216,.16),0 4px 14px rgba(15,23,42,.08);border:1px solid #E4E5F2;position:relative}
+  .screen{position:relative;width:100%;height:100%;border-radius:32px;overflow:hidden;background:linear-gradient(180deg,#F4F5FC,#EEEFF8);display:flex;flex-direction:column}
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:26px;background:var(--card);border-radius:0 0 16px 16px;z-index:30}
+  .sbar{height:38px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 22px 5px;font-size:12px;font-weight:650;color:var(--ink);z-index:20}
+  .sbar .rt{display:flex;gap:5px;align-items:center}
+  .dnav{background:var(--card);padding:11px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:11px;z-index:10}
+  .back{width:34px;height:34px;border-radius:10px;background:var(--ground-b);display:grid;place-items:center;color:var(--ink-2)}
+  .dnav b{font-size:16px;font-weight:720;letter-spacing:-.2px}
+  .dnav .sub{font-size:11px;color:var(--ink-3)}
+  .dnav .who{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-3)}
+  .dnav .ava{width:30px;height:30px;border-radius:9px;background:#FCE7F0;color:#B83280;display:grid;place-items:center;font-weight:700;font-size:11px}
+  .scroll{flex:1;overflow:hidden;position:relative;padding:15px 16px 0}
+  /* form */
+  .fld{margin-bottom:14px}
+  .fld label{font-size:10.5px;font-weight:800;letter-spacing:.05em;color:var(--ink-3);text-transform:uppercase;display:block;margin-bottom:6px}
+  .inp{height:44px;border:1px solid var(--line);border-radius:12px;padding:0 13px;display:flex;align-items:center;font-size:14px;font-weight:600;background:var(--card);gap:9px}
+  .inp svg{color:var(--ink-3)}.inp .cv{margin-left:auto;color:var(--ink-3)}
+  .daterow{display:flex;gap:10px}
+  .daterow .fld{flex:1;margin-bottom:0}
+  .daterange{display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:11px;color:var(--accent-ink);font-weight:600;background:var(--accent-weak);border-radius:10px;padding:8px 11px}
+  /* type chips */
+  .types{display:flex;gap:8px}
+  .tchip{flex:1;border:1px solid var(--line);border-radius:12px;padding:11px 8px;text-align:center;font-size:12.5px;font-weight:650;color:var(--ink-2);background:var(--card);display:flex;flex-direction:column;align-items:center;gap:6px}
+  .tchip .ti{width:30px;height:30px;border-radius:9px;display:grid;place-items:center}
+  .tchip.on{border-color:var(--accent);background:var(--accent-weak);color:var(--accent-ink)}
+  .t-sick .ti{background:var(--crit-weak);color:var(--crit)} .t-cas .ti{background:var(--info-weak);color:var(--info)} .t-oth .ti{background:var(--ground-a);color:var(--ink-2)}
+  .tchip.on .ti{filter:none}
+  textarea.note{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-family:inherit;font-size:13.5px;resize:none;height:74px;background:var(--card);color:var(--ink)}
+  textarea.note::placeholder{color:var(--ink-3)}
+  .infonote{display:flex;gap:9px;align-items:flex-start;font-size:11px;color:var(--ink-2);background:var(--good-weak);border:1px dashed #BEE7D6;border-radius:11px;padding:10px 12px;margin-top:2px}
+  .infonote svg{color:#0B7A55;margin-top:1px}.infonote b{color:#065F46}
+  .submit{position:absolute;left:16px;right:16px;bottom:20px;z-index:15}
+  .submit button{width:100%;border:0;font-family:inherit;background:var(--accent);color:#fff;padding:14px;border-radius:14px;font-size:14.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:var(--shadow-lg)}
+  .fade{position:absolute;left:0;right:0;bottom:0;height:80px;background:linear-gradient(180deg,transparent,#EEEFF8 70%);pointer-events:none;z-index:14}
+  /* status list */
+  .applybtn{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--accent);color:#fff;border:0;font-family:inherit;font-weight:700;font-size:13.5px;border-radius:12px;padding:12px;width:100%;margin-bottom:15px;box-shadow:var(--shadow)}
+  .lreq{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:11px;box-shadow:var(--shadow)}
+  .lreq .top{display:flex;align-items:center;gap:10px}
+  .lreq .lt{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none}
+  .lreq .dates{font-weight:700;font-size:14px}
+  .lreq .meta{font-size:11.5px;color:var(--ink-3);margin-top:1px}
+  .st{margin-left:auto;font-size:10.5px;font-weight:800;letter-spacing:.03em;padding:4px 10px;border-radius:var(--r-pill)}
+  .st-appr{color:#0B7A55;background:var(--good-weak)} .st-pend{color:#9A6408;background:var(--warn-weak)} .st-rej{color:var(--crit);background:var(--crit-weak)}
+  .lreq .note2{font-size:12px;color:var(--ink-2);margin-top:10px;padding-top:10px;border-top:1px solid var(--line);display:flex;gap:7px;align-items:flex-start}
+  .lreq .note2 svg{color:var(--ink-3);margin-top:1px}
+  .appr-by{font-size:11px;color:#0B7A55;font-weight:600;margin-top:8px;display:flex;align-items:center;gap:6px}
+  .rej-by{font-size:11px;color:var(--crit);font-weight:600;margin-top:8px;display:flex;align-items:center;gap:6px}
+  .nav{position:absolute;left:0;right:0;bottom:0;height:64px;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:center;padding-bottom:8px;z-index:16}
+  .nav a{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:var(--ink-3);text-decoration:none}
+  .nav a.on{color:var(--accent-ink)}.nav a.on .ni{background:var(--accent-weak)}
+  .nav .ni{width:34px;height:26px;border-radius:9px;display:grid;place-items:center}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="ic-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol>
+  <symbol id="ic-back" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="ic-heart" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></symbol>
+  <symbol id="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></symbol>
+  <symbol id="ic-dots2" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="ic-note" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="12" y1="17" x2="8" y2="17"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="ic-home" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+  <symbol id="ic-check2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><path d="M9 15l2 2 4-4"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+  <symbol id="ic-wallet" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></symbol>
+</defs></svg>
+
+<div class="lead">
+  <div class="crumb">SUB-PROJECT #3 &middot; LEAVE</div>
+  <h1>Parent &mdash; apply &amp; track leave</h1>
+  <p>A parent requests their child&rsquo;s absence in a few taps, then tracks it. Once a teacher approves, the covered days show as <b>Excused</b> &mdash; out of the attendance % and never a &ldquo;risk&rdquo;.</p>
+</div>
+
+<div class="rail">
+
+  <!-- APPLY FORM -->
+  <div class="device-wrap">
+    <div class="cap"><span class="dot" style="background:var(--accent)"></span> Apply for leave</div>
+    <div class="phone"><div class="screen"><div class="notch"></div>
+      <div class="sbar"><span>8:41</span><div class="rt"><span>5G</span><span>&#9646;&#9646;&#9646;&#9646;</span></div></div>
+      <div class="dnav">
+        <div class="back"><svg class="i sm"><use href="#ic-back"/></svg></div>
+        <div><b>Apply for leave</b><div class="sub">For Aarav &middot; Class 8&ndash;B</div></div>
+        <div class="who"><div class="ava">SA</div></div>
+      </div>
+      <div class="scroll">
+        <div class="daterow">
+          <div class="fld"><label>From</label><div class="inp"><svg class="i sm"><use href="#ic-cal"/></svg> Mon 24 Nov</div></div>
+          <div class="fld"><label>To</label><div class="inp"><svg class="i sm"><use href="#ic-cal"/></svg> Wed 26 Nov</div></div>
+        </div>
+        <div class="daterange"><svg class="i sm"><use href="#ic-cal"/></svg> 3 days &middot; full days</div>
+
+        <div class="fld"><label>Reason type</label>
+          <div class="types">
+            <div class="tchip t-sick on"><span class="ti"><svg class="i sm"><use href="#ic-heart"/></svg></span> Sick</div>
+            <div class="tchip t-cas"><span class="ti"><svg class="i sm"><use href="#ic-sun"/></svg></span> Casual</div>
+            <div class="tchip t-oth"><span class="ti"><svg class="i sm"><use href="#ic-dots2"/></svg></span> Other</div>
+          </div>
+        </div>
+
+        <div class="fld"><label>Note to teacher</label>
+          <textarea class="note" readonly>Aarav has a viral fever, doctor advised 3 days rest. Will share reports if needed.</textarea>
+        </div>
+
+        <div class="infonote"><svg class="i sm"><use href="#ic-shield"/></svg><div>Goes to <b>Aarav&rsquo;s class teacher</b> for approval. Applying for past/ongoing dates is fine &mdash; already-marked days get corrected to <b>Excused</b> once approved.</div></div>
+      </div>
+      <div class="fade"></div>
+      <div class="submit"><button><svg class="i"><use href="#ic-check"/></svg> Submit request</button></div>
+    </div></div>
+  </div>
+
+  <!-- STATUS LIST -->
+  <div class="device-wrap">
+    <div class="cap"><span class="dot" style="background:var(--good)"></span> My requests &mdash; track status</div>
+    <div class="phone"><div class="screen"><div class="notch"></div>
+      <div class="sbar"><span>8:42</span><div class="rt"><span>5G</span><span>&#9646;&#9646;&#9646;&#9646;</span></div></div>
+      <div class="dnav">
+        <div class="back"><svg class="i sm"><use href="#ic-back"/></svg></div>
+        <div><b>Leave</b><div class="sub">Aarav &middot; Class 8&ndash;B</div></div>
+        <div class="who"><div class="ava">SA</div></div>
+      </div>
+      <div class="scroll">
+        <button class="applybtn"><svg class="i sm"><use href="#ic-plus"/></svg> Apply for leave</button>
+
+        <div class="lreq">
+          <div class="top">
+            <div class="lt t-sick" style="background:var(--crit-weak);color:var(--crit)"><svg class="i sm"><use href="#ic-heart"/></svg></div>
+            <div><div class="dates">24&ndash;26 Nov</div><div class="meta">Sick &middot; 3 days &middot; applied 2h ago</div></div>
+            <span class="st st-pend"><svg class="i sm" style="width:11px;height:11px;vertical-align:-1px"><use href="#ic-clock"/></svg> PENDING</span>
+          </div>
+          <div class="note2"><svg class="i sm"><use href="#ic-note"/></svg> Viral fever, doctor advised 3 days rest.</div>
+        </div>
+
+        <div class="lreq">
+          <div class="top">
+            <div class="lt t-cas" style="background:var(--info-weak);color:var(--info)"><svg class="i sm"><use href="#ic-sun"/></svg></div>
+            <div><div class="dates">11 Nov</div><div class="meta">Casual &middot; 1 day</div></div>
+            <span class="st st-appr">APPROVED</span>
+          </div>
+          <div class="appr-by"><svg class="i sm"><use href="#ic-check"/></svg> Approved by Ms. Rao &middot; marked Excused</div>
+        </div>
+
+        <div class="lreq">
+          <div class="top">
+            <div class="lt t-oth" style="background:var(--ground-a);color:var(--ink-2)"><svg class="i sm"><use href="#ic-dots2"/></svg></div>
+            <div><div class="dates">28 Oct</div><div class="meta">Other &middot; 1 day</div></div>
+            <span class="st st-rej">REJECTED</span>
+          </div>
+          <div class="rej-by"><svg class="i sm"><use href="#ic-x"/></svg> Declined by Ms. Rao &middot; &ldquo;Please apply in advance&rdquo;</div>
+        </div>
+        <div style="height:80px"></div>
+      </div>
+      <div class="fade"></div>
+      <div class="nav">
+        <a><span class="ni"><svg class="i"><use href="#ic-home"/></svg></span>Home</a>
+        <a class="on"><span class="ni"><svg class="i"><use href="#ic-check2"/></svg></span>Attendance</a>
+        <a><span class="ni"><svg class="i"><use href="#ic-book"/></svg></span>Academics</a>
+        <a><span class="ni"><svg class="i"><use href="#ic-wallet"/></svg></span>Fees</a>
+      </div>
+    </div></div>
+  </div>
+
+</div>

@@ -641,3 +641,38 @@ no persisted `overdue`, no standalone defaulter view).
   **defaults to overdue-only** with an "all outstanding (incl. not-yet-due)" toggle; reminders target the overdue set.
   No new storage, **no nightly status-flip cron** (deriving on read is always correct; a midnight flip is a footgun).
   Existing `pending|partial|paid` unchanged (it means "how much is paid"); overdue is an orthogonal *time* overlay.
+
+**D16 — Leave (sub-project #3) UX/flow lock.** Design grill 2026-07-24; builds on D8 (`excused` status). Grounded on
+real code: Leave is FULLY greenfield (no leave table, no `excused` enum value, no holidays/calendar); student-leave has
+a clean precedent to mirror (homework `SECURITY DEFINER` RPC + `is_parent_of_student`; parents already write on behalf
+of their child) and homeroom-approver resolution already exists (`section_assignments.class_teacher_id` /
+`teaches_section` / `can_write_section_attendance`).
+
+- **Scope: STUDENT leave only** (a parent applies for their child's absence). **Staff/teacher leave DEFERRED** to its
+  own future HR module (balances/quotas/substitute cover = a mini-HRMS with zero existing scaffolding).
+- **Approver: single-step** — the **homeroom class teacher** of the student's section is primary, with
+  **principal + school_admin as school-wide fallback** (mirrors the universal write-scope pattern). No escalation chain.
+  **Pending** touches nothing; **Rejected** leaves no attendance footprint (per spec §Leave). Approval is what flips
+  covered days to `excused`.
+- **Excused mechanic (the core call) — sidestep the calendar entirely:** `leave_requests` table is the source of truth;
+  a **`BEFORE INSERT/UPDATE` trigger on `attendance_records`** forces `status='excused'` whenever an **approved** leave
+  covers `(student, date, session)` — so leave wins on **any** write path (the geo `mark_attendance` RPC, retroactive
+  edits, bulk tools), with **zero coupling** to the attendance RPC. On approval, the approve RPC updates any **existing**
+  attendance rows in the range → `excused` (retroactive case, which is the common one); it does **not** fabricate rows
+  for unmarked days. **NO holidays/calendar table in v1** — attendance %/risk count only days that have a row, so a
+  holiday simply has no row and needs no excusing; the calendar problem dissolves. Analytics **exclude `excused`** (the
+  D8 requirement). `ALTER TYPE public.attendance_status ADD VALUE 'excused'` is a standalone migration (Postgres won't
+  allow `ADD VALUE` + immediate use in one txn). Parent attendance view overlays approved-leave days as "Excused".
+- **Request shape:** **full-day date-range** (`from_date..to_date`, `session_scope='FULL_DAY'`; the trigger excuses any
+  session on those dates). **Half-day (FN/AN) leave DEFERRED.** `leave_type` enum = **`Sick | Casual | Other`** + a
+  free-text note. **Retroactive allowed** (child falls sick that morning — `from_date` may be today/recent past, capped
+  at the active term/year; this is the *common* case, hence the approve-RPC handling of already-marked rows). **No
+  attachment/doctor's-note upload in v1.** No auto-approval.
+- **Surfaces (mockups = 3, right platform each):** **Parent → mobile** (request form: dates + type + note; + "My
+  requests" status list Pending/Approved/Rejected). **Approver inbox → BOTH web + mobile** — **web** is role-aware (a
+  *teacher* sees their sections' requests; *admin/principal* see school-wide, one RLS-scoped page) with Approve/Reject;
+  **mobile** = teacher approval inbox. Teachers use BOTH portals — a teacher-facing action must exist on web AND mobile
+  (see memory note; my initial "teacher=mobile only" framing was wrong, user-corrected). Attendance-marking screens
+  (web + mobile) gain an **"On leave &middot; excused" badge** on affected students (read-only reflection of the trigger).
+  **Leave calendar view DEFERRED** (status list + excused overlay cover v1). **Notifications:** parent submits → teacher
+  notified; approve/reject → parent notified (reuse in-app `notifications` row + Expo push).
