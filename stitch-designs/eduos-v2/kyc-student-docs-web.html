@@ -1,0 +1,203 @@
+<title>Edu-OS &middot; Student documents tab (admin)</title>
+<style>
+  :root{
+    --accent:#4F46E5; --accent-2:#1D4ED8; --accent-weak:#EEF1FE; --accent-ink:#4338CA;
+    --ground-a:#EAECF9; --ground-b:#F6F5FC; --card:#FFFFFF;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A0B4; --line:#EBECF4;
+    --good:#10B981; --good-weak:#E7F7F0; --warn:#F59E0B; --warn-weak:#FDF3E2;
+    --crit:#EF4444; --crit-weak:#FCECEC; --info:#3B82F6; --info-weak:#E9F1FE;
+    --shadow:0 4px 20px rgba(29,78,216,.07); --shadow-lg:0 12px 40px rgba(29,78,216,.13);
+    --r:16px; --r-md:12px; --r-sm:10px; --r-pill:999px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;line-height:1.45;
+    background:radial-gradient(1200px 500px at 100% -5%,#E7E3FB,transparent 60%),linear-gradient(180deg,var(--ground-a),var(--ground-b) 42%)}
+  .i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .i.sm{width:15px;height:15px}.i.lg{width:19px;height:19px}
+  .topnav{display:flex;align-items:center;gap:22px;height:64px;padding:0 26px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  .logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:#fff;box-shadow:var(--shadow)}
+  .mainnav{display:flex;align-items:center;gap:4px}
+  .mainnav a{position:relative;padding:9px 13px;border-radius:9px;color:var(--ink-2);text-decoration:none;font-size:14px;font-weight:500}
+  .mainnav a.on{color:var(--accent-ink);font-weight:650}
+  .mainnav a.on::after{content:"";position:absolute;left:13px;right:13px;bottom:-19px;height:2.5px;border-radius:2px;background:var(--accent)}
+  .selsec{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 13px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink-3);font-size:13.5px;min-width:168px}
+  .grow{flex:1}
+  .ybtn,.search{height:36px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:13px;font-family:inherit}
+  .ybtn{display:inline-flex;align-items:center;gap:8px;padding:0 13px;color:var(--ink-2);font-weight:600;cursor:pointer}
+  .search{display:flex;align-items:center;gap:9px;padding:0 12px;color:var(--ink-3);min-width:200px}
+  .search kbd{margin-left:auto;font-size:11px;background:var(--ground-a);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-family:inherit}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
+  .wrap{max-width:1080px;margin:0 auto;padding:20px 26px 48px;display:flex;flex-direction:column;gap:16px}
+  .back{font-size:12.5px;color:var(--ink-3);font-weight:600;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+  .btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:9px;border:1px solid transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .btn.primary{background:var(--accent);color:#fff;box-shadow:var(--shadow)}.btn.primary:hover{background:var(--accent-ink)}
+  .btn.good{background:var(--good);color:#fff;box-shadow:0 4px 14px rgba(16,185,129,.28)}.btn.good:hover{background:#0EA271}
+  .btn.ghost{background:var(--card);border-color:var(--line);color:var(--ink-2)}.btn.ghost:hover{color:var(--ink);border-color:var(--ink-3)}
+  .btn.sm{height:32px;padding:0 12px;font-size:12.5px;border-radius:8px}
+  /* student summary card */
+  .sum{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:18px 20px;display:flex;align-items:center;gap:16px}
+  .sum .av{width:56px;height:56px;border-radius:15px;background:#E4E9FF;color:#4338CA;display:grid;place-items:center;font-weight:750;font-size:19px;flex:none}
+  .sum h1{margin:0;font-size:22px;font-weight:760;letter-spacing:-.4px}
+  .sum .meta{font-size:12.5px;color:var(--ink-3);margin-top:3px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .clspill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:var(--r-pill);background:var(--ground-a);color:var(--ink-2)}
+  .ring{margin-left:auto;display:flex;align-items:center;gap:13px}
+  .ringc{width:64px;height:64px;border-radius:50%;background:conic-gradient(var(--good) 0 71%,var(--ground-a) 71% 100%);display:grid;place-items:center;flex:none}
+  .ringc .inner{width:48px;height:48px;border-radius:50%;background:var(--card);display:grid;place-items:center;font-weight:800;font-size:15px}
+  .ring .rl{font-size:11px;color:var(--ink-3);font-weight:600}.ring .rl b{display:block;font-size:13px;color:var(--ink);font-weight:700;margin-top:2px}
+  /* tabs */
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line)}
+  .tabs a{padding:11px 15px;font-size:13.5px;font-weight:600;color:var(--ink-3);text-decoration:none;position:relative}
+  .tabs a.on{color:var(--accent-ink)}
+  .tabs a.on::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:2.5px;border-radius:2px;background:var(--accent)}
+  /* doc list */
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+  .ph{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line)}
+  .ph h3{margin:0;font-size:15px;font-weight:660}
+  .ph .r{margin-left:auto;display:flex;gap:8px}
+  .drow{display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--line)}
+  .drow:last-child{border-bottom:0}
+  .dtico{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;flex:none}
+  .ti-blue{background:var(--accent-weak);color:var(--accent-ink)}.ti-slate{background:#EEF0F4;color:#516079}
+  .dinfo{min-width:190px}
+  .dinfo b{font-weight:650;font-size:14px}
+  .dreq{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:var(--r-pill);margin-left:7px}
+  .req-y{color:var(--crit);background:var(--crit-weak)}.req-n{color:var(--ink-3);background:var(--ground-a)}
+  .dinfo span{font-size:11.5px;color:var(--ink-3);display:block;margin-top:3px}
+  .st{font-size:11px;font-weight:800;letter-spacing:.02em;padding:5px 11px;border-radius:var(--r-pill);display:inline-flex;gap:5px;align-items:center}
+  .st-sub{color:var(--info);background:var(--info-weak)}.st-ver{color:#0B7A55;background:var(--good-weak)}.st-rej{color:var(--crit);background:var(--crit-weak)}.st-exp{color:var(--warn);background:var(--warn-weak)}.st-miss{color:var(--ink-3);background:var(--ground-a)}.st-soon{color:#B4740B;background:var(--warn-weak)}
+  .filecell{display:flex;align-items:center;gap:9px;margin-left:auto;min-width:150px;justify-content:flex-end}
+  .thumb{width:40px;height:32px;border-radius:7px;border:1px solid var(--line);background:var(--ground-b);display:grid;place-items:center;color:var(--ink-3);flex:none}
+  .fmeta{font-size:11px;color:var(--ink-3);text-align:right}.fmeta b{color:var(--ink-2);font-weight:600;font-size:12px;display:block}
+  .acts{display:flex;gap:7px;align-items:center;margin-left:14px}
+  .link{color:var(--accent-ink);font-weight:600;font-size:12.5px;text-decoration:none;display:inline-flex;gap:5px;align-items:center;cursor:pointer}
+  .reason{font-size:11.5px;color:var(--crit);background:var(--crit-weak);border-radius:8px;padding:6px 10px;margin-top:7px;display:inline-flex;gap:6px;align-items:flex-start}
+  .upl{border:1.5px dashed var(--line);border-radius:10px;padding:8px 14px;font-size:12.5px;font-weight:600;color:var(--accent-ink);background:var(--ground-b);cursor:pointer;display:inline-flex;gap:7px;align-items:center}
+  .colwrap{display:flex;flex-direction:column}
+  .note{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--ink-2);background:var(--ground-b);border:1px dashed var(--line);border-radius:12px;padding:11px 13px}
+  .note b{color:var(--ink)}.note .chic{color:var(--ink-3);margin-top:1px}
+  @media (max-width:820px){.mainnav,.selsec,.search{display:none}.filecell{display:none}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="ic-back" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="ic-checkcirc" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="ic-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
+  <symbol id="ic-idcard" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="10" r="2"/><path d="M6 16c0-1.5 1-2.5 2-2.5s2 1 2 2.5"/><line x1="14" y1="9" x2="18" y2="9"/><line x1="14" y1="13" x2="18" y2="13"/></symbol>
+  <symbol id="ic-up" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+</defs></svg>
+
+<header class="topnav">
+  <div class="logo"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg></div>
+  <nav class="mainnav"><a href="#">Dashboard</a><a href="#" class="on">Students</a><a href="#">Admissions</a><a href="#">KYC</a><a href="#">Fees</a><a href="#">More &#9662;</a></nav>
+  <div class="selsec">St. Mary&rsquo;s Public &#9662;</div>
+  <div class="grow"></div>
+  <button class="ybtn">2026&ndash;27 &#9662;</button>
+  <div class="search"><svg class="i sm"><use href="#ic-search"/></svg> Search&hellip; <kbd>&#8984;K</kbd></div>
+  <div class="avatar">DI</div>
+</header>
+
+<div class="wrap">
+  <a class="back" href="#"><svg class="i sm"><use href="#ic-back"/></svg> Back to Students</a>
+
+  <!-- student summary -->
+  <div class="sum">
+    <div class="av">AS</div>
+    <div>
+      <h1>Aarav Sharma</h1>
+      <div class="meta"><span class="clspill">Grade 6-B</span> Roll 25 &middot; Adm STM/2026/0412 &middot; DOB 14 Mar 2015</div>
+    </div>
+    <div class="ring">
+      <div class="ringc"><div class="inner">5/7</div></div>
+      <div class="rl">Documents<b>2 still needed</b></div>
+    </div>
+  </div>
+
+  <!-- tabs -->
+  <div class="tabs">
+    <a href="#">Profile</a><a href="#">Attendance</a><a href="#">Fees</a><a href="#" class="on">Documents</a><a href="#">Timetable</a>
+  </div>
+
+  <!-- doc checklist -->
+  <div class="panel">
+    <div class="ph"><h3>Required documents</h3><div class="r"><button class="btn ghost sm"><svg class="i sm"><use href="#ic-up"/></svg> Upload document</button></div></div>
+
+    <!-- verified -->
+    <div class="drow">
+      <div class="dtico ti-blue"><svg class="i lg"><use href="#ic-file"/></svg></div>
+      <div class="dinfo"><b>Birth Certificate</b><span class="dreq req-y">Required</span><span>Verified by Principal &middot; 12 Jun</span></div>
+      <span class="st st-ver"><svg class="i sm"><use href="#ic-checkcirc"/></svg> Verified</span>
+      <div class="filecell"><span class="thumb"><svg class="i sm"><use href="#ic-file"/></svg></span><div class="fmeta"><b>birth-cert.pdf</b>420 KB</div></div>
+      <div class="acts"><span class="link"><svg class="i sm"><use href="#ic-eye"/></svg> View</span></div>
+    </div>
+
+    <!-- verified -->
+    <div class="drow">
+      <div class="dtico ti-blue"><svg class="i lg"><use href="#ic-idcard"/></svg></div>
+      <div class="dinfo"><b>Passport Photo</b><span class="dreq req-y">Required</span><span>Verified by You &middot; 12 Jun</span></div>
+      <span class="st st-ver"><svg class="i sm"><use href="#ic-checkcirc"/></svg> Verified</span>
+      <div class="filecell"><span class="thumb"><svg class="i sm"><use href="#ic-idcard"/></svg></span><div class="fmeta"><b>photo.png</b>240 KB</div></div>
+      <div class="acts"><span class="link"><svg class="i sm"><use href="#ic-eye"/></svg> View</span></div>
+    </div>
+
+    <!-- submitted (pending verify) -->
+    <div class="drow">
+      <div class="dtico ti-blue"><svg class="i lg"><use href="#ic-file"/></svg></div>
+      <div class="dinfo"><b>Transfer Certificate</b><span class="dreq req-y">Required</span><span>Uploaded 2 days ago &middot; by R. Pillai</span></div>
+      <span class="st st-sub"><svg class="i sm"><use href="#ic-clock"/></svg> Awaiting review</span>
+      <div class="filecell"><span class="thumb"><svg class="i sm"><use href="#ic-file"/></svg></span><div class="fmeta"><b>tc-scan.pdf</b>780 KB</div></div>
+      <div class="acts"><span class="link"><svg class="i sm"><use href="#ic-eye"/></svg> View</span><button class="btn good sm"><svg class="i sm"><use href="#ic-check"/></svg> Verify</button></div>
+    </div>
+
+    <!-- expiring soon (verified with a validity date) -->
+    <div class="drow">
+      <div class="dtico ti-blue"><svg class="i lg"><use href="#ic-file"/></svg></div>
+      <div class="dinfo"><b>Medical / Vaccination</b><span class="dreq req-n">Optional</span><span>Verified &middot; valid till 10 Aug 2026</span></div>
+      <span class="st st-soon"><svg class="i sm"><use href="#ic-alert"/></svg> Expires in 16 days</span>
+      <div class="filecell"><span class="thumb"><svg class="i sm"><use href="#ic-file"/></svg></span><div class="fmeta"><b>vacc-card.pdf</b>510 KB</div></div>
+      <div class="acts"><span class="link"><svg class="i sm"><use href="#ic-eye"/></svg> View</span></div>
+    </div>
+
+    <!-- rejected -->
+    <div class="drow">
+      <div class="colwrap" style="flex:1">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div class="dtico ti-blue"><svg class="i lg"><use href="#ic-file"/></svg></div>
+          <div class="dinfo"><b>Previous Marksheet</b><span class="dreq req-y">Required</span><span>Uploaded 4 days ago &middot; by R. Pillai</span></div>
+          <span class="st st-rej"><svg class="i sm"><use href="#ic-x"/></svg> Rejected</span>
+          <div class="filecell"><span class="thumb"><svg class="i sm"><use href="#ic-file"/></svg></span><div class="fmeta"><b>marksheet.jpg</b>1.6 MB</div></div>
+          <div class="acts"><button class="upl"><svg class="i sm"><use href="#ic-up"/></svg> Re-upload</button></div>
+        </div>
+        <div class="reason"><svg class="i sm" style="width:13px;height:13px;margin-top:1px"><use href="#ic-alert"/></svg> <span>Rejected by Principal &mdash; &ldquo;Second page is cut off, please rescan the full marksheet.&rdquo;</span></div>
+      </div>
+    </div>
+
+    <!-- missing -->
+    <div class="drow">
+      <div class="dtico ti-slate"><svg class="i lg"><use href="#ic-idcard"/></svg></div>
+      <div class="dinfo"><b>Aadhaar Card</b><span class="dreq req-y">Required</span><span>Not on file yet</span></div>
+      <span class="st st-miss">Missing</span>
+      <div class="filecell"></div>
+      <div class="acts"><button class="upl"><svg class="i sm"><use href="#ic-up"/></svg> Upload</button></div>
+    </div>
+
+    <!-- missing optional -->
+    <div class="drow">
+      <div class="dtico ti-slate"><svg class="i lg"><use href="#ic-file"/></svg></div>
+      <div class="dinfo"><b>Address Proof</b><span class="dreq req-y">Required</span><span>Not on file yet</span></div>
+      <span class="st st-miss">Missing</span>
+      <div class="filecell"></div>
+      <div class="acts"><button class="upl"><svg class="i sm"><use href="#ic-up"/></svg> Upload</button></div>
+    </div>
+  </div>
+
+  <div class="note"><svg class="i chic"><use href="#ic-shield"/></svg><div><b>The checklist is the required document types minus what&rsquo;s on file.</b> A type shows <b>Missing</b> until a document is uploaded, then <b>Awaiting review</b> until an admin or principal verifies it. A <b>Rejected</b> doc still counts as missing until a corrected version is re-uploaded. Files sit in a private bucket &mdash; &ldquo;View&rdquo; opens a 60-second signed link. Parents submit documents to the office; staff upload them here (parent self-upload is a later addition).</div></div>
+</div>

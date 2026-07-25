@@ -729,3 +729,40 @@ or unauthenticated edge fn — all fns are `verify_jwt`, anon sign-ins off); reu
   confirmation (ref #), (3) admin Kanban board (4 columns + Rejected, cards with dup-badge/test-score/payment/assigned,
   add-enquiry), (4) application detail/review drawer (card fields + stage actions + Enrol dialog). Fee UI shown only when
   online_payments ON.
+
+**D18 — KYC Documents (sub-project #5) UX/flow lock.** Design grill 2026-07-25; builds on D12 (seeded Indian doc-type set,
+admin/principal verify, bulk-verify). Grounded on an Explore pass: KYC is FULLY greenfield (no kyc/document/verification
+table); reuse spine = clone `homework_attachments` table + the private `homework-attachments` bucket (only existing private
+bucket; path `<feature>/<school_id>/...`, school at foldername[2]), `createSignedUrl(path,60)` reads, `review_homework`-style
+SECURITY DEFINER approve/reject RPC, `_vault_get`+`x-cron-secret` cron→edge-fn for nightly expiry; `kyc_documents` key already
+reserved in F1 registry. NO staff table (staff = profiles+user_roles; student subject = student_profiles.id, staff subject =
+profiles.id — different keyspaces). Decisions (all "go with recommendation" except D18.9 user-widened):
+- **Scope:** STUDENTS ONLY v1; polymorphic `subject_type`(student|staff)+`subject_id` schema kept so staff drops in later
+  additively (different doc-types + uploader + subject keyspace, so not v1).
+- **Uploader:** ADMIN / front-office ONLY (reuses homework private-bucket RLS verbatim: super_admin/school_admin write);
+  **KYC is WEB-ONLY** in v1 (upload+verify+checklist on one admin surface, mirrors Admissions). Parent mobile self-upload
+  DEFERRED (would need novel parent-write-to-private-bucket RLS — no precedent). Docs submitted in person/email, office scans+uploads.
+- **Doc types:** seeded Indian-standard set on KYC-enable (Birth cert, TC, prev marksheet, photo, Aadhaar, address proof +
+  optional caste/medical), sensible is_required defaults; per-school CUSTOMIZE (add/rename/toggle required/deactivate — soft,
+  no hard-delete if referenced); requirements SCHOOL-WIDE per type, **NOT per-class** (conditional/per-class matrix = fast-follow).
+- **Checklist:** COMPUTED-ON-READ (VIEW/`get_kyc_checklist(student_id)`), NOT materialized (overrides spec's nightly-materialize
+  — same call as fee overdue D15; a nightly snapshot would show stale completeness). Nightly cron REPURPOSED to **expiry only**.
+- **Status model:** an uploaded document row = `submitted|verified|rejected|expired`; **"missing" = absence of a row** (checklist-
+  derived, no `pending` status). Upload → `submitted`; verify is a DISTINCT step (uploader clerk ≠ verifier principal),
+  BULK-capable `verify_documents(ids[])` (D12) + `reject_document(id,reason)`, authz get_my_role() IN (school_admin,principal).
+  Rejected doc → reason + still counts INCOMPLETE (re-upload = admin uploads corrected version, supersedes).
+- **Expiry:** OPTIONAL per doc type (mark "expires" + optional default validity); on verify, `expires_on` prefills =
+  verified_date+validity (admin-editable); non-expiring types → expires_on NULL. ONE nightly cron flips `verified→expired` when
+  expires_on<today (only KYC cron). Derived on-read "expiring soon" badge (verified, expires within ~30d, no cron). Expired
+  surfaces in queue + counts incomplete (re-collect signal). NO automated parent SMS v1 (admin-surfaced; overrides spec "comms trigger").
+- **Files:** PDF/JPG/PNG, 5 MB cap, **ONE document per (student × type)**, re-upload SUPERSEDES (multi-page/front-back → combined
+  PDF; superseded object retained for audit but no version-history UI). Keeps (student,type)→one unambiguous state.
+- **Surfaces (web-only, ~3 mockups):** (1) KYC dashboard + verification queue (completeness KPIs %complete/missing/pending/
+  expiring + submitted-docs queue w/ multi-select BULK-VERIFY + reject-reason + incomplete-students view; segmented like
+  fee-status), (2) per-student Documents tab on student detail (on-read checklist per required type: verified/submitted/rejected/
+  expired/missing + upload control + view-via-signed-URL), (3) doc-type settings panel (co-located, flag-gated). Dedicated "KYC"/
+  "Documents" nav item for school_admin+principal; gated by `kyc_documents` flag.
+- **View access (D18.9, user-widened):** `school_admin`+`principal` school-wide, **+ teachers READ-ONLY scoped to their own
+  students** (`teaches_student`; app-layer authz before signing since storage RLS has no GUCs). NO parent/student view v1.
+  Verify/upload stay admin/principal. All views = 60s signed URLs. **Checklist auto-exists on student creation** (on-read ⇒
+  Admissions "seed KYC checklist on convert" is a NO-OP/automatic).

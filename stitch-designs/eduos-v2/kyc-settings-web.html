@@ -1,0 +1,179 @@
+<title>Edu-OS &middot; KYC document types (settings)</title>
+<style>
+  :root{
+    --accent:#4F46E5; --accent-2:#1D4ED8; --accent-weak:#EEF1FE; --accent-ink:#4338CA;
+    --ground-a:#EAECF9; --ground-b:#F6F5FC; --card:#FFFFFF;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A0B4; --line:#EBECF4;
+    --good:#10B981; --good-weak:#E7F7F0; --warn:#F59E0B; --warn-weak:#FDF3E2;
+    --crit:#EF4444; --crit-weak:#FCECEC; --info:#3B82F6; --info-weak:#E9F1FE;
+    --shadow:0 4px 20px rgba(29,78,216,.07); --shadow-lg:0 12px 40px rgba(29,78,216,.13);
+    --r:16px; --r-md:12px; --r-sm:10px; --r-pill:999px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;line-height:1.45;
+    background:radial-gradient(1200px 500px at 100% -5%,#E7E3FB,transparent 60%),linear-gradient(180deg,var(--ground-a),var(--ground-b) 42%)}
+  .i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .i.sm{width:15px;height:15px}.i.lg{width:19px;height:19px}
+  .topnav{display:flex;align-items:center;gap:22px;height:64px;padding:0 26px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  .logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:#fff;box-shadow:var(--shadow)}
+  .mainnav{display:flex;align-items:center;gap:4px}
+  .mainnav a{position:relative;padding:9px 13px;border-radius:9px;color:var(--ink-2);text-decoration:none;font-size:14px;font-weight:500}
+  .mainnav a.on{color:var(--accent-ink);font-weight:650}
+  .mainnav a.on::after{content:"";position:absolute;left:13px;right:13px;bottom:-19px;height:2.5px;border-radius:2px;background:var(--accent)}
+  .selsec{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 13px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink-3);font-size:13.5px;min-width:168px}
+  .grow{flex:1}
+  .ybtn{height:36px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:13px;font-family:inherit;display:inline-flex;align-items:center;gap:8px;padding:0 13px;color:var(--ink-2);font-weight:600;cursor:pointer}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
+  .wrap{max-width:960px;margin:0 auto;padding:20px 26px 48px;display:flex;flex-direction:column;gap:16px}
+  .back{font-size:12.5px;color:var(--ink-3);font-weight:600;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+  .head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+  .head h1{margin:0;font-size:24px;letter-spacing:-.5px;font-weight:760}
+  .head p{margin:4px 0 0;color:var(--ink-3);font-size:13px}
+  .head .r{margin-left:auto}
+  .btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:9px;border:1px solid transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .btn.primary{background:var(--accent);color:#fff;box-shadow:var(--shadow)}.btn.primary:hover{background:var(--accent-ink)}
+  .btn.ghost{background:var(--card);border-color:var(--line);color:var(--ink-2)}.btn.ghost:hover{color:var(--ink);border-color:var(--ink-3)}
+  .btn.sm{height:31px;padding:0 11px;font-size:12px;border-radius:8px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+  .ph{display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--line)}
+  .ph h3{margin:0;font-size:14px;font-weight:660}.ph .c{font-size:11px;font-weight:700;color:var(--ink-3);background:var(--ground-a);border-radius:var(--r-pill);padding:2px 9px}
+  .ph .r{margin-left:auto}
+  thead th{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);text-align:left;padding:9px 18px;border-bottom:1px solid var(--line)}
+  table{width:100%;border-collapse:collapse}
+  tbody td{padding:12px 18px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--ground-b)}
+  tr.off{opacity:.55}
+  .dt{display:flex;align-items:center;gap:11px}
+  .dtico{width:34px;height:34px;border-radius:10px;background:var(--accent-weak);color:var(--accent-ink);display:grid;place-items:center;flex:none}
+  .dt b{font-weight:650;font-size:13.5px}.dt span{font-size:11px;color:var(--ink-3);display:block}
+  .custom{font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-ink);background:var(--accent-weak);border-radius:var(--r-pill);padding:2px 7px;margin-left:6px}
+  /* required toggle segmented */
+  .rseg{display:inline-flex;background:var(--ground-b);border:1px solid var(--line);border-radius:9px;padding:2px;gap:2px}
+  .rseg button{border:0;background:none;font-family:inherit;font-size:11.5px;font-weight:700;color:var(--ink-3);padding:5px 11px;border-radius:6px;cursor:pointer}
+  .rseg button.on{background:var(--card);box-shadow:var(--shadow)}
+  .rseg button.on.req{color:var(--crit)}.rseg button.on.opt{color:var(--ink-2)}
+  .exp{font-size:12px;color:var(--ink-2);display:inline-flex;align-items:center;gap:6px}
+  .exp .val{font-weight:650;color:var(--ink)}
+  .exp .none{color:var(--ink-3);font-weight:500}
+  /* toggle */
+  .tog{width:40px;height:23px;border-radius:var(--r-pill);background:var(--good);position:relative;cursor:pointer;flex:none}
+  .tog::after{content:"";position:absolute;top:2px;left:19px;width:19px;height:19px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .15s}
+  .tog.off{background:var(--ink-3)}.tog.off::after{left:2px}
+  .rowmenu{color:var(--ink-3);cursor:pointer;display:grid;place-items:center;width:30px;height:30px;border-radius:8px}
+  .rowmenu:hover{background:var(--ground-a);color:var(--ink)}
+  .tright{text-align:right}
+  .note{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--ink-2);background:var(--ground-b);border:1px dashed var(--line);border-radius:12px;padding:11px 13px}
+  .note b{color:var(--ink)}.note .chic{color:var(--ink-3);margin-top:1px}
+  @media (max-width:760px){.mainnav,.selsec{display:none}.exp,.tright{display:none}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-back" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
+  <symbol id="ic-idcard" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="10" r="2"/><path d="M6 16c0-1.5 1-2.5 2-2.5s2 1 2 2.5"/><line x1="14" y1="9" x2="18" y2="9"/><line x1="14" y1="13" x2="18" y2="13"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="ic-dots" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+  <symbol id="ic-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+</defs></svg>
+
+<header class="topnav">
+  <div class="logo"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg></div>
+  <nav class="mainnav"><a href="#">Dashboard</a><a href="#">Students</a><a href="#">Admissions</a><a href="#" class="on">KYC</a><a href="#">Fees</a><a href="#">More &#9662;</a></nav>
+  <div class="selsec">St. Mary&rsquo;s Public &#9662;</div>
+  <div class="grow"></div>
+  <button class="ybtn">2026&ndash;27 &#9662;</button>
+  <div class="avatar">DI</div>
+</header>
+
+<div class="wrap">
+  <a class="back" href="#"><svg class="i sm"><use href="#ic-back"/></svg> Back to KYC documents</a>
+  <div class="head">
+    <div><h1>Document types</h1><p>What you collect from every student &mdash; and which ones are mandatory. We&rsquo;ve seeded the Indian-standard set; edit it to fit your school.</p></div>
+    <div class="r"><button class="btn primary"><svg class="i sm"><use href="#ic-plus"/></svg> Add document type</button></div>
+  </div>
+
+  <div class="panel">
+    <div class="ph"><h3>Active types</h3><span class="c">6 required &middot; 2 optional</span></div>
+    <table>
+      <thead><tr><th>Document</th><th>Requirement</th><th>Validity</th><th class="tright">Active</th><th style="width:40px"></th></tr></thead>
+      <tbody>
+        <tr>
+          <td><div class="dt"><div class="dtico"><svg class="i sm"><use href="#ic-file"/></svg></div><div><b>Birth Certificate</b><span>PDF, JPG or PNG &middot; up to 5 MB</span></div></div></td>
+          <td><div class="rseg"><button class="on req">Required</button><button class="opt">Optional</button></div></td>
+          <td><span class="exp"><svg class="i sm"><use href="#ic-clock"/></svg> <span class="none">Never expires</span></span></td>
+          <td class="tright"><span class="tog"></span></td>
+          <td><span class="rowmenu"><svg class="i sm"><use href="#ic-dots"/></svg></span></td>
+        </tr>
+        <tr>
+          <td><div class="dt"><div class="dtico"><svg class="i sm"><use href="#ic-file"/></svg></div><div><b>Transfer Certificate (TC)</b><span>From the previous school</span></div></div></td>
+          <td><div class="rseg"><button class="on req">Required</button><button class="opt">Optional</button></div></td>
+          <td><span class="exp"><svg class="i sm"><use href="#ic-clock"/></svg> <span class="none">Never expires</span></span></td>
+          <td class="tright"><span class="tog"></span></td>
+          <td><span class="rowmenu"><svg class="i sm"><use href="#ic-dots"/></svg></span></td>
+        </tr>
+        <tr>
+          <td><div class="dt"><div class="dtico"><svg class="i sm"><use href="#ic-file"/></svg></div><div><b>Previous Marksheet</b><span>Last report card / marksheet</span></div></div></td>
+          <td><div class="rseg"><button class="on req">Required</button><button class="opt">Optional</button></div></td>
+          <td><span class="exp"><svg class="i sm"><use href="#ic-clock"/></svg> <span class="none">Never expires</span></span></td>
+          <td class="tright"><span class="tog"></span></td>
+          <td><span class="rowmenu"><svg class="i sm"><use href="#ic-dots"/></svg></span></td>
+        </tr>
+        <tr>
+          <td><div class="dt"><div class="dtico"><svg class="i sm"><use href="#ic-idcard"/></svg></div><div><b>Passport Photo</b><span>Recent colour photograph</span></div></div></td>
+          <td><div class="rseg"><button class="on req">Required</button><button class="opt">Optional</button></div></td>
+          <td><span class="exp"><svg class="i sm"><use href="#ic-clock"/></svg> <span class="none">Never expires</span></span></td>
+          <td class="tright"><span class="tog"></span></td>
+          <td><span class="rowmenu"><svg class="i sm"><use href="#ic-dots"/></svg></span></td>
+        </tr>
+        <tr>
+          <td><div class="dt"><div class="dtico"><svg class="i sm"><use href="#ic-idcard"/></svg></div><div><b>Aadhaar Card</b><span>Optional for minors</span></div></div></td>
+          <td><div class="rseg"><button class="req">Required</button><button class="on opt">Optional</button></div></td>
+          <td><span class="exp"><svg class="i sm"><use href="#ic-clock"/></svg> <span class="none">Never expires</span></span></td>
+          <td class="tright"><span class="tog"></span></td>
+          <td><span class="rowmenu"><svg class="i sm"><use href="#ic-dots"/></svg></span></td>
+        </tr>
+        <tr>
+          <td><div class="dt"><div class="dtico"><svg class="i sm"><use href="#ic-file"/></svg></div><div><b>Address Proof</b><span>Utility bill / ration card</span></div></div></td>
+          <td><div class="rseg"><button class="on req">Required</button><button class="opt">Optional</button></div></td>
+          <td><span class="exp"><svg class="i sm"><use href="#ic-clock"/></svg> <span class="none">Never expires</span></span></td>
+          <td class="tright"><span class="tog"></span></td>
+          <td><span class="rowmenu"><svg class="i sm"><use href="#ic-dots"/></svg></span></td>
+        </tr>
+        <tr>
+          <td><div class="dt"><div class="dtico"><svg class="i sm"><use href="#ic-file"/></svg></div><div><b>Medical / Vaccination</b><span>Immunisation record</span></div></div></td>
+          <td><div class="rseg"><button class="req">Required</button><button class="on opt">Optional</button></div></td>
+          <td><span class="exp"><svg class="i sm"><use href="#ic-clock"/></svg> <span class="val">1 year</span></span></td>
+          <td class="tright"><span class="tog"></span></td>
+          <td><span class="rowmenu"><svg class="i sm"><use href="#ic-dots"/></svg></span></td>
+        </tr>
+        <tr>
+          <td><div class="dt"><div class="dtico"><svg class="i sm"><use href="#ic-file"/></svg></div><div><b>House / Community Form <span class="custom">Custom</span></b><span>Added by your school</span></div></div></td>
+          <td><div class="rseg"><button class="req">Required</button><button class="on opt">Optional</button></div></td>
+          <td><span class="exp"><svg class="i sm"><use href="#ic-clock"/></svg> <span class="none">Never expires</span></span></td>
+          <td class="tright"><span class="tog"></span></td>
+          <td><span class="rowmenu"><svg class="i sm"><use href="#ic-dots"/></svg></span></td>
+        </tr>
+        <tr class="off">
+          <td><div class="dt"><div class="dtico" style="background:var(--ground-a);color:var(--ink-3)"><svg class="i sm"><use href="#ic-file"/></svg></div><div><b>Caste / Category Certificate</b><span>Deactivated &middot; hidden from new checklists</span></div></div></td>
+          <td><div class="rseg"><button class="req">Required</button><button class="on opt">Optional</button></div></td>
+          <td><span class="exp"><svg class="i sm"><use href="#ic-clock"/></svg> <span class="none">Never expires</span></span></td>
+          <td class="tright"><span class="tog off"></span></td>
+          <td><span class="rowmenu"><svg class="i sm"><use href="#ic-dots"/></svg></span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note"><svg class="i chic"><use href="#ic-settings"/></svg><div><b>Requirements apply school-wide.</b> A <b>Required</b> type counts toward every student&rsquo;s completeness; <b>Optional</b> ones are collected but don&rsquo;t block. Turning a type <b>Off</b> deactivates it &mdash; existing documents are kept, but it drops out of new checklists (types with documents on file are never hard-deleted). Only a type flagged with a validity period sets an expiry date when verified. Per-class rules (e.g. no TC for Nursery) come later; for now mark such types Optional.</div></div>
+</div>
+
+<script>
+  document.querySelectorAll('.rseg button').forEach(b=>b.addEventListener('click',()=>{
+    b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  }));
+  document.querySelectorAll('.tog').forEach(t=>t.addEventListener('click',()=>{t.classList.toggle('off');t.closest('tr').classList.toggle('off',t.classList.contains('off'));}));
+</script>
