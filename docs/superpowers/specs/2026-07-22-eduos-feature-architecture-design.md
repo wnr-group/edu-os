@@ -676,3 +676,56 @@ of their child) and homeroom-approver resolution already exists (`section_assign
   (web + mobile) gain an **"On leave &middot; excused" badge** on affected students (read-only reflection of the trigger).
   **Leave calendar view DEFERRED** (status list + excused overlay cover v1). **Notifications:** parent submits → teacher
   notified; approve/reject → parent notified (reuse in-app `notifications` row + Expo push).
+
+**D17 — Admissions (sub-project #4) UX/flow lock.** Design grill 2026-07-25; builds on D10 (optional app fee, manual
+entrance score). Grounded on an Explore pass: Admissions is FULLY greenfield (no lead/enquiry/application table, route,
+or unauthenticated edge fn — all fns are `verify_jwt`, anon sign-ins off); reusable = phone-based parent provisioning
+(`find-or-create-user.ts`), `get_active_academic_year` (already anon-callable), classes/sections, `fee_line_items`/
+`payments`, notification single/fan-out templates, `(school)/layout.tsx` role gate. All 14 forks = "go with recommendation":
+- **Entry points:** public form **+ admin "Add enquiry" (walk-in)** — both write the SAME row into one pipeline (public =
+  isolated edge fn; walk-in = authenticated RLS insert, reuses add-student-drawer pattern).
+- **Data model:** ONE `admission_applications` table with a `stage` enum (no lead/application split — the split's
+  "nullable-stage soup" justification evaporates when every row is born at `enquiry`) + `admission_stage_events` audit log.
+- **Board:** 4 stages **Enquiry → Under review → Offered → Enrolled** + **Rejected** terminal (reachable from any stage).
+  Entrance-test/interview/doc-review are **card fields, not columns** (stages skippable); `payment_status` orthogonal to `stage`.
+- **Public form:** SINGLE page. Applicant: full_name*, dob*, gender, **class applying for*** (anon `get_active_academic_year`
+  + classes). Parent: name*, **phone*** (identity key for provisioning), email (opt, decision comms). Optional prev-school /
+  area / note. **No document upload.** Phone + class are hard-required; applies to a `class` (section assigned at enrolment).
+- **Fee (D10 mechanics):** optional, school-set, default ₹0 in a per-school **`admission_settings`** row. Fee>0 ⇒ create app
+  row `payment_status=pending` THEN Razorpay order in the SAME public call → return {application_id, order_id, key_id,
+  amount} → form opens checkout → `razorpay-webhook` (extended) flips `paid` → live Enquiry. Payment fields live **directly
+  on `admission_applications`** (NOT `fee_line_items` — those are hard-keyed to `student_id`; applicant has none yet). Uses
+  per-school Razorpay creds (D14). **`online_payments` OFF ⇒ server forces fee=0** (feature_enabled check in edge fn),
+  never blocks submit. **Unpaid/abandoned apps hidden from the board** (optional "Awaiting payment" filter).
+- **Routing:** branded **subdomain `/apply`** (public, OUTSIDE `(school)` auth group; resolves school from subdomain like
+  the rest of the app), header shows school logo + primary_color; admin portal shows copy-link/QR to distribute.
+- **Anti-spam:** self-contained baseline **always on** (honeypot + time-trap <2s + per-IP/per-phone rate limit in the edge
+  fn); **Cloudflare Turnstile** wired but **config-gated OFF by default** (flip on if a school is flooded; Turnstile > hCaptcha).
+  Rate-limit responses are soft. Mockup shows no CAPTCHA (Turnstile off = CSP-safe).
+- **Documents:** NONE in Admissions v1 — "document review" is a manual **status toggle + note**; KYC (#5) owns all real
+  document handling and its checklist is **seeded on convert**. No admission-docs bucket (avoids duplicating KYC + the
+  riskiest unauth-upload surface).
+- **Convert (the seam):** explicit **"Enrol student" dialog from an Offered card** (collects the enrolment-only fields
+  section/roll#/admission#) → **guarded SERVER ACTION** (not pure-SQL RPC — parent auth-user creation is an `auth.admin`
+  API call, exactly why `resolve-parent` is a Next.js route): `findOrCreateUserByPhone` + `attachRole('parent')` → insert
+  `student_profiles` + `student_enrollments` (reuses today's path). **Idempotent** via `converted_student_id` on the app +
+  stage-event. Downstream (free): parent auth account + welcome SMS + parent-app access; KYC checklist seed.
+- **Duplicates:** SOFT badge on (**parent phone + applicant name** — NOT phone alone, so siblings pass) for non-terminal
+  matches; resolve-by-reject (no record-merge in v1). Rate-limit handles abuse; dedup = data-cleanliness only.
+- **Notifications:** inbound = `notifications` row (type `admission_new`) to admins/principals (web in-app; they have no
+  mobile app). Outbound to login-less applicant = (1) on-submit **confirmation page + ref #**, (2) on-offer **transactional
+  templated SMS** (mirrors `sendParentWelcomeSms` — SAME category as the deferred general channel is NOT), (3) reject =
+  **no auto message** (personal call). Email deferred (no email infra).
+- **Surfaces:** **WEB-ONLY.** Board shared by **school_admin + principal, equal abilities** in v1 (no principal-approval
+  gate — fast-follow). Nav item added for both roles. **No mobile, no teacher** (admissions isn't a teacher function;
+  the Leave teacher-web+mobile rule doesn't apply). Whole feature gated by `admissions` flag (OFF ⇒ `/apply` 404 + nav hidden).
+- **Acceptance:** **offline** — offer SMS says "contact office"; parent confirms/pays in person; admin clicks Enrol
+  (convert IS the acceptance — no digital accept link/token). Single **Rejected** terminal + **reason note** distinguishes
+  school-rejected vs applicant-declined (no second terminal column).
+- **Card fields:** entrance-test **score** (numeric, manual — no auto-grade/live-Testing v1), **internal notes** (free text,
+  folds in interview), **docs-reviewed** toggle+note, **assigned-to** (optional staff, multi-admin routing). Stage-move
+  reasons → `admission_stage_events`.
+- **Mockups (web-only, ~4 screens):** (1) public `/apply` form (branded, single-page, optional fee summary), (2) submit
+  confirmation (ref #), (3) admin Kanban board (4 columns + Rejected, cards with dup-badge/test-score/payment/assigned,
+  add-enquiry), (4) application detail/review drawer (card fields + stage actions + Enrol dialog). Fee UI shown only when
+  online_payments ON.

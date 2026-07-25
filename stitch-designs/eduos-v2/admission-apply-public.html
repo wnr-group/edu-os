@@ -1,0 +1,201 @@
+<title>Edu-OS &middot; Apply for admission (public form)</title>
+<style>
+  :root{
+    --accent:#4F46E5; --accent-2:#1D4ED8; --accent-weak:#EEF1FE; --accent-ink:#4338CA;
+    --ground-a:#EAECF9; --ground-b:#F6F5FC; --card:#FFFFFF;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A0B4; --line:#EBECF4;
+    --good:#10B981; --good-weak:#E7F7F0; --warn:#F59E0B; --warn-weak:#FDF3E2;
+    --crit:#EF4444; --crit-weak:#FCECEC; --info:#3B82F6; --info-weak:#E9F1FE;
+    --shadow:0 4px 20px rgba(29,78,216,.07); --shadow-lg:0 12px 40px rgba(29,78,216,.13);
+    --r:16px; --r-md:12px; --r-sm:10px; --r-pill:999px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    /* per-school brand (schools.primary_color) */
+    --brand:#0E7490; --brand-2:#0B5566; --brand-weak:#E4F2F5; --brand-ink:#0A5566;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;line-height:1.45;
+    background:radial-gradient(1100px 480px at 100% -8%,#DDEEF1,transparent 60%),linear-gradient(180deg,#EAF1F3,var(--ground-b) 46%)}
+  .i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .i.sm{width:15px;height:15px}.i.lg{width:19px;height:19px}
+  /* public branded header */
+  .pubnav{display:flex;align-items:center;gap:14px;height:66px;padding:0 26px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  .plogo{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,var(--brand),var(--brand-2));display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;box-shadow:var(--shadow)}
+  .pubnav .sn{font-weight:730;font-size:16px;letter-spacing:-.3px}
+  .pubnav .sn span{display:block;font-size:11.5px;color:var(--ink-3);font-weight:500;letter-spacing:0}
+  .pubnav .rt{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:12.5px;color:var(--ink-3)}
+  .pubnav .rt a{color:var(--ink-2);text-decoration:none;font-weight:600}
+  .securebadge{display:inline-flex;gap:6px;align-items:center;font-size:11.5px;color:#0B7A55;background:var(--good-weak);border:1px solid #CDEFE0;padding:5px 10px;border-radius:var(--r-pill);font-weight:650}
+  .stage{max-width:1120px;margin:0 auto;padding:26px 24px 60px;display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+  @media (max-width:940px){.stage{grid-template-columns:1fr}}
+  .screencap{grid-column:1/-1;display:flex;align-items:center;gap:10px;color:var(--ink-3);font-size:12px;font-weight:600;margin-top:6px}
+  .screencap .ln{height:1px;background:var(--line);flex:1}
+  /* form card */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+  .hero{padding:22px 24px 18px;background:linear-gradient(135deg,var(--brand-weak),#fff);border-bottom:1px solid var(--line)}
+  .hero h1{margin:0;font-size:24px;letter-spacing:-.6px;font-weight:770}
+  .hero p{margin:6px 0 0;color:var(--ink-2);font-size:13.5px;max-width:44ch}
+  .yr{display:inline-flex;gap:7px;align-items:center;margin-top:12px;font-size:12px;font-weight:650;color:var(--brand-ink);background:#fff;border:1px solid #D3E7EB;padding:6px 11px;border-radius:var(--r-pill)}
+  .body{padding:20px 24px 8px}
+  .sec{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:16px 0 12px;display:flex;align-items:center;gap:9px}
+  .sec:first-child{margin-top:2px}
+  .sec .n{width:22px;height:22px;border-radius:7px;background:var(--brand-weak);color:var(--brand-ink);display:grid;place-items:center;font-size:11px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  @media (max-width:520px){.grid2{grid-template-columns:1fr}}
+  .fld{display:flex;flex-direction:column;gap:6px;margin-bottom:13px}
+  .fld.full{grid-column:1/-1}
+  .fld label{font-size:12.5px;font-weight:650;color:var(--ink-2)}
+  .fld label .req{color:var(--crit);margin-left:2px}
+  .in{height:42px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:0 13px;font-size:14px;font-family:inherit;color:var(--ink)}
+  .in::placeholder{color:var(--ink-3)}
+  .in:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-weak)}
+  select.in{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A0B4' stroke-width='2.5' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center}
+  textarea.in{height:auto;min-height:74px;padding:11px 13px;resize:vertical;line-height:1.5}
+  .hint{font-size:11.5px;color:var(--ink-3)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .gchip{font-size:13px;font-weight:600;color:var(--ink-2);background:#fff;border:1px solid var(--line);padding:9px 15px;border-radius:10px;cursor:pointer}
+  .gchip.on{background:var(--brand-weak);color:var(--brand-ink);border-color:var(--brand)}
+  /* fee summary */
+  .fee{margin:6px 24px 0;border:1px solid #D3E7EB;background:var(--brand-weak);border-radius:13px;padding:14px 16px;display:flex;align-items:center;gap:13px}
+  .fee .fi{width:38px;height:38px;border-radius:11px;background:#fff;color:var(--brand-ink);display:grid;place-items:center;border:1px solid #D3E7EB}
+  .fee .ft{font-size:13px;font-weight:700;color:var(--brand-ink)}
+  .fee .fs{font-size:11.5px;color:var(--ink-2);margin-top:2px}
+  .fee .amt{margin-left:auto;font-size:20px;font-weight:800;color:var(--brand-ink);letter-spacing:-.4px}
+  .foot{padding:16px 24px 22px;display:flex;align-items:center;gap:13px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:46px;padding:0 22px;border-radius:11px;border:1px solid transparent;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit}
+  .btn.brand{background:var(--brand);color:#fff;box-shadow:var(--shadow);flex:1;min-width:200px}
+  .btn.brand:hover{background:var(--brand-2)}
+  .foot .terms{font-size:11.5px;color:var(--ink-3);flex-basis:100%}
+  .foot .terms a{color:var(--brand-ink);font-weight:600;text-decoration:none}
+  /* honeypot (hidden from humans) */
+  .hp{position:absolute;left:-9999px;height:0;overflow:hidden}
+  /* confirmation card */
+  .conf{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;position:sticky;top:90px}
+  .conf .top{padding:30px 26px 22px;text-align:center;background:linear-gradient(180deg,var(--good-weak),#fff)}
+  .tick{width:60px;height:60px;border-radius:50%;background:var(--good);color:#fff;display:grid;place-items:center;margin:0 auto 14px;box-shadow:0 8px 22px rgba(16,185,129,.35)}
+  .conf h2{margin:0;font-size:21px;font-weight:770;letter-spacing:-.4px}
+  .conf .sub{margin:7px auto 0;color:var(--ink-2);font-size:13.5px;max-width:38ch}
+  .refbox{margin:18px 26px;border:1px dashed var(--brand);background:var(--brand-weak);border-radius:13px;padding:15px 18px;text-align:center}
+  .refbox .rl{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-ink)}
+  .refbox .rv{font-size:26px;font-weight:820;letter-spacing:.5px;color:var(--brand-ink);margin-top:5px;font-variant-numeric:tabular-nums}
+  .steps{padding:4px 26px 8px}
+  .steps .st{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--line)}
+  .steps .st:last-child{border-bottom:0}
+  .steps .si{width:30px;height:30px;border-radius:9px;background:var(--accent-weak);color:var(--accent-ink);display:grid;place-items:center;flex:none}
+  .steps .st b{font-size:13px;font-weight:660}
+  .steps .st p{margin:2px 0 0;font-size:12px;color:var(--ink-3)}
+  .conf .cf{padding:14px 26px 24px;font-size:12px;color:var(--ink-3);text-align:center}
+  .paid{display:inline-flex;gap:6px;align-items:center;font-size:11.5px;font-weight:700;color:#0B7A55;background:var(--good-weak);border:1px solid #CDEFE0;padding:5px 11px;border-radius:var(--r-pill);margin-top:2px}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-cap" viewBox="0 0 24 24"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></symbol>
+  <symbol id="ic-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="ic-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="ic-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
+</defs></svg>
+
+<header class="pubnav">
+  <div class="plogo">SM</div>
+  <div class="sn">St. Mary&rsquo;s Public School<span>Admissions &middot; stmarys.edu-os.app</span></div>
+  <div class="rt">
+    <a href="#">About</a><a href="#">Contact</a>
+    <span class="securebadge"><svg class="i sm"><use href="#ic-lock"/></svg> Secure form</span>
+  </div>
+</header>
+
+<div class="stage">
+
+  <!-- ================= SCREEN 1: the form ================= -->
+  <div>
+    <div class="screencap"><span>Screen 1 &mdash; Public application form</span><span class="ln"></span></div>
+    <form class="card" autocomplete="off">
+      <div class="hero">
+        <h1>Apply for admission</h1>
+        <p>Fill in your child&rsquo;s details below. It takes about 3 minutes &mdash; the school will contact you after reviewing your application.</p>
+        <span class="yr"><svg class="i sm"><use href="#ic-cap"/></svg> Admissions open for 2026&ndash;27</span>
+      </div>
+
+      <div class="body">
+        <div class="sec"><span class="n"><svg class="i sm"><use href="#ic-user"/></svg></span> Student details</div>
+        <div class="grid2">
+          <div class="fld full"><label>Student&rsquo;s full name<span class="req">*</span></label><input class="in" placeholder="e.g. Aarav Sharma"></div>
+          <div class="fld"><label>Date of birth<span class="req">*</span></label><input class="in" placeholder="DD / MM / YYYY"></div>
+          <div class="fld"><label>Class applying for<span class="req">*</span></label>
+            <select class="in"><option>Select a class&hellip;</option><option>Nursery</option><option>LKG</option><option>UKG</option><option>Grade 1</option><option selected>Grade 6</option><option>Grade 9</option></select>
+          </div>
+          <div class="fld full"><label>Gender</label>
+            <div class="chips"><span class="gchip on">Male</span><span class="gchip">Female</span><span class="gchip">Other</span></div>
+          </div>
+        </div>
+
+        <div class="sec"><span class="n"><svg class="i sm"><use href="#ic-users"/></svg></span> Parent / guardian</div>
+        <div class="grid2">
+          <div class="fld"><label>Parent / guardian name<span class="req">*</span></label><input class="in" placeholder="e.g. Neha Sharma"></div>
+          <div class="fld"><label>Mobile number<span class="req">*</span></label><input class="in" placeholder="+91 98765 43210"><span class="hint">We&rsquo;ll send updates here &mdash; make sure it&rsquo;s reachable.</span></div>
+          <div class="fld full"><label>Email <span class="hint" style="font-weight:500">(optional)</span></label><input class="in" placeholder="you@example.com"></div>
+        </div>
+
+        <div class="sec"><span class="n"><svg class="i sm"><use href="#ic-info"/></svg></span> A little more <span class="hint" style="font-weight:500;letter-spacing:0;text-transform:none">&mdash; optional</span></div>
+        <div class="grid2">
+          <div class="fld"><label>Previous school</label><input class="in" placeholder="If any"></div>
+          <div class="fld"><label>Area / locality</label><input class="in" placeholder="e.g. Indiranagar"></div>
+          <div class="fld full"><label>Anything you&rsquo;d like the school to know?</label><textarea class="in" placeholder="A short note (optional)"></textarea></div>
+        </div>
+
+        <!-- honeypot: hidden from real users, only bots fill it -->
+        <div class="hp" aria-hidden="true"><label>Company<input tabindex="-1" autocomplete="off" name="company"></label></div>
+      </div>
+
+      <!-- fee summary shown ONLY when online_payments is ON and fee > 0 -->
+      <div class="fee">
+        <div class="fi"><svg class="i"><use href="#ic-card"/></svg></div>
+        <div><div class="ft">Application fee</div><div class="fs">Paid securely via Razorpay after you tap submit &middot; non-refundable</div></div>
+        <div class="amt">&#8377;500</div>
+      </div>
+
+      <div class="foot">
+        <button type="button" class="btn brand"><svg class="i"><use href="#ic-card"/></svg> Submit &amp; pay &#8377;500</button>
+        <span class="terms">By submitting you agree to St. Mary&rsquo;s <a href="#">admission terms</a> and <a href="#">privacy policy</a>. Protected against spam &mdash; no CAPTCHA needed.</span>
+      </div>
+    </form>
+  </div>
+
+  <!-- ================= SCREEN 2: confirmation ================= -->
+  <div>
+    <div class="screencap"><span>Screen 2 &mdash; After submit (confirmation)</span><span class="ln"></span></div>
+    <div class="conf">
+      <div class="top">
+        <div class="tick"><svg class="i lg"><use href="#ic-check"/></svg></div>
+        <h2>Application received</h2>
+        <p class="sub">Thank you! Aarav&rsquo;s application for <b>Grade 6 &middot; 2026&ndash;27</b> is now with the admissions team.</p>
+        <div class="paid"><svg class="i sm"><use href="#ic-check"/></svg> Application fee &#8377;500 paid</div>
+      </div>
+
+      <div class="refbox">
+        <div class="rl">Your reference number</div>
+        <div class="rv">A&#8209;1042</div>
+      </div>
+
+      <div class="steps">
+        <div class="st"><span class="si"><svg class="i sm"><use href="#ic-clock"/></svg></span><div><b>What happens next</b><p>The school reviews your application and may call you for documents or a short interaction.</p></div></div>
+        <div class="st"><span class="si"><svg class="i sm"><use href="#ic-phone"/></svg></span><div><b>We&rsquo;ll reach you on your mobile</b><p>Keep +91&nbsp;98765&nbsp;43210 handy &mdash; updates and the admission offer come by SMS.</p></div></div>
+        <div class="st"><span class="si"><svg class="i sm"><use href="#ic-info"/></svg></span><div><b>Questions?</b><p>Quote reference <b>A&#8209;1042</b> when you contact the school office.</p></div></div>
+      </div>
+
+      <div class="cf">A copy of this reference has been sent to your mobile.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  document.querySelectorAll('.gchip').forEach(c=>c.addEventListener('click',()=>{
+    c.parentElement.querySelectorAll('.gchip').forEach(x=>x.classList.remove('on'));c.classList.add('on');
+  }));
+</script>
