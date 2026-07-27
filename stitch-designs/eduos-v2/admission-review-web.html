@@ -1,0 +1,249 @@
+<title>Edu-OS &middot; Application review + enrol (admin)</title>
+<style>
+  :root{
+    --accent:#4F46E5; --accent-2:#1D4ED8; --accent-weak:#EEF1FE; --accent-ink:#4338CA;
+    --ground-a:#EAECF9; --ground-b:#F6F5FC; --card:#FFFFFF;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A0B4; --line:#EBECF4;
+    --good:#10B981; --good-weak:#E7F7F0; --warn:#F59E0B; --warn-weak:#FDF3E2;
+    --crit:#EF4444; --crit-weak:#FCECEC; --info:#3B82F6; --info-weak:#E9F1FE;
+    --shadow:0 4px 20px rgba(29,78,216,.07); --shadow-lg:0 12px 40px rgba(29,78,216,.13);
+    --r:16px; --r-md:12px; --r-sm:10px; --r-pill:999px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;line-height:1.45;
+    background:radial-gradient(1200px 500px at 100% -5%,#E7E3FB,transparent 60%),linear-gradient(180deg,var(--ground-a),var(--ground-b) 42%)}
+  .i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .i.sm{width:15px;height:15px}.i.lg{width:19px;height:19px}
+  .stage{max-width:1240px;margin:0 auto;padding:26px 24px 60px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:start}
+  @media (max-width:1000px){.stage{grid-template-columns:1fr}}
+  .screencap{display:flex;align-items:center;gap:10px;color:var(--ink-3);font-size:12px;font-weight:600;margin-bottom:10px}
+  .screencap .ln{height:1px;background:var(--line);flex:1}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:38px;padding:0 15px;border-radius:10px;border:1px solid transparent;font-size:13.5px;font-weight:650;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .btn.primary{background:var(--accent);color:#fff;box-shadow:var(--shadow)}.btn.primary:hover{background:var(--accent-ink)}
+  .btn.good{background:var(--good);color:#fff;box-shadow:0 4px 14px rgba(16,185,129,.3)}.btn.good:hover{background:#0EA271}
+  .btn.ghost{background:var(--card);border-color:var(--line);color:var(--ink-2)}.btn.ghost:hover{color:var(--ink);border-color:var(--ink-3)}
+  .btn.danger{background:var(--card);border-color:#F3C9C9;color:var(--crit)}.btn.danger:hover{background:var(--crit-weak)}
+  .btn.sm{height:32px;padding:0 12px;font-size:12.5px;border-radius:8px}
+  .btn.wide{width:100%}
+  /* drawer as panel */
+  .drawer{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-lg);overflow:hidden}
+  .dh{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:12px;background:linear-gradient(180deg,var(--accent-weak),#fff)}
+  .dh .aav{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-weight:750;font-size:15px;flex:none}
+  .a-blue{background:#E4E9FF;color:#4338CA}.a-green{background:#DEF6EC;color:#0B7A55}.a-amber{background:#FCEFD6;color:#B4740B}.a-pink{background:#FCE7F0;color:#B83280}
+  .dh .nm{font-size:18px;font-weight:750;letter-spacing:-.3px}
+  .dh .sm2{font-size:12px;color:var(--ink-3);margin-top:2px;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+  .clspill{font-size:10px;font-weight:800;padding:2px 8px;border-radius:var(--r-pill);background:var(--ground-a);color:var(--ink-2)}
+  .dh .x{margin-left:auto;width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink-3);display:grid;place-items:center;cursor:pointer;flex:none}
+  /* stage stepper */
+  .stepper{display:flex;align-items:center;gap:0;padding:13px 18px;border-bottom:1px solid var(--line);overflow-x:auto}
+  .stp{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;color:var(--ink-3);white-space:nowrap}
+  .stp .b{width:19px;height:19px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:10px}
+  .stp.done{color:#0B7A55}.stp.done .b{background:var(--good);border-color:var(--good);color:#fff}
+  .stp.cur{color:var(--accent-ink)}.stp.cur .b{background:var(--accent);border-color:var(--accent);color:#fff}
+  .steplink{width:22px;height:2px;background:var(--line);margin:0 4px;flex:none}
+  .steplink.done{background:var(--good)}
+  .db{padding:6px 18px 14px}
+  .badges{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0 4px}
+  .tag{font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:var(--r-pill);display:inline-flex;gap:5px;align-items:center}
+  .t-src{color:var(--info);background:var(--info-weak)}.t-pay-paid{color:#0B7A55;background:var(--good-weak)}.t-dup{color:var(--warn);background:var(--warn-weak)}
+  .sec{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:16px 0 9px}
+  .kv{display:grid;grid-template-columns:1fr 1fr;gap:9px 16px}
+  .kv .k{font-size:11px;color:var(--ink-3);font-weight:600}
+  .kv .v{font-size:13.5px;font-weight:600;margin-top:1px}
+  .kv .full{grid-column:1/-1}
+  /* review fields box */
+  .rev{background:var(--ground-b);border:1px solid var(--line);border-radius:13px;padding:14px 15px;margin-top:4px}
+  .fld{margin-bottom:13px}.fld:last-child{margin-bottom:0}
+  .fld label{font-size:12px;font-weight:650;color:var(--ink-2);display:block;margin-bottom:6px}
+  .score-in{display:inline-flex;align-items:center;gap:8px}
+  .in{height:38px;border:1px solid var(--line);border-radius:9px;background:#fff;padding:0 12px;font-size:14px;font-family:inherit;color:var(--ink)}
+  .in:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
+  .score-in .in{width:74px;text-align:center;font-weight:700}
+  .score-in .of{font-size:13px;color:var(--ink-3);font-weight:600}
+  textarea.in{height:auto;min-height:60px;width:100%;padding:10px 12px;resize:vertical;line-height:1.5}
+  select.in{width:100%;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A0B4' stroke-width='2.5' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+  /* toggle */
+  .togrow{display:flex;align-items:center;gap:11px}
+  .tog{width:42px;height:24px;border-radius:var(--r-pill);background:var(--good);position:relative;cursor:pointer;flex:none}
+  .tog::after{content:"";position:absolute;top:2px;left:20px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .15s}
+  .tog.off{background:var(--ink-3)}.tog.off::after{left:2px}
+  .togrow .tl b{font-size:12.5px;font-weight:650}.togrow .tl span{font-size:11px;color:var(--ink-3);display:block}
+  .asgrow{display:flex;align-items:center;gap:9px}
+  .aw{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-size:11px;font-weight:800}
+  /* activity */
+  .act{position:relative;padding-left:20px}
+  .act::before{content:"";position:absolute;left:5px;top:4px;bottom:8px;width:2px;background:var(--line)}
+  .ai{position:relative;padding-bottom:13px}
+  .ai::before{content:"";position:absolute;left:-19px;top:3px;width:10px;height:10px;border-radius:50%;background:var(--accent);border:2px solid #fff;box-shadow:0 0 0 1.5px var(--accent-weak)}
+  .ai b{font-size:12.5px;font-weight:650}.ai .m{font-size:11px;color:var(--ink-3);margin-top:1px}
+  /* drawer footer actions */
+  .dfoot{padding:14px 18px;border-top:1px solid var(--line);background:var(--card);display:flex;gap:9px;align-items:center;position:sticky;bottom:0}
+  .dfoot .btn.good{flex:1}
+  /* enrol dialog */
+  .dialog{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-lg);overflow:hidden}
+  .dgh{padding:18px 20px 14px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start;background:linear-gradient(180deg,var(--good-weak),#fff)}
+  .dgh .gi{width:42px;height:42px;border-radius:12px;background:var(--good);color:#fff;display:grid;place-items:center;flex:none;box-shadow:0 6px 16px rgba(16,185,129,.32)}
+  .dgh h2{margin:0;font-size:18px;font-weight:760;letter-spacing:-.3px}
+  .dgh p{margin:4px 0 0;font-size:12.5px;color:var(--ink-2)}
+  .dgb{padding:16px 20px}
+  .willbox{border:1px solid #CDEFE0;background:var(--good-weak);border-radius:12px;padding:12px 14px;margin-bottom:16px}
+  .willbox .wt{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#0B7A55;margin-bottom:8px}
+  .willbox .wl{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--ink-2);padding:4px 0}
+  .willbox .wl svg{color:var(--good);margin-top:1px}
+  .willbox .wl b{color:var(--ink);font-weight:650}
+  .dg-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  .dg-grid .full{grid-column:1/-1}
+  .dgf-lab{font-size:12px;font-weight:650;color:var(--ink-2);margin-bottom:6px;display:block}
+  .dgf-lab .req{color:var(--crit)}
+  .dg-grid .in{height:42px;width:100%}
+  .idem{display:flex;gap:8px;align-items:flex-start;font-size:11px;color:var(--ink-3);margin-top:14px;background:var(--ground-b);border:1px dashed var(--line);border-radius:10px;padding:9px 11px}
+  .dgfoot{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end}
+  .note{grid-column:1/-1;display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--ink-2);background:var(--ground-b);border:1px dashed var(--line);border-radius:12px;padding:11px 13px;margin-top:2px}
+  .note b{color:var(--ink)}.note .chic{color:var(--ink-3);margin-top:1px}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="ic-cap" viewBox="0 0 24 24"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+  <symbol id="ic-award" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.09 13.09 16.5 22 12 19.5 7.5 22l1.41-8.91"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+  <symbol id="ic-x2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="ic-key" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3"/></symbol>
+  <symbol id="ic-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
+</defs></svg>
+
+<div class="stage">
+
+  <!-- ============ SCREEN 1: review drawer ============ -->
+  <div>
+    <div class="screencap"><span>Screen 3 &mdash; Application review (slide-over)</span><span class="ln"></span></div>
+    <div class="drawer">
+      <div class="dh">
+        <div class="aav a-blue">RV</div>
+        <div><div class="nm">Riya Verma</div><div class="sm2"><span class="clspill">Grade 6 &middot; 2026&ndash;27</span> Ref A-1036 &middot; applied 6 days ago</div></div>
+        <div class="x"><svg class="i sm"><use href="#ic-x"/></svg></div>
+      </div>
+
+      <div class="stepper">
+        <div class="stp done"><span class="b"><svg class="i" style="width:11px;height:11px"><use href="#ic-check"/></svg></span> Enquiry</div>
+        <div class="steplink done"></div>
+        <div class="stp done"><span class="b"><svg class="i" style="width:11px;height:11px"><use href="#ic-check"/></svg></span> Under review</div>
+        <div class="steplink done"></div>
+        <div class="stp cur"><span class="b">3</span> Offered</div>
+        <div class="steplink"></div>
+        <div class="stp"><span class="b">4</span> Enrolled</div>
+      </div>
+
+      <div class="db">
+        <div class="badges">
+          <span class="tag t-src">Online application</span>
+          <span class="tag t-pay-paid"><svg class="i sm" style="width:11px;height:11px"><use href="#ic-award"/></svg> Fee &#8377;500 paid</span>
+        </div>
+
+        <div class="sec"><svg class="i sm" style="vertical-align:-2px"><use href="#ic-user"/></svg> Student</div>
+        <div class="kv">
+          <div><div class="k">Full name</div><div class="v">Riya Verma</div></div>
+          <div><div class="k">Date of birth</div><div class="v">14 Mar 2015</div></div>
+          <div><div class="k">Gender</div><div class="v">Female</div></div>
+          <div><div class="k">Class applying for</div><div class="v">Grade 6</div></div>
+        </div>
+
+        <div class="sec"><svg class="i sm" style="vertical-align:-2px"><use href="#ic-users"/></svg> Parent / guardian</div>
+        <div class="kv">
+          <div><div class="k">Name</div><div class="v">Sunita Verma</div></div>
+          <div><div class="k">Mobile</div><div class="v">+91 98333 21100</div></div>
+          <div class="full"><div class="k">Email</div><div class="v">sunita.verma@example.com</div></div>
+          <div class="full"><div class="k">Previous school &middot; Area</div><div class="v">Little Flowers H.S. &middot; Indiranagar</div></div>
+        </div>
+
+        <div class="sec">Review</div>
+        <div class="rev">
+          <div class="fld">
+            <label>Entrance test score</label>
+            <div class="score-in"><input class="in" value="91"><span class="of">/ 100</span></div>
+          </div>
+          <div class="fld">
+            <label>Documents reviewed</label>
+            <div class="togrow"><span class="tog"></span><div class="tl"><b>Verified &mdash; birth cert &amp; last marksheet seen</b><span>Full digital collection happens in KYC once enrolled</span></div></div>
+          </div>
+          <div class="fld">
+            <label>Internal notes</label>
+            <textarea class="in">Strong interaction. Parent keen on science stream. Fee paid same day. Recommended for offer.</textarea>
+          </div>
+          <div class="fld" style="margin-bottom:0">
+            <label>Assigned to</label>
+            <div class="asgrow"><span class="aw a-amber">RP</span><select class="in" style="max-width:210px"><option selected>Rekha Pillai</option><option>You (D. Iyer)</option><option>Unassigned</option></select></div>
+          </div>
+        </div>
+
+        <div class="sec">Activity</div>
+        <div class="act">
+          <div class="ai"><b>Offer sent</b><div class="m">You &middot; 1 day ago &middot; SMS to parent</div></div>
+          <div class="ai"><b>Moved to Under review &rarr; Offered</b><div class="m">Rekha Pillai &middot; 1 day ago</div></div>
+          <div class="ai"><b>Entrance test recorded &mdash; 91/100</b><div class="m">Rekha Pillai &middot; 3 days ago</div></div>
+          <div class="ai"><b>Application submitted &amp; fee paid</b><div class="m">Online form &middot; 6 days ago</div></div>
+        </div>
+      </div>
+
+      <div class="dfoot">
+        <button class="btn danger"><svg class="i sm"><use href="#ic-x2"/></svg> Reject</button>
+        <button class="btn good"><svg class="i sm"><use href="#ic-cap"/></svg> Enrol student</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN 2: enrol dialog ============ -->
+  <div>
+    <div class="screencap"><span>Screen 4 &mdash; &ldquo;Enrol student&rdquo; dialog</span><span class="ln"></span></div>
+    <div class="dialog">
+      <div class="dgh">
+        <div class="gi"><svg class="i lg"><use href="#ic-cap"/></svg></div>
+        <div><h2>Enrol Riya Verma</h2><p>This turns the application into a real student and provisions the parent&rsquo;s account. Add the details the school assigns at enrolment.</p></div>
+      </div>
+
+      <div class="dgb">
+        <div class="willbox">
+          <div class="wt">What this does</div>
+          <div class="wl"><svg class="i sm"><use href="#ic-user"/></svg><div>Creates <b>Riya Verma</b> as a student in Grade 6 &middot; 2026&ndash;27</div></div>
+          <div class="wl"><svg class="i sm"><use href="#ic-key"/></svg><div>Provisions <b>Sunita Verma&rsquo;s</b> parent account (+91 98333 21100) &amp; sends a welcome SMS</div></div>
+          <div class="wl"><svg class="i sm"><use href="#ic-file"/></svg><div>Seeds her <b>KYC document checklist</b> so the office can collect papers</div></div>
+        </div>
+
+        <div class="dg-grid">
+          <div class="full">
+            <label class="dgf-lab">Section <span class="req">*</span></label>
+            <select class="in"><option>Select a section&hellip;</option><option>6 &ndash; A</option><option selected>6 &ndash; B</option><option>6 &ndash; C</option></select>
+          </div>
+          <div>
+            <label class="dgf-lab">Roll number</label>
+            <input class="in" placeholder="e.g. 25">
+          </div>
+          <div>
+            <label class="dgf-lab">Admission number</label>
+            <input class="in" value="STM/2026/0412">
+          </div>
+        </div>
+
+        <div class="idem"><svg class="i sm"><use href="#ic-lock"/></svg><div>Safe to run once &mdash; if Riya has already been enrolled from this application, the button is disabled so no duplicate student is created.</div></div>
+      </div>
+
+      <div class="dgfoot">
+        <button class="btn ghost">Cancel</button>
+        <button class="btn good"><svg class="i sm"><use href="#ic-check"/></svg> Create student &amp; enrol</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="note"><svg class="i chic"><use href="#ic-cap"/></svg><div><b>Convert is the one irreversible write &mdash; so it&rsquo;s deliberate.</b> &ldquo;Enrol student&rdquo; opens this dialog (it never happens on a stray drag), collects the enrolment-only fields, then runs a guarded server action that reuses the existing parent-provisioning path (find-or-create parent by phone &rarr; create student &rarr; enrol). It records who did it, stores the new student&rsquo;s id on the application for idempotency, and moves the card to <b>Enrolled</b>.</div></div>
+</div>
+
+<script>
+  document.querySelectorAll('.tog').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('off')));
+</script>

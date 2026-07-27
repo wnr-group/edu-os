@@ -1,0 +1,265 @@
+<title>Edu-OS &middot; Admissions board (admin)</title>
+<style>
+  :root{
+    --accent:#4F46E5; --accent-2:#1D4ED8; --accent-weak:#EEF1FE; --accent-ink:#4338CA;
+    --ground-a:#EAECF9; --ground-b:#F6F5FC; --card:#FFFFFF;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A0B4; --line:#EBECF4;
+    --good:#10B981; --good-weak:#E7F7F0; --warn:#F59E0B; --warn-weak:#FDF3E2;
+    --crit:#EF4444; --crit-weak:#FCECEC; --info:#3B82F6; --info-weak:#E9F1FE;
+    --shadow:0 4px 20px rgba(29,78,216,.07); --shadow-lg:0 12px 40px rgba(29,78,216,.13);
+    --r:16px; --r-md:12px; --r-sm:10px; --r-pill:999px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;line-height:1.45;
+    background:radial-gradient(1200px 500px at 100% -5%,#E7E3FB,transparent 60%),linear-gradient(180deg,var(--ground-a),var(--ground-b) 42%)}
+  .i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .i.sm{width:15px;height:15px}.i.lg{width:19px;height:19px}
+  .topnav{display:flex;align-items:center;gap:22px;height:64px;padding:0 26px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  .logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:#fff;box-shadow:var(--shadow)}
+  .mainnav{display:flex;align-items:center;gap:4px}
+  .mainnav a{position:relative;padding:9px 13px;border-radius:9px;color:var(--ink-2);text-decoration:none;font-size:14px;font-weight:500}
+  .mainnav a:hover{color:var(--ink);background:var(--accent-weak)}
+  .mainnav a.on{color:var(--accent-ink);font-weight:650}
+  .mainnav a.on::after{content:"";position:absolute;left:13px;right:13px;bottom:-19px;height:2.5px;border-radius:2px;background:var(--accent)}
+  .selsec{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 13px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink-3);font-size:13.5px;min-width:168px}
+  .grow{flex:1}
+  .ybtn,.search{height:36px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:13px;font-family:inherit}
+  .ybtn{display:inline-flex;align-items:center;gap:8px;padding:0 13px;color:var(--ink-2);font-weight:600;cursor:pointer}
+  .search{display:flex;align-items:center;gap:9px;padding:0 12px;color:var(--ink-3);min-width:200px}
+  .search kbd{margin-left:auto;font-size:11px;background:var(--ground-a);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-family:inherit}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
+  .wrap{max-width:1500px;margin:0 auto;padding:22px 26px 40px;display:flex;flex-direction:column;gap:16px}
+  .crumb{font-size:12.5px;color:var(--ink-3);font-weight:500}
+  .head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:-4px}
+  .head h1{margin:0;font-size:27px;letter-spacing:-.7px;font-weight:760}
+  .head p{margin:4px 0 0;color:var(--ink-3);font-size:13.5px}
+  .head .r{margin-left:auto;display:flex;gap:9px;align-items:center}
+  .btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:9px;border:1px solid transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .btn.primary{background:var(--accent);color:#fff;box-shadow:var(--shadow)} .btn.primary:hover{background:var(--accent-ink)}
+  .btn.ghost{background:var(--card);border-color:var(--line);color:var(--ink-2)} .btn.ghost:hover{color:var(--ink);border-color:var(--ink-3)}
+  .btn.sm{height:32px;padding:0 12px;font-size:12.5px;border-radius:8px}
+  /* share link strip */
+  .sharebar{display:flex;align-items:center;gap:13px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:11px 16px;box-shadow:var(--shadow);flex-wrap:wrap}
+  .sharebar .li{width:34px;height:34px;border-radius:10px;background:var(--accent-weak);color:var(--accent-ink);display:grid;place-items:center;flex:none}
+  .sharebar .u{font-size:13px;font-weight:650}
+  .sharebar .u b{font-weight:730;color:var(--accent-ink)}
+  .sharebar .u span{display:block;font-size:11.5px;color:var(--ink-3);font-weight:500}
+  .sharebar .urlpill{margin-left:6px;font-size:12.5px;font-weight:600;color:var(--ink-2);background:var(--ground-b);border:1px solid var(--line);padding:7px 12px;border-radius:9px}
+  .sharebar .rt{margin-left:auto;display:flex;gap:8px;align-items:center}
+  /* filter row */
+  .filters{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .fchip{font-size:12px;font-weight:600;color:var(--ink-2);background:var(--card);border:1px solid var(--line);padding:6px 11px;border-radius:var(--r-pill);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+  .fchip.on{background:var(--accent-weak);color:var(--accent-ink);border-color:transparent}
+  .fchip .cnt{font-size:10.5px;background:var(--ground-a);color:var(--ink-2);border-radius:var(--r-pill);padding:0 6px;font-weight:700}
+  .fchip.on .cnt{background:#fff;color:var(--accent-ink)}
+  .fchip.warn{color:#B4740B;background:var(--warn-weak);border-color:transparent}
+  .fchip.warn .cnt{background:#fff;color:#B4740B}
+  /* board */
+  .board{display:grid;grid-template-columns:repeat(5,minmax(258px,1fr));gap:14px;overflow-x:auto;padding-bottom:8px}
+  .col{background:rgba(255,255,255,.55);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;min-height:60vh}
+  .colh{display:flex;align-items:center;gap:9px;padding:13px 14px 11px;position:sticky;top:0}
+  .dot{width:9px;height:9px;border-radius:50%}
+  .colh .t{font-size:13px;font-weight:730}
+  .colh .c{font-size:11px;font-weight:800;color:var(--ink-3);background:var(--card);border:1px solid var(--line);border-radius:var(--r-pill);padding:1px 8px}
+  .colh .add{margin-left:auto;width:26px;height:26px;border-radius:8px;border:1px dashed var(--line);color:var(--ink-3);display:grid;place-items:center;cursor:pointer;background:none}
+  .d-enq{background:var(--info)}.d-rev{background:var(--warn)}.d-off{background:var(--accent)}.d-enr{background:var(--good)}.d-rej{background:var(--ink-3)}
+  .stack{display:flex;flex-direction:column;gap:10px;padding:2px 11px 14px;overflow-y:auto}
+  /* card */
+  .appc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 13px;box-shadow:0 2px 8px rgba(29,78,216,.05);cursor:pointer;position:relative}
+  .appc:hover{border-color:#D6D9EC;box-shadow:var(--shadow)}
+  .appc.rej{opacity:.72}
+  .appc .top{display:flex;align-items:flex-start;gap:9px}
+  .aav{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}
+  .a-blue{background:#E4E9FF;color:#4338CA}.a-green{background:#DEF6EC;color:#0B7A55}.a-amber{background:#FCEFD6;color:#B4740B}.a-pink{background:#FCE7F0;color:#B83280}.a-cyan{background:#DFF3F7;color:#0E7490}.a-slate{background:#E7EAF0;color:#516079}
+  .appc .nm{font-weight:680;font-size:13.5px;line-height:1.25}
+  .appc .mt{font-size:11px;color:var(--ink-3);margin-top:2px;display:flex;align-items:center;gap:5px}
+  .clspill{font-size:10px;font-weight:800;padding:2px 8px;border-radius:var(--r-pill);background:var(--ground-a);color:var(--ink-2)}
+  .appc .row{display:flex;align-items:center;gap:6px;margin-top:10px;flex-wrap:wrap}
+  .tag{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:var(--r-pill);display:inline-flex;gap:5px;align-items:center}
+  .t-dup{color:var(--warn);background:var(--warn-weak)}
+  .t-pay-pend{color:var(--crit);background:var(--crit-weak)}
+  .t-pay-paid{color:#0B7A55;background:var(--good-weak)}
+  .t-pay-free{color:var(--ink-3);background:var(--ground-a)}
+  .t-score{color:var(--accent-ink);background:var(--accent-weak)}
+  .t-src{color:var(--info);background:var(--info-weak)}
+  .appc .foot{display:flex;align-items:center;gap:7px;margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}
+  .appc .foot .ago{font-size:10.5px;color:var(--ink-3)}
+  .asg{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--ink-2);font-weight:600}
+  .asg .aw{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font-size:9px;font-weight:800}
+  .asg.none{color:var(--ink-3);font-weight:500}
+  .emptycol{font-size:11.5px;color:var(--ink-3);text-align:center;padding:22px 10px;border:1px dashed var(--line);border-radius:11px;margin:2px 0}
+  .note{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--ink-2);background:var(--ground-b);border:1px dashed var(--line);border-radius:12px;padding:11px 13px}
+  .note b{color:var(--ink)}.note .chic{color:var(--ink-3);margin-top:1px}
+  @media (max-width:900px){.mainnav,.selsec,.search{display:none}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="ic-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+  <symbol id="ic-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="18" y1="14" x2="21" y2="14"/><line x1="18" y1="18" x2="21" y2="18"/><line x1="18" y1="21" x2="21" y2="21"/></symbol>
+  <symbol id="ic-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="ic-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+  <symbol id="ic-copyalert" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-award" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.09 13.09 16.5 22 12 19.5 7.5 22l1.41-8.91"/></symbol>
+  <symbol id="ic-filter" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></symbol>
+  <symbol id="ic-cap" viewBox="0 0 24 24"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></symbol>
+</defs></svg>
+
+<header class="topnav">
+  <div class="logo"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg></div>
+  <nav class="mainnav"><a href="#">Dashboard</a><a href="#">Students</a><a href="#" class="on">Admissions</a><a href="#">Fees</a><a href="#">Academics</a><a href="#">More &#9662;</a></nav>
+  <div class="selsec">St. Mary&rsquo;s Public &#9662;</div>
+  <div class="grow"></div>
+  <button class="ybtn">2026&ndash;27 &#9662;</button>
+  <div class="search"><svg class="i sm"><use href="#ic-search"/></svg> Search&hellip; <kbd>&#8984;K</kbd></div>
+  <div class="avatar">DI</div>
+</header>
+
+<div class="wrap">
+  <div>
+    <div class="crumb">Admissions &rsaquo; Pipeline</div>
+    <div class="head">
+      <div><h1>Admissions</h1><p>Every enquiry &mdash; online or walk-in &mdash; in one pipeline, from first contact to enrolled.</p></div>
+      <div class="r">
+        <button class="btn ghost"><svg class="i sm"><use href="#ic-filter"/></svg> Grade 6</button>
+        <button class="btn primary"><svg class="i sm"><use href="#ic-plus"/></svg> Add enquiry</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- shareable public form link -->
+  <div class="sharebar">
+    <div class="li"><svg class="i"><use href="#ic-link"/></svg></div>
+    <div class="u"><b>Your public application form</b><span>Share this with parents or print the QR for your front desk</span></div>
+    <span class="urlpill">stmarys.edu-os.app/apply</span>
+    <div class="rt">
+      <button class="btn ghost sm"><svg class="i sm"><use href="#ic-copy"/></svg> Copy link</button>
+      <button class="btn ghost sm"><svg class="i sm"><use href="#ic-qr"/></svg> QR code</button>
+    </div>
+  </div>
+
+  <!-- filters -->
+  <div class="filters">
+    <span class="fchip on">All classes</span>
+    <span class="fchip">Source: All</span>
+    <span class="fchip">Assigned: Anyone</span>
+    <span class="grow"></span>
+    <span class="fchip warn"><svg class="i sm"><use href="#ic-copyalert"/></svg> Awaiting payment <span class="cnt">3</span></span>
+  </div>
+
+  <!-- KANBAN -->
+  <div class="board">
+
+    <!-- ENQUIRY -->
+    <div class="col">
+      <div class="colh"><span class="dot d-enq"></span><span class="t">Enquiry</span><span class="c">6</span><button class="add"><svg class="i sm"><use href="#ic-plus"/></svg></button></div>
+      <div class="stack">
+        <div class="appc">
+          <div class="top"><div class="aav a-blue">AS</div><div><div class="nm">Aarav Sharma</div><div class="mt"><span class="clspill">Grade 6</span> &middot; +91 98765&hellip;</div></div></div>
+          <div class="row"><span class="tag t-src">Online</span><span class="tag t-pay-paid"><svg class="i sm" style="width:11px;height:11px"><use href="#ic-award"/></svg> Fee paid</span></div>
+          <div class="foot"><span class="ago">2h ago &middot; A-1042</span><span class="asg none">Unassigned</span></div>
+        </div>
+        <div class="appc">
+          <div class="top"><div class="aav a-pink">DK</div><div><div class="nm">Diya Kapoor</div><div class="mt"><span class="clspill">Grade 6</span> &middot; +91 90123&hellip;</div></div></div>
+          <div class="row"><span class="tag t-dup"><svg class="i sm" style="width:11px;height:11px"><use href="#ic-copyalert"/></svg> Possible duplicate</span><span class="tag t-pay-paid">Fee paid</span></div>
+          <div class="foot"><span class="ago">5h ago &middot; A-1041</span><span class="asg"><span class="aw a-amber">RP</span>R. Pillai</span></div>
+        </div>
+        <div class="appc">
+          <div class="top"><div class="aav a-cyan">VN</div><div><div class="nm">Vihaan Nair</div><div class="mt"><span class="clspill">Grade 1</span> &middot; +91 99887&hellip;</div></div></div>
+          <div class="row"><span class="tag t-src">Walk-in</span><span class="tag t-pay-free">No fee</span></div>
+          <div class="foot"><span class="ago">Yesterday</span><span class="asg none">Unassigned</span></div>
+        </div>
+        <div class="appc">
+          <div class="top"><div class="aav a-green">MG</div><div><div class="nm">Myra Gupta</div><div class="mt"><span class="clspill">LKG</span> &middot; +91 91234&hellip;</div></div></div>
+          <div class="row"><span class="tag t-src">Online</span><span class="tag t-pay-paid">Fee paid</span></div>
+          <div class="foot"><span class="ago">Yesterday &middot; A-1039</span><span class="asg none">Unassigned</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UNDER REVIEW -->
+    <div class="col">
+      <div class="colh"><span class="dot d-rev"></span><span class="t">Under review</span><span class="c">4</span><button class="add"><svg class="i sm"><use href="#ic-plus"/></svg></button></div>
+      <div class="stack">
+        <div class="appc">
+          <div class="top"><div class="aav a-amber">KR</div><div><div class="nm">Kabir Reddy</div><div class="mt"><span class="clspill">Grade 6</span> &middot; +91 98111&hellip;</div></div></div>
+          <div class="row"><span class="tag t-score">Test 82/100</span><span class="tag t-pay-paid">Fee paid</span></div>
+          <div class="foot"><span class="ago">Docs reviewed</span><span class="asg"><span class="aw a-blue">DI</span>You</span></div>
+        </div>
+        <div class="appc">
+          <div class="top"><div class="aav a-slate">IS</div><div><div class="nm">Ishaan Singh</div><div class="mt"><span class="clspill">Grade 9</span> &middot; +91 90555&hellip;</div></div></div>
+          <div class="row"><span class="tag t-score">Test 64/100</span><span class="tag t-src">Walk-in</span></div>
+          <div class="foot"><span class="ago">Interview scheduled</span><span class="asg"><span class="aw a-amber">RP</span>R. Pillai</span></div>
+        </div>
+        <div class="appc">
+          <div class="top"><div class="aav a-pink">AN</div><div><div class="nm">Anaya Menon</div><div class="mt"><span class="clspill">Grade 6</span> &middot; +91 98222&hellip;</div></div></div>
+          <div class="row"><span class="tag t-pay-paid">Fee paid</span></div>
+          <div class="foot"><span class="ago">Awaiting docs</span><span class="asg"><span class="aw a-blue">DI</span>You</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OFFERED -->
+    <div class="col">
+      <div class="colh"><span class="dot d-off"></span><span class="t">Offered</span><span class="c">3</span><button class="add"><svg class="i sm"><use href="#ic-plus"/></svg></button></div>
+      <div class="stack">
+        <div class="appc">
+          <div class="top"><div class="aav a-blue">RV</div><div><div class="nm">Riya Verma</div><div class="mt"><span class="clspill">Grade 6</span> &middot; +91 98333&hellip;</div></div></div>
+          <div class="row"><span class="tag t-score">Test 91/100</span><span class="tag t-pay-paid">Fee paid</span></div>
+          <div class="foot"><span class="ago">Offer sent 1d ago</span><span class="asg"><span class="aw a-amber">RP</span>R. Pillai</span></div>
+        </div>
+        <div class="appc">
+          <div class="top"><div class="aav a-green">AT</div><div><div class="nm">Aditya Tiwari</div><div class="mt"><span class="clspill">Grade 1</span> &middot; +91 98444&hellip;</div></div></div>
+          <div class="row"><span class="tag t-src">Walk-in</span></div>
+          <div class="foot"><span class="ago">Offer sent 3d ago</span><span class="asg"><span class="aw a-blue">DI</span>You</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ENROLLED -->
+    <div class="col">
+      <div class="colh"><span class="dot d-enr"></span><span class="t">Enrolled</span><span class="c">18</span></div>
+      <div class="stack">
+        <div class="appc">
+          <div class="top"><div class="aav a-green">SP</div><div><div class="nm">Saanvi Patel</div><div class="mt"><span class="clspill">Grade 6</span> &middot; Roll 24</div></div></div>
+          <div class="row"><span class="tag t-pay-paid"><svg class="i sm" style="width:11px;height:11px"><use href="#ic-cap"/></svg> Now a student</span></div>
+          <div class="foot"><span class="ago">Enrolled 2d ago</span><span class="asg"><span class="aw a-blue">DI</span>You</span></div>
+        </div>
+        <div class="appc">
+          <div class="top"><div class="aav a-cyan">RB</div><div><div class="nm">Reyansh Bose</div><div class="mt"><span class="clspill">LKG</span> &middot; Roll 06</div></div></div>
+          <div class="row"><span class="tag t-pay-paid"><svg class="i sm" style="width:11px;height:11px"><use href="#ic-cap"/></svg> Now a student</span></div>
+          <div class="foot"><span class="ago">Enrolled 4d ago</span><span class="asg"><span class="aw a-amber">RP</span>R. Pillai</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REJECTED -->
+    <div class="col">
+      <div class="colh"><span class="dot d-rej"></span><span class="t">Rejected</span><span class="c">5</span></div>
+      <div class="stack">
+        <div class="appc rej">
+          <div class="top"><div class="aav a-slate">TC</div><div><div class="nm">Tara Chatterjee</div><div class="mt"><span class="clspill">Grade 9</span> &middot; +91 98666&hellip;</div></div></div>
+          <div class="row"><span class="tag t-pay-free">Declined offer</span></div>
+          <div class="foot"><span class="ago">Chose another school</span></div>
+        </div>
+        <div class="appc rej">
+          <div class="top"><div class="aav a-slate">NJ</div><div><div class="nm">Neil Joseph</div><div class="mt"><span class="clspill">Grade 6</span> &middot; +91 98777&hellip;</div></div></div>
+          <div class="row"><span class="tag t-pay-free">Not eligible</span></div>
+          <div class="foot"><span class="ago">Below cut-off age</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="note"><svg class="i chic"><use href="#ic-cap"/></svg><div><b>One pipeline, two front doors.</b> Cards arrive from the public <b>/apply</b> form or an <b>Add enquiry</b> walk-in &mdash; identical from here on. Optional steps (entrance test, interview, document check) live <b>on the card</b>, not as columns, so a school that just does &ldquo;enquiry &rarr; offer &rarr; enrol&rdquo; isn&rsquo;t dragging through empty stages. Unpaid applications stay off the board until payment clears (see the <b>Awaiting payment</b> filter). Moving a card to <b>Enrolled</b> opens the enrol dialog &mdash; nothing becomes a student by accident.</div></div>
+</div>
+
+<script>
+  document.querySelectorAll('.fchip').forEach(c=>c.addEventListener('click',()=>{
+    if(c.classList.contains('warn'))return;c.classList.toggle('on');
+  }));
+</script>

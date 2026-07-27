@@ -1,0 +1,240 @@
+<title>Edu-OS &middot; KYC documents (admin)</title>
+<style>
+  :root{
+    --accent:#4F46E5; --accent-2:#1D4ED8; --accent-weak:#EEF1FE; --accent-ink:#4338CA;
+    --ground-a:#EAECF9; --ground-b:#F6F5FC; --card:#FFFFFF;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A0B4; --line:#EBECF4;
+    --good:#10B981; --good-weak:#E7F7F0; --warn:#F59E0B; --warn-weak:#FDF3E2;
+    --crit:#EF4444; --crit-weak:#FCECEC; --info:#3B82F6; --info-weak:#E9F1FE;
+    --shadow:0 4px 20px rgba(29,78,216,.07); --shadow-lg:0 12px 40px rgba(29,78,216,.13);
+    --r:16px; --r-md:12px; --r-sm:10px; --r-pill:999px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;line-height:1.45;
+    background:radial-gradient(1200px 500px at 100% -5%,#E7E3FB,transparent 60%),linear-gradient(180deg,var(--ground-a),var(--ground-b) 42%)}
+  .i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .i.sm{width:15px;height:15px}.i.lg{width:19px;height:19px}
+  .topnav{display:flex;align-items:center;gap:22px;height:64px;padding:0 26px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  .logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:#fff;box-shadow:var(--shadow)}
+  .mainnav{display:flex;align-items:center;gap:4px}
+  .mainnav a{position:relative;padding:9px 13px;border-radius:9px;color:var(--ink-2);text-decoration:none;font-size:14px;font-weight:500}
+  .mainnav a:hover{color:var(--ink);background:var(--accent-weak)}
+  .mainnav a.on{color:var(--accent-ink);font-weight:650}
+  .mainnav a.on::after{content:"";position:absolute;left:13px;right:13px;bottom:-19px;height:2.5px;border-radius:2px;background:var(--accent)}
+  .selsec{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 13px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink-3);font-size:13.5px;min-width:168px}
+  .grow{flex:1}
+  .ybtn,.search{height:36px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:13px;font-family:inherit}
+  .ybtn{display:inline-flex;align-items:center;gap:8px;padding:0 13px;color:var(--ink-2);font-weight:600;cursor:pointer}
+  .search{display:flex;align-items:center;gap:9px;padding:0 12px;color:var(--ink-3);min-width:200px}
+  .search kbd{margin-left:auto;font-size:11px;background:var(--ground-a);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-family:inherit}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
+  .wrap{max-width:1340px;margin:0 auto;padding:22px 26px 48px;display:flex;flex-direction:column;gap:16px}
+  .crumb{font-size:12.5px;color:var(--ink-3);font-weight:500}
+  .head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:-4px}
+  .head h1{margin:0;font-size:27px;letter-spacing:-.7px;font-weight:760}
+  .head p{margin:4px 0 0;color:var(--ink-3);font-size:13.5px}
+  .head .r{margin-left:auto;display:flex;gap:9px;align-items:center}
+  .btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:9px;border:1px solid transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .btn.primary{background:var(--accent);color:#fff;box-shadow:var(--shadow)} .btn.primary:hover{background:var(--accent-ink)}
+  .btn.good{background:var(--good);color:#fff;box-shadow:0 4px 14px rgba(16,185,129,.28)} .btn.good:hover{background:#0EA271}
+  .btn.ghost{background:var(--card);border-color:var(--line);color:var(--ink-2)} .btn.ghost:hover{color:var(--ink);border-color:var(--ink-3)}
+  .btn.sm{height:32px;padding:0 12px;font-size:12.5px;border-radius:8px}
+  .fchip{font-size:12px;font-weight:600;color:var(--ink-2);background:var(--card);border:1px solid var(--line);padding:6px 11px;border-radius:var(--r-pill);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+  .fchip.on{background:var(--accent-weak);color:var(--accent-ink);border-color:transparent}
+  /* KPI strip */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .kpi .k{font-size:11.5px;color:var(--ink-3);font-weight:600;display:flex;align-items:center;gap:8px}
+  .kpi .k .ico{width:26px;height:26px;border-radius:8px;display:grid;place-items:center}
+  .kpi .v{font-size:26px;font-weight:780;letter-spacing:-.6px;margin-top:11px}
+  .kpi .sub{font-size:11.5px;color:var(--ink-3);margin-top:5px}
+  .ic-blue{background:var(--accent-weak);color:var(--accent-ink)}.ic-green{background:var(--good-weak);color:#0B7A55}.ic-amber{background:var(--warn-weak);color:#B4740B}.ic-crit{background:var(--crit-weak);color:var(--crit)}
+  .kpi.hero{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border:0}
+  .kpi.hero .k,.kpi.hero .sub{color:rgba(255,255,255,.85)}.kpi.hero .k .ico{background:rgba(255,255,255,.2);color:#fff}
+  .prog{height:7px;border-radius:var(--r-pill);background:rgba(255,255,255,.25);overflow:hidden;margin-top:12px}
+  .prog>i{display:block;height:100%;background:#fff}
+  /* panel */
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+  .ph{display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .ph h3{margin:0;font-size:15px;font-weight:660}
+  .seg{display:inline-flex;background:var(--ground-b);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+  .seg button{border:0;background:none;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--ink-3);padding:6px 12px;border-radius:7px;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .seg button.on{background:var(--card);color:var(--accent-ink);box-shadow:var(--shadow)}
+  .seg .cnt{font-size:10.5px;background:var(--ground-a);color:var(--ink-2);border-radius:var(--r-pill);padding:1px 7px;font-weight:700}
+  .seg button.on .cnt{background:var(--accent-weak);color:var(--accent-ink)}
+  .ph .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .sortby{font-size:12px;color:var(--ink-3);display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:6px 10px;font-weight:600}
+  /* bulk bar */
+  .bulkbar{display:flex;align-items:center;gap:12px;padding:10px 18px;background:var(--accent-weak);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--accent-ink);font-weight:600}
+  .bulkbar .muted{color:var(--ink-3);font-weight:500;margin-left:auto}
+  /* table */
+  table{width:100%;border-collapse:collapse}
+  thead th{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);text-align:left;padding:10px 18px;border-bottom:1px solid var(--line)}
+  tbody td{padding:12px 18px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+  tbody tr:hover{background:var(--ground-b)}
+  tbody tr:last-child td{border-bottom:0}
+  .cbx{width:17px;height:17px;border-radius:5px;border:1.5px solid var(--ink-3);display:inline-grid;place-items:center;cursor:pointer;color:transparent}
+  .cbx.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  tr.sel{background:var(--accent-weak)}tr.sel:hover{background:var(--accent-weak)}
+  .who{display:flex;align-items:center;gap:10px}
+  .wav{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:700;font-size:12px}
+  .a-blue{background:#E4E9FF;color:#4338CA}.a-green{background:#DEF6EC;color:#0B7A55}.a-amber{background:#FCEFD6;color:#B4740B}.a-pink{background:#FCE7F0;color:#B83280}.a-cyan{background:#DFF3F7;color:#0E7490}.a-slate{background:#E7EAF0;color:#516079}
+  .who b{font-weight:650;font-size:13.5px}.who span{font-size:11px;color:var(--ink-3);display:block}
+  .clspill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:var(--r-pill);background:var(--ground-a);color:var(--ink-2)}
+  /* doc type cell */
+  .doctype{display:flex;align-items:center;gap:9px}
+  .dtico{width:30px;height:30px;border-radius:9px;background:var(--accent-weak);color:var(--accent-ink);display:grid;place-items:center;flex:none}
+  .doctype b{font-weight:640;font-size:13px}.doctype span{font-size:11px;color:var(--ink-3);display:block}
+  /* status pill */
+  .st{font-size:11px;font-weight:800;letter-spacing:.02em;padding:4px 10px;border-radius:var(--r-pill);display:inline-flex;gap:5px;align-items:center}
+  .st-sub{color:var(--info);background:var(--info-weak)}
+  .st-ver{color:#0B7A55;background:var(--good-weak)}
+  .st-rej{color:var(--crit);background:var(--crit-weak)}
+  .st-exp{color:var(--warn);background:var(--warn-weak)}
+  .st-miss{color:var(--ink-3);background:var(--ground-a)}
+  .thumb{width:38px;height:30px;border-radius:6px;border:1px solid var(--line);background:var(--ground-b);display:grid;place-items:center;color:var(--ink-3)}
+  .rowbtn{display:flex;justify-content:flex-end;gap:7px}
+  .link{color:var(--accent-ink);font-weight:600;font-size:12.5px;text-decoration:none;display:inline-flex;gap:5px;align-items:center;cursor:pointer}
+  /* completeness mini-bar */
+  .cbar{display:flex;align-items:center;gap:9px;min-width:120px}
+  .cbar .track{flex:1;height:7px;border-radius:var(--r-pill);background:var(--ground-a);overflow:hidden}
+  .cbar .track>i{display:block;height:100%;border-radius:var(--r-pill)}
+  .cbar b{font-size:12px;font-weight:750;width:34px;text-align:right}
+  .miss{font-size:11px;color:var(--crit);font-weight:600}
+  .note{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--ink-2);background:var(--ground-b);border:1px dashed var(--line);border-radius:12px;padding:11px 13px}
+  .note b{color:var(--ink)}.note .chic{color:var(--ink-3);margin-top:1px}
+  @media (max-width:1080px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:820px){.mainnav,.selsec,.search{display:none}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="ic-checkcirc" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="ic-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
+  <symbol id="ic-idcard" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="10" r="2"/><path d="M6 16c0-1.5 1-2.5 2-2.5s2 1 2 2.5"/><line x1="14" y1="9" x2="18" y2="9"/><line x1="14" y1="13" x2="18" y2="13"/></symbol>
+  <symbol id="ic-sort" viewBox="0 0 24 24"><path d="M11 5h10"/><path d="M11 9h7"/><path d="M11 13h4"/><path d="m3 17 3 3 3-3"/><path d="M6 18V4"/></symbol>
+  <symbol id="ic-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+</defs></svg>
+
+<header class="topnav">
+  <div class="logo"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg></div>
+  <nav class="mainnav"><a href="#">Dashboard</a><a href="#">Students</a><a href="#">Admissions</a><a href="#" class="on">KYC</a><a href="#">Fees</a><a href="#">More &#9662;</a></nav>
+  <div class="selsec">St. Mary&rsquo;s Public &#9662;</div>
+  <div class="grow"></div>
+  <button class="ybtn">2026&ndash;27 &#9662;</button>
+  <div class="search"><svg class="i sm"><use href="#ic-search"/></svg> Search&hellip; <kbd>&#8984;K</kbd></div>
+  <div class="avatar">DI</div>
+</header>
+
+<div class="wrap">
+  <div>
+    <div class="crumb">KYC &rsaquo; Documents</div>
+    <div class="head">
+      <div><h1>Student documents</h1><p>Verify what&rsquo;s been submitted and see, at a glance, whose records are still incomplete.</p></div>
+      <div class="r">
+        <span class="fchip on">All classes</span>
+        <button class="btn ghost"><svg class="i sm"><use href="#ic-settings"/></svg> Document types</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="kpis">
+    <div class="kpi hero"><div class="k"><span class="ico"><svg class="i sm"><use href="#ic-shield"/></svg></span> Records complete</div><div class="v">78%</div><div class="prog"><i style="width:78%"></i></div><div class="sub">748 of 960 students fully verified</div></div>
+    <div class="kpi"><div class="k"><span class="ico ic-crit"><svg class="i sm"><use href="#ic-alert"/></svg></span> Incomplete students</div><div class="v" style="color:var(--crit)">212</div><div class="sub">missing a required document</div></div>
+    <div class="kpi"><div class="k"><span class="ico ic-blue"><svg class="i sm"><use href="#ic-clock"/></svg></span> Pending verification</div><div class="v">34</div><div class="sub">uploaded, awaiting review</div></div>
+    <div class="kpi"><div class="k"><span class="ico ic-amber"><svg class="i sm"><use href="#ic-alert"/></svg></span> Expiring / expired</div><div class="v" style="color:var(--warn)">9</div><div class="sub">5 expiring in 30 days &middot; 4 expired</div></div>
+  </div>
+
+  <!-- panel: segmented queue -->
+  <div class="panel">
+    <div class="ph">
+      <div class="seg">
+        <button class="on">To verify <span class="cnt">34</span></button>
+        <button>Incomplete students <span class="cnt">212</span></button>
+        <button>Expiring <span class="cnt">9</span></button>
+      </div>
+      <div class="right"><span class="sortby"><svg class="i sm"><use href="#ic-sort"/></svg> Oldest first</span></div>
+    </div>
+
+    <div class="bulkbar">
+      <span class="cbx on"><svg class="i sm"><use href="#ic-check"/></svg></span>
+      3 documents selected
+      <button class="btn good sm"><svg class="i sm"><use href="#ic-checkcirc"/></svg> Verify selected</button>
+      <button class="btn ghost sm"><svg class="i sm"><use href="#ic-x"/></svg> Reject&hellip;</button>
+      <span class="muted">Only school admin &amp; principal can verify</span>
+    </div>
+
+    <table>
+      <thead><tr><th style="width:34px"></th><th>Student</th><th>Class</th><th>Document</th><th>Uploaded</th><th></th><th style="text-align:right"></th></tr></thead>
+      <tbody>
+        <tr class="sel">
+          <td><span class="cbx on"><svg class="i sm"><use href="#ic-check"/></svg></span></td>
+          <td><div class="who"><div class="wav a-blue">AS</div><div><b>Aarav Sharma</b><span>Adm STM/2026/0412</span></div></div></td>
+          <td><span class="clspill">6-B</span></td>
+          <td><div class="doctype"><div class="dtico"><svg class="i sm"><use href="#ic-file"/></svg></div><div><b>Birth Certificate</b><span>PDF &middot; 420 KB</span></div></div></td>
+          <td class="who"><span>2 days ago &middot; by R. Pillai</span></td>
+          <td><span class="thumb"><svg class="i sm"><use href="#ic-file"/></svg></span></td>
+          <td style="text-align:right"><div class="rowbtn"><span class="link"><svg class="i sm"><use href="#ic-eye"/></svg> View</span></div></td>
+        </tr>
+        <tr class="sel">
+          <td><span class="cbx on"><svg class="i sm"><use href="#ic-check"/></svg></span></td>
+          <td><div class="who"><div class="wav a-pink">DK</div><div><b>Diya Kapoor</b><span>Adm STM/2026/0409</span></div></div></td>
+          <td><span class="clspill">6-B</span></td>
+          <td><div class="doctype"><div class="dtico"><svg class="i sm"><use href="#ic-idcard"/></svg></div><div><b>Aadhaar Card</b><span>JPG &middot; 1.2 MB</span></div></div></td>
+          <td class="who"><span>2 days ago &middot; by R. Pillai</span></td>
+          <td><span class="thumb"><svg class="i sm"><use href="#ic-idcard"/></svg></span></td>
+          <td style="text-align:right"><div class="rowbtn"><span class="link"><svg class="i sm"><use href="#ic-eye"/></svg> View</span></div></td>
+        </tr>
+        <tr class="sel">
+          <td><span class="cbx on"><svg class="i sm"><use href="#ic-check"/></svg></span></td>
+          <td><div class="who"><div class="wav a-cyan">VN</div><div><b>Vihaan Nair</b><span>Adm STM/2026/0401</span></div></div></td>
+          <td><span class="clspill">1-A</span></td>
+          <td><div class="doctype"><div class="dtico"><svg class="i sm"><use href="#ic-file"/></svg></div><div><b>Transfer Certificate</b><span>PDF &middot; 780 KB</span></div></div></td>
+          <td class="who"><span>Yesterday &middot; by You</span></td>
+          <td><span class="thumb"><svg class="i sm"><use href="#ic-file"/></svg></span></td>
+          <td style="text-align:right"><div class="rowbtn"><span class="link"><svg class="i sm"><use href="#ic-eye"/></svg> View</span></div></td>
+        </tr>
+        <tr>
+          <td><span class="cbx"></span></td>
+          <td><div class="who"><div class="wav a-green">MG</div><div><b>Myra Gupta</b><span>Adm STM/2026/0398</span></div></div></td>
+          <td><span class="clspill">LKG</span></td>
+          <td><div class="doctype"><div class="dtico"><svg class="i sm"><use href="#ic-idcard"/></svg></div><div><b>Passport Photo</b><span>PNG &middot; 240 KB</span></div></div></td>
+          <td class="who"><span>Yesterday &middot; by You</span></td>
+          <td><span class="thumb"><svg class="i sm"><use href="#ic-idcard"/></svg></span></td>
+          <td style="text-align:right"><div class="rowbtn"><span class="link"><svg class="i sm"><use href="#ic-eye"/></svg> View</span></div></td>
+        </tr>
+        <tr>
+          <td><span class="cbx"></span></td>
+          <td><div class="who"><div class="wav a-amber">KR</div><div><b>Kabir Reddy</b><span>Adm STM/2026/0388</span></div></div></td>
+          <td><span class="clspill">6-A</span></td>
+          <td><div class="doctype"><div class="dtico"><svg class="i sm"><use href="#ic-file"/></svg></div><div><b>Previous Marksheet</b><span>PDF &middot; 1.6 MB</span></div></div></td>
+          <td class="who"><span>3 days ago &middot; by R. Pillai</span></td>
+          <td><span class="thumb"><svg class="i sm"><use href="#ic-file"/></svg></span></td>
+          <td style="text-align:right"><div class="rowbtn"><span class="link"><svg class="i sm"><use href="#ic-eye"/></svg> View</span></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note"><svg class="i chic"><use href="#ic-shield"/></svg><div><b>Completeness is live, not a nightly snapshot.</b> Each student&rsquo;s checklist is computed on read (required document types &minus; what&rsquo;s on file), so the moment a document is uploaded or verified the numbers update. The only scheduled job flips <b>verified &rarr; expired</b> when a validity date passes. Documents live in a private bucket &mdash; every &ldquo;View&rdquo; opens a fresh 60-second signed link, visible to admin &amp; principal (and a class teacher for their own students), never a public URL.</div></div>
+</div>
+
+<script>
+  document.querySelectorAll('.cbx').forEach(c=>{if(!c.closest('.bulkbar'))c.addEventListener('click',()=>{
+    c.classList.toggle('on');const tr=c.closest('tr');if(tr)tr.classList.toggle('sel',c.classList.contains('on'));
+    c.innerHTML=c.classList.contains('on')?'<svg class="i sm"><use href="#ic-check"/></svg>':'';
+  })});
+  document.querySelectorAll('.seg button, .fchip').forEach(b=>b.addEventListener('click',()=>{
+    if(b.classList.contains('fchip')){b.classList.toggle('on');return;}
+    b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  }));
+</script>
