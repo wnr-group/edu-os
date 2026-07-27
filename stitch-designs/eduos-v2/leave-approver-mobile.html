@@ -1,0 +1,193 @@
+<title>Edu-OS &middot; Leave inbox (teacher, mobile)</title>
+<style>
+  :root{
+    --accent:#4F46E5; --accent-2:#1D4ED8; --accent-weak:#EEF1FE; --accent-ink:#4338CA;
+    --ground-a:#EAECF9; --ground-b:#F6F5FC; --card:#FFFFFF;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A0B4; --line:#EBECF4;
+    --good:#10B981; --good-weak:#E7F7F0; --warn:#F59E0B; --warn-weak:#FDF3E2;
+    --crit:#EF4444; --crit-weak:#FCECEC; --info:#3B82F6; --info-weak:#E9F1FE;
+    --shadow:0 4px 20px rgba(29,78,216,.07); --shadow-lg:0 12px 40px rgba(29,78,216,.13);
+    --r:16px; --r-md:12px; --r-sm:10px; --r-pill:999px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;line-height:1.45;padding:34px 20px 60px;
+    background:radial-gradient(1200px 500px at 100% -5%,#E7E3FB,transparent 60%),linear-gradient(180deg,var(--ground-a),var(--ground-b) 42%)}
+  .i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .i.sm{width:14px;height:14px}.i.lg{width:20px;height:20px}
+  .lead{max-width:900px;margin:0 auto 26px}
+  .lead .crumb{font-size:12.5px;color:var(--accent-ink);font-weight:600;letter-spacing:.02em}
+  .lead h1{margin:6px 0 0;font-size:26px;letter-spacing:-.6px;font-weight:770}
+  .lead p{margin:6px 0 0;color:var(--ink-2);font-size:14px;max-width:660px}
+  .rail{display:flex;gap:34px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
+  .device-wrap{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .cap{font-size:12px;font-weight:700;color:var(--ink-2);display:flex;align-items:center;gap:8px}
+  .cap .dot{width:8px;height:8px;border-radius:50%}
+  .phone{width:352px;height:720px;background:var(--card);border-radius:42px;padding:11px;
+    box-shadow:0 30px 70px rgba(29,78,216,.16),0 4px 14px rgba(15,23,42,.08);border:1px solid #E4E5F2;position:relative}
+  .screen{position:relative;width:100%;height:100%;border-radius:32px;overflow:hidden;background:linear-gradient(180deg,#F4F5FC,#EEEFF8);display:flex;flex-direction:column}
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:26px;background:var(--card);border-radius:0 0 16px 16px;z-index:30}
+  .sbar{height:38px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 22px 5px;font-size:12px;font-weight:650;color:var(--ink);z-index:20}
+  .sbar .rt{display:flex;gap:5px;align-items:center}
+  .ahead{background:var(--card);padding:11px 16px 13px;border-bottom:1px solid var(--line);z-index:10}
+  .ahead .row1{display:flex;align-items:center;gap:11px}
+  .ava{width:38px;height:38px;border-radius:12px;background:#E4E9FF;color:#4338CA;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+  .ahead h2{margin:0;font-size:17px;font-weight:730;letter-spacing:-.3px}
+  .ahead .sub{font-size:11.5px;color:var(--ink-3);margin-top:1px}
+  .bell{margin-left:auto;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--ink-2);background:var(--ground-b);position:relative}
+  .bell .dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--crit);border:2px solid var(--card)}
+  .scroll{flex:1;overflow:hidden;position:relative;padding:14px 16px 0}
+  .seg2{display:flex;background:var(--ground-b);border:1px solid var(--line);border-radius:11px;padding:3px;gap:2px;margin-bottom:13px}
+  .seg2 b{flex:1;text-align:center;font-size:12px;font-weight:650;color:var(--ink-3);padding:7px;border-radius:8px}
+  .seg2 b.on{background:var(--card);color:var(--accent-ink);box-shadow:var(--shadow)}
+  .seg2 .c{font-size:10px;background:var(--warn-weak);color:var(--warn);border-radius:var(--r-pill);padding:0 6px;margin-left:4px;font-weight:800}
+  /* request card */
+  .lcard{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:13px;margin-bottom:11px;box-shadow:var(--shadow)}
+  .lcard .top{display:flex;align-items:center;gap:10px}
+  .lcard .sa{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}
+  .a-blue{background:#E4E9FF;color:#4338CA}.a-green{background:#DEF6EC;color:#0B7A55}.a-amber{background:#FCEFD6;color:#B4740B}.a-pink{background:#FCE7F0;color:#B83280}
+  .lcard .nm b{font-size:14px;font-weight:680}
+  .lcard .nm span{font-size:11px;color:var(--ink-3)}
+  .typetag{margin-left:auto;font-size:9.5px;font-weight:800;letter-spacing:.03em;padding:3px 8px;border-radius:var(--r-pill)}
+  .ty-sick{color:var(--crit);background:var(--crit-weak)}.ty-cas{color:var(--info);background:var(--info-weak)}.ty-oth{color:var(--ink-2);background:var(--ground-a)}
+  .lcard .dates{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:650;color:var(--ink-2);margin-top:11px}
+  .lcard .dates svg{color:var(--ink-3)}
+  .lcard .rt2{margin-left:auto;font-size:11px;color:var(--ink-3);font-weight:500}
+  .lcard .nt{font-size:12px;color:var(--ink-2);margin-top:9px;background:var(--ground-b);border-radius:10px;padding:9px 11px;line-height:1.45}
+  .lcard .acts{display:flex;gap:9px;margin-top:12px}
+  .abtn{flex:1;border:0;font-family:inherit;font-weight:700;font-size:13px;border-radius:11px;padding:11px;display:flex;align-items:center;justify-content:center;gap:7px}
+  .abtn.ok{background:var(--good);color:#fff}
+  .abtn.no{background:var(--card);border:1px solid #F3C7C7;color:var(--crit)}
+  /* attendance tie-in */
+  .selrow{display:flex;gap:9px;margin-bottom:12px}
+  .sel{flex:1;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:8px 11px}
+  .sel .l{font-size:9.5px;font-weight:800;letter-spacing:.06em;color:var(--ink-3);text-transform:uppercase}
+  .sel .v{font-size:13px;font-weight:600;margin-top:2px;display:flex;align-items:center;gap:6px}
+  .sel .v svg{margin-left:auto;color:var(--ink-3)}
+  .stu{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:9px 11px;display:flex;align-items:center;gap:10px;margin-bottom:8px;box-shadow:var(--shadow)}
+  .stu .sa2{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}
+  .stu .nm2{min-width:0;flex:1}
+  .stu .nm2 b{font-size:13.5px;font-weight:640;display:block;line-height:1.2}
+  .stu .nm2 span{font-size:11px;color:var(--ink-3)}
+  .pal{display:inline-flex;background:var(--ground-b);border:1px solid var(--line);border-radius:9px;padding:2px;gap:1px}
+  .pal b{font-size:11px;font-weight:700;color:var(--ink-3);padding:5px 9px;border-radius:7px}
+  .pal b.p-on{background:var(--good);color:#fff}
+  .stu.leave{background:#F3F6FF;border-color:#DEE3FA}
+  .exbadge{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;letter-spacing:.02em;color:var(--accent-ink);background:#fff;border:1px solid #DEE3FA;border-radius:var(--r-pill);padding:5px 10px}
+  .exhint{display:flex;gap:8px;align-items:flex-start;font-size:11px;color:var(--accent-ink);background:var(--accent-weak);border-radius:11px;padding:9px 11px;margin:2px 0 11px}
+  .exhint svg{margin-top:1px}
+  .nav{position:absolute;left:0;right:0;bottom:0;height:64px;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:center;padding-bottom:8px;z-index:16}
+  .nav a{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:var(--ink-3);text-decoration:none}
+  .nav a.on{color:var(--accent-ink)}.nav a.on .ni{background:var(--accent-weak)}
+  .nav .ni{width:34px;height:26px;border-radius:9px;display:grid;place-items:center;position:relative}
+  .nav .ni .b{position:absolute;top:-3px;right:2px;min-width:15px;height:15px;border-radius:9px;background:var(--crit);color:#fff;font-size:9px;font-weight:800;display:grid;place-items:center;padding:0 3px}
+  .fade{position:absolute;left:0;right:0;bottom:64px;height:70px;background:linear-gradient(180deg,transparent,#EEEFF8 70%);pointer-events:none;z-index:14}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="ic-note" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
+  <symbol id="ic-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="ic-home" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+  <symbol id="ic-check2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><path d="M9 15l2 2 4-4"/></symbol>
+  <symbol id="ic-inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+</defs></svg>
+
+<div class="lead">
+  <div class="crumb">SUB-PROJECT #3 &middot; LEAVE</div>
+  <h1>Teacher &mdash; approve on the go</h1>
+  <p>The class teacher clears requests from a mobile inbox (or on web). Once approved, those students show an <b>&ldquo;On leave &middot; Excused&rdquo;</b> badge right on the attendance sheet &mdash; so they&rsquo;re never marked absent by mistake.</p>
+</div>
+
+<div class="rail">
+
+  <!-- LEAVE INBOX -->
+  <div class="device-wrap">
+    <div class="cap"><span class="dot" style="background:var(--accent)"></span> Leave inbox</div>
+    <div class="phone"><div class="screen"><div class="notch"></div>
+      <div class="sbar"><span>9:02</span><div class="rt"><span>5G</span><span>&#9646;&#9646;&#9646;&#9646;</span></div></div>
+      <div class="ahead"><div class="row1">
+        <div class="ava">SR</div>
+        <div><h2>Leave requests</h2><div class="sub">Ms. Rao &middot; Class 8&ndash;B homeroom</div></div>
+        <div class="bell"><svg class="i sm"><use href="#ic-bell"/></svg><span class="dot"></span></div>
+      </div></div>
+      <div class="scroll">
+        <div class="seg2"><b class="on">Pending <span class="c">4</span></b><b>Approved</b><b>Rejected</b></div>
+
+        <div class="lcard">
+          <div class="top">
+            <div class="sa a-blue">AK</div>
+            <div class="nm"><b>Aarav Kapoor</b><br/><span>Roll 01</span></div>
+            <span class="typetag ty-sick">SICK</span>
+          </div>
+          <div class="dates"><svg class="i sm"><use href="#ic-cal"/></svg> 24&ndash;26 Nov &middot; 3 days <span class="rt2">2h ago</span></div>
+          <div class="nt">Viral fever, doctor advised 3 days rest.</div>
+          <div class="acts"><button class="abtn no"><svg class="i sm"><use href="#ic-x"/></svg> Decline</button><button class="abtn ok"><svg class="i sm"><use href="#ic-check"/></svg> Approve</button></div>
+        </div>
+
+        <div class="lcard">
+          <div class="top">
+            <div class="sa a-green">IV</div>
+            <div class="nm"><b>Ishaan Verma</b><br/><span>Roll 03</span></div>
+            <span class="typetag ty-sick">SICK</span>
+          </div>
+          <div class="dates"><svg class="i sm"><use href="#ic-cal"/></svg> 21&ndash;22 Nov &middot; retroactive <span class="rt2">1d ago</span></div>
+          <div class="nt">Was down with flu last week &mdash; please excuse.</div>
+          <div class="acts"><button class="abtn no"><svg class="i sm"><use href="#ic-x"/></svg> Decline</button><button class="abtn ok"><svg class="i sm"><use href="#ic-check"/></svg> Approve</button></div>
+        </div>
+        <div style="height:80px"></div>
+      </div>
+      <div class="fade"></div>
+      <div class="nav">
+        <a><span class="ni"><svg class="i"><use href="#ic-home"/></svg></span>Home</a>
+        <a><span class="ni"><svg class="i"><use href="#ic-check2"/></svg></span>Attendance</a>
+        <a class="on"><span class="ni"><svg class="i"><use href="#ic-inbox"/></svg><span class="b">4</span></span>Leave</a>
+        <a><span class="ni"><svg class="i"><use href="#ic-user"/></svg></span>Profile</a>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- ATTENDANCE TIE-IN -->
+  <div class="device-wrap">
+    <div class="cap"><span class="dot" style="background:var(--good)"></span> Attendance sheet &mdash; the badge tie-in</div>
+    <div class="phone"><div class="screen"><div class="notch"></div>
+      <div class="sbar"><span>9:24</span><div class="rt"><span>5G</span><span>&#9646;&#9646;&#9646;&#9646;</span></div></div>
+      <div class="ahead"><div class="row1">
+        <div class="ava">SR</div>
+        <div><h2>Attendance</h2><div class="sub">Class 8&ndash;B &middot; Mon, 24 Nov</div></div>
+        <div class="bell"><svg class="i sm"><use href="#ic-bell"/></svg></div>
+      </div></div>
+      <div class="scroll">
+        <div class="selrow">
+          <div class="sel"><div class="l">Section</div><div class="v">Class 8&ndash;B <svg class="i sm"><use href="#ic-chev"/></svg></div></div>
+          <div class="sel"><div class="l">Session</div><div class="v">Full day <svg class="i sm"><use href="#ic-chev"/></svg></div></div>
+        </div>
+        <div class="exhint"><svg class="i sm"><use href="#ic-shield"/></svg><div><b>1 student on approved leave today</b> &mdash; locked to Excused, out of the count.</div></div>
+
+        <div class="stu leave">
+          <div class="sa2 a-blue">AK</div>
+          <div class="nm2"><b>Aarav Kapoor</b><span>Roll 01 &middot; Sick leave 24&ndash;26 Nov</span></div>
+          <span class="exbadge"><svg class="i sm"><use href="#ic-shield"/></svg> EXCUSED</span>
+        </div>
+        <div class="stu"><div class="sa2 a-pink">DS</div><div class="nm2"><b>Diya Sharma</b><span>Roll 02</span></div><div class="pal"><b class="p-on">P</b><b>A</b><b>L</b></div></div>
+        <div class="stu"><div class="sa2 a-green">IV</div><div class="nm2"><b>Ishaan Verma</b><span>Roll 03</span></div><div class="pal"><b class="p-on">P</b><b>A</b><b>L</b></div></div>
+        <div class="stu"><div class="sa2 a-amber">KN</div><div class="nm2"><b>Kavya Nair</b><span>Roll 04</span></div><div class="pal"><b class="p-on">P</b><b>A</b><b>L</b></div></div>
+        <div style="height:80px"></div>
+      </div>
+      <div class="fade"></div>
+      <div class="nav">
+        <a><span class="ni"><svg class="i"><use href="#ic-home"/></svg></span>Home</a>
+        <a class="on"><span class="ni"><svg class="i"><use href="#ic-check2"/></svg></span>Attendance</a>
+        <a><span class="ni"><svg class="i"><use href="#ic-inbox"/></svg><span class="b">4</span></span>Leave</a>
+        <a><span class="ni"><svg class="i"><use href="#ic-user"/></svg></span>Profile</a>
+      </div>
+    </div></div>
+  </div>
+
+</div>
