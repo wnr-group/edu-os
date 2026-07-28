@@ -101,6 +101,7 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
       academic: [{ label: "Certificates", href: "/principal/certificates" }],
       administration: [
         { label: "Discipline", href: "/principal/discipline" },
+        { label: "Geo Review", href: "/principal/attendance/geo-review" },
         { label: "Reports", href: "/principal/reports" },
       ],
       communication: [{ label: "Feedback", href: "/principal/feedback" }],
