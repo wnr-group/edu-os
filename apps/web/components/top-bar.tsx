@@ -48,10 +48,13 @@ function NavLink({ item, isActive, accent }: { item: NavItem; isActive: boolean;
     <Link
       href={item.href}
       aria-current={isActive ? "page" : undefined}
-      className="group relative flex items-center px-1 py-1.5 text-sm transition-colors"
+      className="group relative flex items-center gap-1.5 px-1 py-1.5 text-sm transition-colors"
       style={{ color: isActive ? accent : "#475569", fontWeight: isActive ? 600 : 500 }}
     >
       {item.label}
+      {!!item.badge && (
+        <span className="rounded-full bg-[#FDF3E2] px-1.5 py-0.5 text-[10px] font-bold text-[#F59E0B]">{item.badge}</span>
+      )}
       {isActive && (
         <span
           className="absolute inset-x-0 -bottom-[5px] h-[2px] origin-left animate-nav-underline rounded-full"
@@ -141,6 +144,9 @@ export function TopBar({
               >
                 More
                 <ChevronDown className="h-3.5 w-3.5 transition-transform group-data-[popup-open]:rotate-180" />
+                {sections.some((s) => s.items.some((i) => !!i.badge)) && (
+                  <span className="absolute -right-1.5 -top-1 h-2 w-2 rounded-full bg-[#F59E0B]" />
+                )}
                 {moreActive && (
                   <span
                     className="absolute inset-x-0 -bottom-[5px] h-[2px] origin-left animate-nav-underline rounded-full"
@@ -158,7 +164,10 @@ export function TopBar({
                     <DropdownMenuLabel>{section.label}</DropdownMenuLabel>
                     {section.items.map((item) => (
                       <DropdownMenuItem key={item.href} render={<Link href={item.href} />}>
-                        {item.label}
+                        <span className="flex-1">{item.label}</span>
+                        {!!item.badge && (
+                          <span className="rounded-full bg-[#FDF3E2] px-1.5 py-0.5 text-[10px] font-bold text-[#F59E0B]">{item.badge}</span>
+                        )}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuGroup>

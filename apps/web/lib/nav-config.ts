@@ -1,6 +1,7 @@
 export interface NavItem {
   label: string;
   href: string;
+  badge?: number;
 }
 
 export interface NavSection {
@@ -51,6 +52,7 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
         { label: "Fees", href: "/admin/fees" },
         { label: "Discipline", href: "/admin/discipline" },
         { label: "Fee Types", href: "/admin/settings/fee-types" },
+        { label: "Geo Attendance", href: "/admin/settings/geo-attendance" },
         { label: "Reports", href: "/admin/reports" },
       ],
       communication: [
@@ -112,4 +114,14 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
 /** Every nav item for a role, flattened — used for active-route matching and the mobile bottom tab bar. */
 export function allNavItems(config: RoleNavConfig): NavItem[] {
   return [...config.frequent, ...config.sections.flatMap((s) => s.items)];
+}
+
+/** Returns a copy of `config` with `badge` attached to the item matching `href`. */
+export function withBadge(config: RoleNavConfig, href: string, count: number): RoleNavConfig {
+  if (count <= 0) return config;
+  const patch = (item: NavItem): NavItem => (item.href === href ? { ...item, badge: count } : item);
+  return {
+    frequent: config.frequent.map(patch),
+    sections: config.sections.map((s) => ({ ...s, items: s.items.map(patch) })),
+  };
 }

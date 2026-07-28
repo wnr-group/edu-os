@@ -157,3 +157,16 @@ export async function markGroupReviewed(supabase: SupabaseClient, recordIds: str
     .in("id", recordIds);
   return { error: error?.message ?? null };
 }
+
+export async function fetchUnreviewedFlagGroupCount(supabase: SupabaseClient, schoolId: string): Promise<number> {
+  const sinceDate = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const { data } = await supabase
+    .from("attendance_records")
+    .select("section_id, date, session")
+    .eq("school_id", schoolId)
+    .in("geo_status", ["outside", "no_gps"])
+    .is("geo_reviewed_at", null)
+    .gte("date", sinceDate);
+  const keys = new Set((data ?? []).map((r) => `${r.section_id}|${r.date}|${r.session}`));
+  return keys.size;
+}

@@ -4,7 +4,8 @@ import { cookies, headers } from "next/headers";
 import { createServerSupabaseClient } from "../../lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getActiveRoles, topRole } from "@/lib/auth/roles";
-import { NAV_CONFIG, allNavItems } from "@/lib/nav-config";
+import { NAV_CONFIG, allNavItems, withBadge } from "@/lib/nav-config";
+import { fetchUnreviewedFlagGroupCount } from "@/lib/geo-attendance";
 import { TopBar } from "@/components/top-bar";
 import { MobileNav } from "@/components/mobile-nav";
 import { Breadcrumbs } from "@/components/breadcrumbs";
@@ -169,7 +170,12 @@ export default async function SchoolLayout({
     displayRole = realRole;
   }
 
-  const navConfig = NAV_CONFIG[navKey] ?? { frequent: [], sections: [] };
+  let navConfig = NAV_CONFIG[navKey] ?? { frequent: [], sections: [] };
+  if (schoolId && (displayRole === "school_admin" || displayRole === "principal")) {
+    const unreviewedCount = await fetchUnreviewedFlagGroupCount(supabase, schoolId);
+    const badgeHref = displayRole === "school_admin" ? "/admin/settings/geo-attendance" : "/principal/attendance/geo-review";
+    navConfig = withBadge(navConfig, badgeHref, unreviewedCount);
+  }
 // Mobile has no top nav, so its drawer/bottom-tab-bar needs every page,
 // frequent + sectioned, flattened into one list (the original pattern).
 const allItems = allNavItems(navConfig);
