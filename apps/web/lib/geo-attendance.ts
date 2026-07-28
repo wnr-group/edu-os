@@ -71,3 +71,89 @@ export async function deleteGeofence(supabase: SupabaseClient, id: string): Prom
   const { error } = await supabase.from("school_geofences").delete().eq("id", id);
   return { error: error?.message ?? null };
 }
+
+export type GeoFlagStatus = "outside" | "no_gps";
+
+export interface GeoFlagGroup {
+  key: string;
+  teacherName: string;
+  sectionLabel: string;
+  session: string;
+  date: string;
+  geoStatus: GeoFlagStatus;
+  distanceM: number | null;
+  accuracyM: number | null;
+  recordIds: string[];
+  reviewed: boolean;
+  reviewedAt: string | null;
+  reviewedByName: string | null;
+}
+
+interface FlagRow {
+  id: string;
+  section_id: string;
+  date: string;
+  session: string;
+  geo_status: GeoFlagStatus;
+  geo_distance_m: number | null;
+  gps_accuracy_m: number | null;
+  geo_reviewed_at: string | null;
+  marked_by: string | null;
+  marker: { full_name: string | null } | null;
+  reviewer: { full_name: string | null } | null;
+  section: { name: string; class: { name: string } | null } | null;
+}
+
+function groupFlagRows(rows: FlagRow[]): GeoFlagGroup[] {
+  const groups = new Map<string, GeoFlagGroup & { _allReviewed: boolean }>();
+  for (const r of rows) {
+    const key = `${r.section_id}|${r.date}|${r.session}`;
+    const className = r.section?.class?.name ?? "";
+    const sectionName = r.section?.name ?? "";
+    const existing = groups.get(key);
+    if (existing) {
+      existing.recordIds.push(r.id);
+      existing._allReviewed = existing._allReviewed && !!r.geo_reviewed_at;
+      continue;
+    }
+    groups.set(key, {
+      key,
+      teacherName: r.marker?.full_name ?? "Unknown",
+      sectionLabel: className && sectionName ? `${className}-${sectionName}` : sectionName || "—",
+      session: r.session,
+      date: r.date,
+      geoStatus: r.geo_status,
+      distanceM: r.geo_distance_m,
+      accuracyM: r.gps_accuracy_m,
+      recordIds: [r.id],
+      reviewed: !!r.geo_reviewed_at,
+      reviewedAt: r.geo_reviewed_at,
+      reviewedByName: r.reviewer?.full_name ?? null,
+      _allReviewed: !!r.geo_reviewed_at,
+    });
+  }
+  return [...groups.values()]
+    .map((g) => ({ ...g, reviewed: g._allReviewed }))
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+}
+
+export async function fetchFlaggedGroups(supabase: SupabaseClient, schoolId: string, sinceDate: string): Promise<GeoFlagGroup[]> {
+  const { data } = await supabase
+    .from("attendance_records")
+    .select(
+      "id, section_id, date, session, geo_status, geo_distance_m, gps_accuracy_m, geo_reviewed_at, marked_by, marker:profiles!marked_by(full_name), reviewer:profiles!geo_reviewed_by(full_name), section:sections(name, class:classes(name))",
+    )
+    .eq("school_id", schoolId)
+    .in("geo_status", ["outside", "no_gps"])
+    .gte("date", sinceDate)
+    .order("date", { ascending: false });
+  return groupFlagRows((data ?? []) as unknown as FlagRow[]);
+}
+
+export async function markGroupReviewed(supabase: SupabaseClient, recordIds: string[], reviewerId: string): Promise<{ error: string | null }> {
+  const { error } = await supabase
+    .from("attendance_records")
+    .update({ geo_reviewed_at: new Date().toISOString(), geo_reviewed_by: reviewerId })
+    .in("id", recordIds);
+  return { error: error?.message ?? null };
+}
