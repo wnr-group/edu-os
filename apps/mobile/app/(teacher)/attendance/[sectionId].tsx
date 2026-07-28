@@ -17,6 +17,9 @@ import {
   fetchSectionAttendance, fetchRecentStats, fetchMarkedCount, clearAttendance,
 } from "../../../lib/attendance";
 import { sendAbsenceNotification } from "../../../lib/notifications";
+import { getActiveGeofences, getAdvisoryPosition, computeAdvisory } from "../../../lib/location";
+import type { Advisory } from "../../../lib/location";
+import { GeoAdvisoryChip } from "../../../components/GeoAdvisoryChip";
 
 export default function MarkAttendance() {
   const theme = useTheme();
@@ -36,6 +39,7 @@ export default function MarkAttendance() {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notifying, setNotifying] = useState<Record<string, boolean>>({});
+  const [advisory, setAdvisory] = useState<Advisory | null>(null);
 
   const marked = rows.some((r) => r.recordId !== null);
 
@@ -54,6 +58,20 @@ export default function MarkAttendance() {
   }, [sectionId, date, session]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const computeAdvisoryAsync = async () => {
+      const geofences = await getActiveGeofences(supabase, schoolId);
+      const pos = await getAdvisoryPosition();
+      if (pos && geofences.length > 0) {
+        const result = computeAdvisory(pos.lat, pos.lng, pos.accuracy, geofences);
+        setAdvisory(result);
+      } else {
+        setAdvisory(null);
+      }
+    };
+    computeAdvisoryAsync();
+  }, [schoolId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true); await load(); setRefreshing(false);
@@ -172,6 +190,7 @@ export default function MarkAttendance() {
             </Text>
           </View>
           <SessionSelector value={session} onChange={setSession} disabled={disabled} />
+          <GeoAdvisoryChip advisory={advisory} />
           {/* Last-7-marked-days strip */}
           {stats.length > 0 && (
             <View style={{ flexDirection: "row", gap: 6, alignItems: "flex-end", height: 44 }}>
