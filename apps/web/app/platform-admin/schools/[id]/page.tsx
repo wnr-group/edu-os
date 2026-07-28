@@ -6,6 +6,8 @@ import { ViewAsButton } from "./view-as-button";
 import { OverviewTab } from "./overview-tab";
 import { UsersTab } from "./users-tab";
 import { ImportTab } from "./import-tab";
+import { ModulesTab } from "./modules-tab";
+import type { FeatureKey } from "@erp/shared";
 
 export default async function SchoolDetailPage({
   params,
@@ -81,6 +83,16 @@ export default async function SchoolDetailPage({
         { key: "overview", label: "Overview", content: <OverviewTab school={school} roleCounts={roleCounts} /> },
         { key: "users", label: "Users", content: <UsersTab schoolId={school.id} users={users} /> },
         { key: "import", label: "Bulk Import", content: <ImportTab schoolId={school.id} /> },
+        {
+          key: "modules",
+          label: "Modules",
+          content: (
+            <ModulesTab
+              schoolId={school.id}
+              featuresEnabled={(school.features_enabled ?? {}) as Partial<Record<FeatureKey, boolean>>}
+            />
+          ),
+        },
       ]}
     />
   );

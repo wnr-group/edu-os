@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getActiveRoles, hasAnyRole } from "@/lib/auth/roles";
+import { logAudit } from "@erp/shared";
 
 export async function PATCH(
   request: NextRequest,
@@ -18,7 +19,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const allowed = ["name", "domain", "primary_color", "contact_email", "app_store_url", "play_store_url"];
+  const allowed = ["name", "domain", "primary_color", "contact_email", "app_store_url", "play_store_url", "features_enabled"];
   const updates: Record<string, unknown> = {};
   for (const key of allowed) {
     if (key in body) updates[key] = body[key];
@@ -37,5 +38,18 @@ export async function PATCH(
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  // logAudit reads the caller's session via `supabase` (not adminClient) —
+  // it needs auth.getUser() to resolve who made the change.
+  if ("features_enabled" in updates) {
+    await logAudit(supabase, {
+      schoolId: id,
+      action: "school.features_updated",
+      entityType: "school",
+      entityId: id,
+      metadata: { features_enabled: updates.features_enabled },
+    });
+  }
+
   return NextResponse.json(data);
 }
