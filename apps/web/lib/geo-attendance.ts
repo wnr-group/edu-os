@@ -138,16 +138,42 @@ function groupFlagRows(rows: FlagRow[]): GeoFlagGroup[] {
 }
 
 export async function fetchFlaggedGroups(supabase: SupabaseClient, schoolId: string, sinceDate: string): Promise<GeoFlagGroup[]> {
-  const { data } = await supabase
+  const { data: rows } = await supabase
     .from("attendance_records")
     .select(
-      "id, section_id, date, session, geo_status, geo_distance_m, gps_accuracy_m, geo_reviewed_at, marked_by, marker:profiles!marked_by(full_name), reviewer:profiles!geo_reviewed_by(full_name), section:sections(name, class:classes(name))",
+      "id, section_id, date, session, geo_status, geo_distance_m, gps_accuracy_m, geo_reviewed_at, marked_by, geo_reviewed_by, section:sections(name, class:classes(name))",
     )
     .eq("school_id", schoolId)
     .in("geo_status", ["outside", "no_gps"])
     .gte("date", sinceDate)
     .order("date", { ascending: false });
-  return groupFlagRows((data ?? []) as unknown as FlagRow[]);
+
+  if (!rows || rows.length === 0) return [];
+
+  // Fetch profile names for marker and reviewer users
+  const userIds = new Set<string>();
+  rows.forEach(row => {
+    if (row.marked_by) userIds.add(row.marked_by);
+    if (row.geo_reviewed_by) userIds.add(row.geo_reviewed_by);
+  });
+
+  let profileMap = new Map<string, string>();
+  if (userIds.size > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", Array.from(userIds));
+    profileMap = new Map((profiles || []).map(p => [p.id, p.full_name]));
+  }
+
+  const rowsWithProfiles = rows.map(row => ({
+    ...row,
+    marker: row.marked_by ? { full_name: profileMap.get(row.marked_by) || null } : null,
+    reviewer: row.geo_reviewed_by ? { full_name: profileMap.get(row.geo_reviewed_by) || null } : null,
+    // Remove geo_reviewed_by from the final object since FlagRow doesn't expect it
+  } as unknown as FlagRow));
+
+  return groupFlagRows(rowsWithProfiles);
 }
 
 export async function markGroupReviewed(supabase: SupabaseClient, recordIds: string[], reviewerId: string): Promise<{ error: string | null }> {
