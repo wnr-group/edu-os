@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { MapContainer, TileLayer, Marker, Circle, useMapEvents } from "react-leaflet";
+import { useEffect, useMemo, useState } from "react";
+import { MapContainer, TileLayer, Marker, Circle, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { destinationPoint, haversineMeters } from "@/lib/geo-attendance";
@@ -28,6 +28,7 @@ interface GeofenceMapProps {
   onRadiusChange: (radiusM: number) => void;
   dropPinArmed: boolean;
   onPinDropped: () => void;
+  flyToRequest?: { lat: number; lng: number } | null;
 }
 
 function ClickToDropPin({ armed, onCenterChange, onPinDropped }: { armed: boolean; onCenterChange: (lat: number, lng: number) => void; onPinDropped: () => void }) {
@@ -41,7 +42,16 @@ function ClickToDropPin({ armed, onCenterChange, onPinDropped }: { armed: boolea
   return null;
 }
 
-export default function GeofenceMap({ centerLat, centerLng, radiusM, onCenterChange, onRadiusChange, dropPinArmed, onPinDropped }: GeofenceMapProps) {
+function FlyToOnSelect({ request }: { request: { lat: number; lng: number } | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!request) return;
+    map.flyTo([request.lat, request.lng], map.getZoom(), { animate: true, duration: 1 });
+  }, [request, map]);
+  return null;
+}
+
+export default function GeofenceMap({ centerLat, centerLng, radiusM, onCenterChange, onRadiusChange, dropPinArmed, onPinDropped, flyToRequest }: GeofenceMapProps) {
   const [dragging, setDragging] = useState(false);
   const handlePos = useMemo(() => destinationPoint(centerLat, centerLng, radiusM, 90), [centerLat, centerLng, radiusM]);
 
@@ -49,6 +59,7 @@ export default function GeofenceMap({ centerLat, centerLng, radiusM, onCenterCha
     <MapContainer center={[centerLat, centerLng]} zoom={16} style={{ height: 340, width: "100%", cursor: dropPinArmed ? "crosshair" : undefined }}>
       <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       <ClickToDropPin armed={dropPinArmed} onCenterChange={onCenterChange} onPinDropped={onPinDropped} />
+      <FlyToOnSelect request={flyToRequest ?? null} />
       <Circle center={[centerLat, centerLng]} radius={radiusM} pathOptions={{ color: "#4F46E5", weight: 2, dashArray: "6 6", fillColor: "#4F46E5", fillOpacity: 0.12 }} />
       <Marker
         position={[centerLat, centerLng]}
