@@ -307,16 +307,21 @@ export default function MarkAttendance() {
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: theme.warning + "1A", borderRadius: 8 }}>
                 <Ionicons name="flag" size={16} color={theme.warning} />
                 <Text style={{ fontSize: 12, color: theme.warning, fontFamily: "Inter_500Medium", flex: 1 }}>
-                  Staff member is off-campus. Attendance will be flagged for review.
+                  You're outside the campus geofence. Marking still works — this submission is tagged "off-campus" and shows up in the principal's review list. No reason needed.
                 </Text>
               </View>
             )}
             <PrimaryButton
-              label={marked ? "Update Attendance" : `Submit · ${markedCount}/${rows.length} marked`}
+              label={isOffCampus ? "Submit (off-campus)" : marked ? "Update Attendance" : `Submit · ${markedCount}/${rows.length} marked`}
               onPress={submit}
               loading={saving}
               style={isOffCampus ? { backgroundColor: theme.warning, opacity: 0.9 } : undefined}
             />
+            {isOffCampus && (
+              <Text style={{ textAlign: "center", fontSize: 11, fontFamily: "Inter_400Regular", color: theme.textMuted, marginTop: 8 }}>
+                Saved &amp; flagged · principal can review later
+              </Text>
+            )}
           </View>
         )}
       </View>
