@@ -77,6 +77,9 @@ export async function GET(request: NextRequest) {
 
   let cacheKey: string;
   if (type === "reverse") {
+    if (!request.nextUrl.searchParams.has("lat") || !request.nextUrl.searchParams.has("lon")) {
+      return NextResponse.json({ error: "invalid lat/lon" }, { status: 400 });
+    }
     const lat = Number(request.nextUrl.searchParams.get("lat"));
     const lon = Number(request.nextUrl.searchParams.get("lon"));
     if (!isFiniteInRange(lat, -90, 90) || !isFiniteInRange(lon, -180, 180)) {
@@ -87,7 +90,10 @@ export async function GET(request: NextRequest) {
     cacheKey = `reverse:${lat.toFixed(5)},${lon.toFixed(5)}`;
   } else {
     const rawQ = request.nextUrl.searchParams.get("q") ?? "";
-    const q = rawQ.replace(CONTROL_CHARS, "").trim().slice(0, MAX_QUERY_LENGTH);
+    const q = rawQ.replace(CONTROL_CHARS, "").trim();
+    if (q.length > MAX_QUERY_LENGTH) {
+      return NextResponse.json({ error: "q is required" }, { status: 400 });
+    }
     if (!q) {
       return NextResponse.json({ error: "q is required" }, { status: 400 });
     }
