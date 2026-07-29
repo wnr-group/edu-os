@@ -463,7 +463,6 @@ export default function ParentFees() {
                 alignItems: "center",
                 marginTop: 8,
               }}
-              activeOpacity={0.8}
             >
               <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#fff" }}>
                 {payingId === "selected" ? "Processing…" : `Pay ₹${lineItems.filter((li) => selectedIds.has(li.id)).reduce((s, li) => s + li.outstanding, 0).toLocaleString("en-IN")}`}

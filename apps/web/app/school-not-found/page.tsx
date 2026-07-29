@@ -20,6 +20,7 @@ export default function SchoolNotFound() {
             alt="EduOS"
             width={88}
             height={88}
+            priority
             className="drop-shadow-sm"
           />
         </HeroReveal>

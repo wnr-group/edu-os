@@ -8,9 +8,10 @@ interface PrimaryButtonProps {
   compact?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
+  color?: string;
 }
 
-export function PrimaryButton({ label, onPress, loading, compact, disabled, style }: PrimaryButtonProps) {
+export function PrimaryButton({ label, onPress, loading, compact, disabled, style, color }: PrimaryButtonProps) {
   const theme = useTheme();
   return (
     <TouchableOpacity
@@ -19,7 +20,7 @@ export function PrimaryButton({ label, onPress, loading, compact, disabled, styl
       activeOpacity={0.8}
       style={[
         {
-          backgroundColor: disabled ? theme.textMuted : theme.primary,
+          backgroundColor: disabled ? theme.textMuted : (color ?? theme.primary),
           borderRadius: 12,
           paddingVertical: compact ? 10 : 16,
           paddingHorizontal: compact ? 20 : 24,
