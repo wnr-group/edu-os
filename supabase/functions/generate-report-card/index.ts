@@ -26,11 +26,24 @@ serve(async (req) => {
       .eq("id", studentId)
       .single();
 
-    const { data: exam } = await supabase
+     const { data: exam } = await supabase
       .from("exams")
       .select("name, school_id, academic_year_id")
       .eq("id", examId)
       .single();
+
+    if (exam?.school_id) {
+      const { data: enabled } = await supabase.rpc("feature_enabled", {
+        p_school_id: exam.school_id,
+        p_key: "report_cards",
+      });
+      if (!enabled) {
+        return new Response(
+          JSON.stringify({ error: "Report cards are disabled for this school" }),
+          { status: 403, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     // Match the enrollment to the exam's academic year so the report card shows
     // the class/section/roll the student held *that* year, not the current one.

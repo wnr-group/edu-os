@@ -108,8 +108,8 @@ export function AnimatedSplash({ onFinish }: Props) {
 
       {/* School name */}
       <Animated.View style={[textAnimStyle, { marginTop: 20 }]}>
-        <Text style={{ fontSize: 26, fontFamily: "Inter_700Bold", color: "#1a8fb5", letterSpacing: -0.5 }}>
-          ConnectMySkool
+        <Text style={{ fontSize: 26, fontFamily: "Inter_700Bold", color: "#1d4ed8", letterSpacing: -0.5 }}>
+          EduOS
         </Text>
       </Animated.View>
 

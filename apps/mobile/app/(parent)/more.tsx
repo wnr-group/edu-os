@@ -7,7 +7,7 @@ import * as ImagePicker from "expo-image-picker";
 import { File } from "expo-file-system";
 import { supabase, fixStorageUrl, SCHOOL_ID } from "../../lib/supabase";
 import { useActiveContext, clearActiveContext } from "../../lib/active-context";
-import { useTheme } from "../../lib/theme";
+import { useTheme, useFeature } from "../../lib/theme";
 import { ListItem } from "../../components/ListItem";
 import { Avatar } from "../../components/Avatar";
 import { SectionHeader } from "../../components/SectionHeader";
@@ -19,6 +19,9 @@ type Section = "menu" | "notifications" | "announcements" | "discipline" | "feed
 
 export default function ParentMore() {
   const theme = useTheme();
+  const feedbackEnabled = useFeature("feedback");
+  const announcementsEnabled = useFeature("announcements");
+  const disciplineEnabled = useFeature("discipline");
   const router = useRouter();
   const { studentId: activeStudentId, activeYearId } = useActiveContext();
   const { section: sectionParam } = useLocalSearchParams<{ section?: string }>();
@@ -167,20 +170,26 @@ export default function ParentMore() {
       Alert.alert("Required", "Please fill in subject and message."); return;
     }
     setSubmitting(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from("feedback").insert({
-      school_id: SCHOOL_ID,
-      from_user_id: user?.id,
-      to_role: "teacher",
-      to_user_id: classteacherId,
-      subject: teacherFeedback.subject.trim(),
-      message: teacherFeedback.message.trim(),
-      status: "open",
-    });
-    setTeacherFeedback({ subject: "", message: "" });
-    setSubmitting(false);
-    setSection("menu");
-    Alert.alert("Sent", "Your message has been sent to the teacher.");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error } = await supabase.from("feedback").insert({
+        school_id: SCHOOL_ID,
+        from_user_id: user?.id,
+        to_role: "teacher",
+        to_user_id: classteacherId,
+        subject: teacherFeedback.subject.trim(),
+        message: teacherFeedback.message.trim(),
+        status: "open",
+      });
+      if (error) throw error;
+      setTeacherFeedback({ subject: "", message: "" });
+      setSection("menu");
+      Alert.alert("Sent", "Your message has been sent to the teacher.");
+    } catch {
+      Alert.alert("Unable to send", "Feedback may be unavailable for your school right now.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function submitManagementFeedback() {
@@ -188,31 +197,37 @@ export default function ParentMore() {
       Alert.alert("Required", "Please fill in subject and message."); return;
     }
     setSubmitting(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from("feedback").insert([
-      {
-        school_id: SCHOOL_ID,
-        from_user_id: user?.id,
-        to_role: "principal",
-        to_user_id: null,
-        subject: managementFeedback.subject.trim(),
-        message: managementFeedback.message.trim(),
-        status: "open",
-      },
-      {
-        school_id: SCHOOL_ID,
-        from_user_id: user?.id,
-        to_role: "school_admin",
-        to_user_id: null,
-        subject: managementFeedback.subject.trim(),
-        message: managementFeedback.message.trim(),
-        status: "open",
-      },
-    ]);
-    setManagementFeedback({ subject: "", message: "" });
-    setSubmitting(false);
-    setSection("menu");
-    Alert.alert("Sent", "Your message has been sent to the management.");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error } = await supabase.from("feedback").insert([
+        {
+          school_id: SCHOOL_ID,
+          from_user_id: user?.id,
+          to_role: "principal",
+          to_user_id: null,
+          subject: managementFeedback.subject.trim(),
+          message: managementFeedback.message.trim(),
+          status: "open",
+        },
+        {
+          school_id: SCHOOL_ID,
+          from_user_id: user?.id,
+          to_role: "school_admin",
+          to_user_id: null,
+          subject: managementFeedback.subject.trim(),
+          message: managementFeedback.message.trim(),
+          status: "open",
+        },
+      ]);
+      if (error) throw error;
+      setManagementFeedback({ subject: "", message: "" });
+      setSection("menu");
+      Alert.alert("Sent", "Your message has been sent to the management.");
+    } catch {
+      Alert.alert("Unable to send", "Feedback may be unavailable for your school right now.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function handlePhotoUpload() {
@@ -319,7 +334,15 @@ export default function ParentMore() {
               </View>
             ))
           )}
-          {section === "announcements" && (
+          {section === "announcements" && !announcementsEnabled && (
+            <View style={{ alignItems: "center", paddingVertical: 40, gap: 10 }}>
+              <Ionicons name="megaphone-outline" size={32} color={theme.textMuted} />
+              <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: theme.textMuted, textAlign: "center", paddingHorizontal: 24 }}>
+                Announcements are currently unavailable for your school.
+              </Text>
+            </View>
+          )}
+          {section === "announcements" && announcementsEnabled && (
             loading ? [0,1,2].map(i => <SkeletonCard key={i} />) :
             announcements.map((a) => (
               <View key={a.id} style={{ backgroundColor: theme.surface, borderRadius: 16, padding: 16, gap: 8 }}>
@@ -329,7 +352,15 @@ export default function ParentMore() {
               </View>
             ))
           )}
-          {section === "discipline" && (
+          {section === "discipline" && !disciplineEnabled && (
+            <View style={{ alignItems: "center", paddingVertical: 40, gap: 10 }}>
+              <Ionicons name="warning-outline" size={32} color={theme.textMuted} />
+              <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: theme.textMuted, textAlign: "center", paddingHorizontal: 24 }}>
+                Discipline records are currently unavailable for your school.
+              </Text>
+            </View>
+          )}
+          {section === "discipline" && disciplineEnabled && (
             loading ? [0,1].map(i => <SkeletonCard key={i} />) :
             discipline.length === 0 ? (
               <Text style={{ textAlign: "center", color: theme.textMuted, fontFamily: "Inter_400Regular", paddingVertical: 32 }}>No discipline records</Text>
@@ -341,7 +372,15 @@ export default function ParentMore() {
               </View>
             ))
           )}
-          {section === "feedback-teacher" && (
+          {(section === "feedback-teacher" || section === "feedback-management") && !feedbackEnabled && (
+            <View style={{ alignItems: "center", paddingVertical: 40, gap: 10 }}>
+              <Ionicons name="chatbubble-outline" size={32} color={theme.textMuted} />
+              <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: theme.textMuted, textAlign: "center", paddingHorizontal: 24 }}>
+                Feedback is currently unavailable for your school.
+              </Text>
+            </View>
+          )}
+          {section === "feedback-teacher" && feedbackEnabled && (
             <View style={{ gap: 14 }}>
               <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: theme.textSecondary }}>
                 Your message will be sent to your child's class teacher.
@@ -370,7 +409,7 @@ export default function ParentMore() {
               <PrimaryButton label="Send to Teacher" onPress={submitTeacherFeedback} loading={submitting} />
             </View>
           )}
-          {section === "feedback-management" && (
+          {section === "feedback-management" && feedbackEnabled && (
             <View style={{ gap: 14 }}>
               <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: theme.textSecondary }}>
                 Send a formal message to school management.
@@ -481,15 +520,23 @@ export default function ParentMore() {
             subtitle={unreadNotifications > 0 ? `${unreadNotifications} unread` : "Alerts & updates"}
             onPress={() => navigate("notifications")}
           />
-          <ListItem
-            icon="megaphone-outline"
-            title="Announcements"
-            subtitle={unseenAnnouncements > 0 ? `${unseenAnnouncements} new` : "School news & updates"}
-            onPress={() => navigate("announcements")}
-          />
-          <ListItem icon="warning-outline" title="Discipline Records" subtitle="Incidents & actions" onPress={() => navigate("discipline")} />
-          <ListItem icon="chatbubble-outline" title="Message Teacher" subtitle="Connect with your child's class teacher" onPress={() => navigate("feedback-teacher")} />
-          <ListItem icon="mail-outline" title="Contact Management" subtitle="Reach out to the principal or admin" onPress={() => navigate("feedback-management")} />
+          {announcementsEnabled && (
+            <ListItem
+              icon="megaphone-outline"
+              title="Announcements"
+              subtitle={unseenAnnouncements > 0 ? `${unseenAnnouncements} new` : "School news & updates"}
+              onPress={() => navigate("announcements")}
+            />
+          )}
+          {disciplineEnabled && (
+            <ListItem icon="warning-outline" title="Discipline Records" subtitle="Incidents & actions" onPress={() => navigate("discipline")} />
+          )}
+          {feedbackEnabled && (
+            <>
+              <ListItem icon="chatbubble-outline" title="Message Teacher" subtitle="Connect with your child's class teacher" onPress={() => navigate("feedback-teacher")} />
+              <ListItem icon="mail-outline" title="Contact Management" subtitle="Reach out to the principal or admin" onPress={() => navigate("feedback-management")} />
+            </>
+          )}
           <ListItem icon="person-circle-outline" title="Profile" subtitle="Account settings" onPress={() => navigate("profile")} />
         </View>
       </ScrollView>

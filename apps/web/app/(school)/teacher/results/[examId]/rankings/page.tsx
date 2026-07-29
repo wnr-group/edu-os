@@ -5,6 +5,8 @@ import { getSchoolId } from "@/lib/school";
 import { getActiveSection } from "@/lib/section-context";
 import { NoSectionPrompt } from "../../../no-section-prompt";
 import { buttonVariants } from "@/components/ui/button";
+import { getSchoolFeatures } from "@/lib/school-brand";
+import { ModuleUnavailable } from "@/components/module-unavailable";
 import { cn } from "@/lib/utils";
 import {
   Table,
@@ -28,8 +30,11 @@ export default async function ExamRankingsPage({
 
   if (!sectionId) return <NoSectionPrompt />;
 
-  const supabase = await createServerSupabaseClient();
   const schoolId = (await getSchoolId())!;
+  const features = await getSchoolFeatures(schoolId);
+  if (features.exams !== true) return <ModuleUnavailable module="Exams" />;
+
+  const supabase = await createServerSupabaseClient();
 
   const [{ data: examRow }, { data: resultsData }] = await Promise.all([
     supabase.from("exams").select("name, start_date, end_date").eq("id", examId).single(),

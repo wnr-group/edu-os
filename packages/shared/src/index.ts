@@ -3,3 +3,4 @@
 export * from "./types/index";
 export * from "./schemas/index";
 export { logAudit } from "./audit";
+export * from "./features/registry";

@@ -10,7 +10,7 @@ import { Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { supabase, supabaseUrl } from "../../lib/supabase";
 import { useActiveContext } from "../../lib/active-context";
-import { useTheme } from "../../lib/theme";
+import { useTheme, useFeature } from "../../lib/theme";
 import { loadParentHomework, loadParentHomeworkRange, ParentHomeworkItem, ParentHomeworkState } from "../../lib/homework";
 import { StatusBadge } from "../../components/StatusBadge";
 import { SectionHeader } from "../../components/SectionHeader";
@@ -38,6 +38,9 @@ interface ExamResult {
 }
 export default function ParentAcademics() {
   const theme = useTheme();
+  const examsEnabled = useFeature("exams");
+  const homeworkEnabled = useFeature("homework");
+  const reportCardsEnabled = useFeature("report_cards");
   const router = useRouter();
   const { studentId: activeStudentId } = useActiveContext();
   const [tab, setTab] = useState<"results" | "homework">("homework");
@@ -342,8 +345,15 @@ export default function ParentAcademics() {
           ))}
         </View>
 
-        {loading ? (
+    {loading ? (
           <View style={{ gap: 8 }}><SkeletonCard /><SkeletonCard /><SkeletonCard /></View>
+        ) : tab === "results" && !examsEnabled ? (
+          <View style={{ alignItems: "center", paddingVertical: 60, gap: 12 }}>
+            <Ionicons name="trophy-outline" size={40} color={theme.textMuted} />
+            <Text style={{ fontSize: 15, fontFamily: "Inter_500Medium", color: theme.textMuted, textAlign: "center", paddingHorizontal: 32 }}>
+              Results aren't available for your school right now.
+            </Text>
+          </View>
         ) : tab === "results" ? (
           <View style={{ gap: 16 }}>
             {Object.keys(groupedResults).length === 0 ? (
@@ -372,17 +382,19 @@ export default function ParentAcademics() {
                             ) : null}
                           </View>
                           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                            <TouchableOpacity
-                              onPress={() => downloadReportCard(exam.examId, exam.examName)}
-                              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                              style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: theme.primary + "15", alignItems: "center", justifyContent: "center" }}
-                            >
-                              {downloadingExamId === exam.examId ? (
-                                <ActivityIndicator size="small" color={theme.primary} />
-                              ) : (
-                                <Ionicons name="download-outline" size={18} color={theme.primary} />
-                              )}
-                            </TouchableOpacity>
+                        {reportCardsEnabled && (
+                              <TouchableOpacity
+                                onPress={() => downloadReportCard(exam.examId, exam.examName)}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: theme.primary + "15", alignItems: "center", justifyContent: "center" }}
+                              >
+                                {downloadingExamId === exam.examId ? (
+                                  <ActivityIndicator size="small" color={theme.primary} />
+                                ) : (
+                                  <Ionicons name="download-outline" size={18} color={theme.primary} />
+                                )}
+                              </TouchableOpacity>
+                            )}
                             <View style={{ alignItems: "flex-end", gap: 4 }}>
                               <Text style={{ fontSize: 16, fontFamily: "Inter_700Bold", color: theme.primary }}>{exam.totalObtained}/{exam.totalMax}</Text>
                               {exam.rank > 0 && (
@@ -417,6 +429,13 @@ export default function ParentAcademics() {
                 </View>
               </View>
             ))}
+          </View>
+    ) : !homeworkEnabled ? (
+          <View style={{ alignItems: "center", paddingVertical: 60, gap: 12 }}>
+            <Ionicons name="book-outline" size={40} color={theme.textMuted} />
+            <Text style={{ fontSize: 15, fontFamily: "Inter_500Medium", color: theme.textMuted, textAlign: "center", paddingHorizontal: 32 }}>
+              Homework isn't available for your school right now.
+            </Text>
           </View>
         ) : (
           <View style={{ gap: 16 }}>

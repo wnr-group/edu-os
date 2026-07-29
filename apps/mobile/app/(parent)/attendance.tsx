@@ -3,7 +3,8 @@ import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from "react-
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../lib/supabase";
 import { useActiveContext } from "../../lib/active-context";
-import { useTheme } from "../../lib/theme";
+import { useTheme, useFeature } from "../../lib/theme";
+import { Ionicons } from "@expo/vector-icons";
 import { Skeleton } from "../../components/Skeleton";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -13,6 +14,7 @@ interface AttendanceRecord { date: string; status: "present" | "absent" | "late"
 
 export default function ParentAttendance() {
   const theme = useTheme();
+  const attendanceEnabled = useFeature("attendance");
   const { studentId: activeStudentId, activeYearId } = useActiveContext();
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,7 +78,15 @@ export default function ParentAttendance() {
   return (
     <SafeAreaView edges={["bottom"]} style={{ flex: 1, backgroundColor: theme.background }}>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 20 }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-        <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: theme.textPrimary }}>Attendance</Text>
+         <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: theme.textPrimary }}>Attendance</Text>
+        {!attendanceEnabled ? (
+          <View style={{ alignItems: "center", paddingVertical: 60, gap: 12 }}>
+            <Ionicons name="calendar-outline" size={40} color={theme.textMuted} />
+            <Text style={{ fontSize: 15, fontFamily: "Inter_500Medium", color: theme.textMuted, textAlign: "center", paddingHorizontal: 32 }}>
+              Attendance isn't available for your school right now.
+            </Text>
+          </View>
+        ) : (<>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={{ flexDirection: "row", gap: 8 }}>
             {MONTHS.map((m, i) => (
@@ -146,7 +156,8 @@ export default function ParentAttendance() {
               <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary }}>{item.label}</Text>
             </View>
           ))}
-        </View>
+       </View>
+        </>)}
       </ScrollView>
     </SafeAreaView>
   );
