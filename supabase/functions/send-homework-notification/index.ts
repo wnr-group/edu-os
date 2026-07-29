@@ -41,6 +41,11 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
   if (!hw) return json({ result: "error", reason: "not_found" }, 404);
 
+  const { data: homeworkEnabled } = await admin.rpc("feature_enabled", {
+    p_school_id: hw.school_id,
+    p_key: "homework",
+  });
+  if (!homeworkEnabled) return json({ result: "error", reason: "module_disabled" }, 403);
   // Authorize: caller must teach this section (homeroom or timetable, active year).
   // NOTE: explicit admin queries using callerId rather than the
   // teaches_homework_section RPC — that RPC relies on auth.uid(), which is NULL

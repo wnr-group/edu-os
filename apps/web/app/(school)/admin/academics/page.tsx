@@ -4,10 +4,14 @@ import { getSchoolId } from "@/lib/school";
 import { KpiCard, KpiGrid } from "@/components/kpi-card";
 import { NewYearButton, ActivateYearButton, AddExamDialog } from "./academic-dialogs";
 import { AcademicYearsTable, ExamsTable } from "./academics-table";
+import { getSchoolFeatures } from "@/lib/school-brand";
+import { ModuleUnavailable } from "@/components/module-unavailable";
 
 export default async function AcademicsPage() {
   const supabase = await createServerSupabaseClient();
   const schoolId = (await getSchoolId())!;
+  const features = await getSchoolFeatures(schoolId);
+  const examsEnabled = features.exams === true;
 
   const { data: academicYears } = await supabase
     .from("academic_years")
@@ -73,15 +77,19 @@ export default async function AcademicsPage() {
         }
       />
 
-      <ExamsTable
-        examRows={examRows}
-        headerAction={
-          <AddExamDialog
-            schoolId={schoolId}
-            academicYears={years.map((y) => ({ id: y.id, name: y.name }))}
-          />
-        }
-      />
+       {examsEnabled ? (
+        <ExamsTable
+          examRows={examRows}
+          headerAction={
+            <AddExamDialog
+              schoolId={schoolId}
+              academicYears={years.map((y) => ({ id: y.id, name: y.name }))}
+            />
+          }
+        />
+      ) : (
+        <ModuleUnavailable module="Exams" />
+      )}
     </div>
   );
 }

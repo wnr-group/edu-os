@@ -7,6 +7,8 @@ import { NoSectionPrompt } from "../../no-section-prompt";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MarksEntryForm } from "./marks-entry-form";
+import { getSchoolFeatures } from "@/lib/school-brand";
+import { ModuleUnavailable } from "@/components/module-unavailable";
 
 export default async function ExamMarksPage({
   params,
@@ -25,8 +27,13 @@ export default async function ExamMarksPage({
     return <NoSectionPrompt />;
   }
 
-  const supabase = await createServerSupabaseClient();
   const schoolId = (await getSchoolId())!;
+  const features = await getSchoolFeatures(schoolId);
+  if (features.exams !== true) {
+    return <ModuleUnavailable module="Exams" />;
+  }
+
+  const supabase = await createServerSupabaseClient();
 
   // Look up the section to get its class_id
   const { data: sectionRow } = await supabase

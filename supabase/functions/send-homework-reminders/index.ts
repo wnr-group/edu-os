@@ -24,8 +24,19 @@ Deno.serve(async (req: Request) => {
     .select("id, school_id, section_id, title")
     .eq("due_date", today);
 
+  // Batch check: one query for every school touched by today's due homework,
+  // instead of an RPC call per row. Cron no-ops the disabled school, silently.
+  const schoolIds = [...new Set((dueHw ?? []).map((h) => h.school_id))];
+  const { data: schoolsData } = schoolIds.length
+    ? await admin.from("schools").select("id, features_enabled").in("id", schoolIds)
+    : { data: [] as { id: string; features_enabled: Record<string, boolean> }[] };
+  const homeworkEnabledSchools = new Set(
+    (schoolsData ?? []).filter((s) => s.features_enabled?.homework === true).map((s) => s.id)
+  );
+
   let notified = 0;
   for (const hw of dueHw ?? []) {
+    if (!homeworkEnabledSchools.has(hw.school_id)) continue;
     // Students enrolled in the section.
     const { data: enrollments } = await admin
       .from("student_enrollments")

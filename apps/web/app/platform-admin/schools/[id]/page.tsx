@@ -29,6 +29,12 @@ export default async function SchoolDetailPage({
 
   if (!school) notFound();
 
+  const { data: gateway } = await supabase
+    .from("school_payment_gateways")
+    .select("key_id, mode, status, account_name")
+    .eq("school_id", id)
+    .maybeSingle();
+
   // Fetch all role rows (including inactive) for the users tab
   const { data: roleRows } = await supabase
     .from("user_roles")
@@ -87,9 +93,12 @@ export default async function SchoolDetailPage({
           key: "modules",
           label: "Modules",
           content: (
-            <ModulesTab
+             <ModulesTab
               schoolId={school.id}
               featuresEnabled={(school.features_enabled ?? {}) as Partial<Record<FeatureKey, boolean>>}
+              paymentGateway={
+                gateway ?? { key_id: null, mode: null, status: "unconfigured", account_name: null }
+              }
             />
           ),
         },

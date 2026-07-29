@@ -18,7 +18,7 @@ export interface Theme {
   schoolName: string;
 }
 
-const DEFAULT_PRIMARY = "#475569";
+const DEFAULT_PRIMARY = "#1d4ed8";
 
 function buildTheme(primary: string, schoolName = ""): Theme {
   return {
@@ -41,6 +41,23 @@ function buildTheme(primary: string, schoolName = ""): Theme {
 
 const ThemeContext = createContext<Theme>(buildTheme(DEFAULT_PRIMARY));
 
+// F1 — feature flags. Local union rather than importing FeatureKey from
+// @erp/shared, since apps/mobile's package.json wasn't available to confirm
+// that dependency exists here. If @erp/shared IS already a mobile dependency,
+// swap this for `import type { FeatureKey } from "@erp/shared";` and delete
+// this local type — everything below is unaffected either way.
+export type FeatureKey =
+  | "attendance" | "attendance_geo" | "homework" | "exams" | "exam_schedule"
+  | "report_cards" | "syllabus" | "timetable"
+  | "admissions" | "kyc_documents" | "leave" | "testing"
+  | "fees" | "online_payments"
+  | "announcements" | "gallery" | "feedback" | "discipline"
+  | "insights";
+
+type FeaturesMap = Partial<Record<FeatureKey, boolean>>;
+
+const FeaturesContext = createContext<FeaturesMap>({});
+
 export function ThemeProvider({
   children,
   schoolId,
@@ -49,24 +66,37 @@ export function ThemeProvider({
   schoolId?: string;
 }) {
   const [theme, setTheme] = useState<Theme>(buildTheme(DEFAULT_PRIMARY));
+  const [features, setFeatures] = useState<FeaturesMap>({});
 
   useEffect(() => {
     if (!schoolId) return;
     supabase
       .from("schools")
-      .select("primary_color, name")
+      .select("primary_color, name, features_enabled")
       .eq("id", schoolId)
       .single()
       .then(({ data }) => {
         if (data) {
           setTheme(buildTheme(data.primary_color ?? DEFAULT_PRIMARY, data.name ?? ""));
+          setFeatures((data.features_enabled ?? {}) as FeaturesMap);
         }
       });
   }, [schoolId]);
 
   return (
-    <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>
+    <ThemeContext.Provider value={theme}>
+      <FeaturesContext.Provider value={features}>{children}</FeaturesContext.Provider>
+    </ThemeContext.Provider>
   );
+}
+
+/**
+ * True only if the key is explicitly `true` in features_enabled — absent/false
+ * both resolve to disabled, matching the DB's fail-safe default (feature_enabled()).
+ */
+export function useFeature(key: FeatureKey): boolean {
+  const features = useContext(FeaturesContext);
+  return features[key] === true;
 }
 
 export function useTheme(): Theme {

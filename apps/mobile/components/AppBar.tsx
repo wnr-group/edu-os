@@ -29,8 +29,8 @@ export function AppBar() {
         style={{ width: 32, height: 32 }}
         resizeMode="contain"
       />
-      <Text style={{ fontSize: 17, fontFamily: "Inter_700Bold", color: "#1a8fb5" }}>
-        ConnectMySkool
+      <Text style={{ fontSize: 17, fontFamily: "Inter_700Bold", color: "#1d4ed8" }}>
+        EduOS
       </Text>
       <View style={{ flex: 1 }} />
       <ContextSwitcher />

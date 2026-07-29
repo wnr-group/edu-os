@@ -1,6 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const RAZORPAY_WEBHOOK_SECRET = Deno.env.get("RAZORPAY_WEBHOOK_SECRET")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -41,13 +40,15 @@ Deno.serve(async (req: Request) => {
   }
 
   const rawBody = await req.text();
-
   const signature = req.headers.get("x-razorpay-signature") ?? "";
-  const valid = await verifySignature(rawBody, signature, RAZORPAY_WEBHOOK_SECRET);
-  if (!valid) {
-    return new Response("Invalid signature", { status: 401 });
-  }
 
+  // ── ERP-63: per-school secret means we must know WHICH school before we can
+  // verify anything. Chicken-and-egg: parse the (as-yet-unverified) body just
+  // far enough to extract notes.student_id — used ONLY as a lookup key to find
+  // a school_id and that school's webhook secret. Nothing derived from the
+  // body is trusted or acted on until verifySignature() below succeeds; the
+  // worst a forged student_id can do is route to the wrong school's secret,
+  // against which a forged signature will not verify (edge case #10).
   let event: Record<string, unknown>;
   try {
     event = JSON.parse(rawBody);
@@ -55,27 +56,59 @@ Deno.serve(async (req: Request) => {
     return new Response("Invalid JSON", { status: 400 });
   }
 
+  const paymentEntity = (event.payload as Record<string, unknown>)?.payment as Record<string, unknown>;
+  const payment = paymentEntity?.entity as Record<string, unknown>;
+  const notes = (payment?.notes ?? {}) as Record<string, string>;
+  const studentId = notes.student_id ?? "";
+
+  if (!payment || !studentId) {
+    // Can't identify a school to verify against. Not necessarily malicious —
+    // could be a Razorpay event type this endpoint doesn't subscribe to — but
+    // with no school context there is nothing safe to do except reject.
+    return new Response("Bad payload", { status: 400 });
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+  const { data: sp } = await supabase
+    .from("student_profiles")
+    .select("school_id, parent_profile_id")
+    .eq("id", studentId)
+    .single();
+
+  if (!sp) return new Response("Student not found", { status: 404 });
+
+  const { data: webhookSecret, error: secretErr } = await supabase
+    .rpc("get_payment_secret", { p_school_id: sp.school_id, p_kind: "webhook_secret" });
+
+  if (secretErr || !webhookSecret) {
+    console.error("Missing Razorpay webhook secret for school:", sp.school_id, secretErr);
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  // ── Verification happens here — only now, only against the resolved school's secret.
+  const valid = await verifySignature(rawBody, signature, webhookSecret);
+  if (!valid) {
+    return new Response("Invalid signature", { status: 401 });
+  }
+
+  // Everything below this line is unchanged from before ERP-63 — same
+  // idempotency handling, same payment/line-item insert logic, same status
+  // recompute. Not gated on online_payments (edge case #7): if an order was
+  // created while the flag was on and payment completes after it's flipped
+  // off, the money has already moved — the webhook must still record it.
   if (event.event !== "payment.captured") {
     return new Response("Ignored", { status: 200 });
   }
 
-  const paymentEntity = (event.payload as Record<string, unknown>)?.payment as Record<string, unknown>;
-  const payment = paymentEntity?.entity as Record<string, unknown>;
-  if (!payment) return new Response("Bad payload", { status: 400 });
-
   const orderId = String(payment.order_id ?? "");
   const paymentId = String(payment.id ?? "");
   const amountPaise = Number(payment.amount ?? 0);
-  const notes = (payment.notes ?? {}) as Record<string, string>;
-
-  const studentId = notes.student_id ?? "";
   const lineItemIds = (notes.line_item_ids ?? "").split(",").filter(Boolean);
 
-  if (!studentId || lineItemIds.length === 0) {
+  if (lineItemIds.length === 0) {
     return new Response("Missing notes", { status: 400 });
   }
-
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   // Idempotency check
   const { data: existing } = await supabase
@@ -90,15 +123,6 @@ Deno.serve(async (req: Request) => {
       status: 200,
     });
   }
-
-  // Get student's school_id
-  const { data: sp } = await supabase
-    .from("student_profiles")
-    .select("school_id, parent_profile_id")
-    .eq("id", studentId)
-    .single();
-
-  if (!sp) return new Response("Student not found", { status: 404 });
 
   const totalAmount = amountPaise / 100;
 

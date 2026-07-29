@@ -1,9 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const RAZORPAY_KEY_ID = Deno.env.get("RAZORPAY_KEY_ID")!;
-const RAZORPAY_KEY_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET")!;
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -71,7 +68,7 @@ serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const { data: sp } = await adminClient
       .from("student_profiles")
-      .select("parent_profile_id")
+      .select("parent_profile_id, school_id")
       .eq("id", student_id)
       .single();
 
@@ -82,11 +79,47 @@ serve(async (req) => {
       );
     }
 
+    // F1-B (ERP-61): online_payments must be explicitly ON for this school.
+    const { data: paymentsEnabled, error: featureErr } = await adminClient
+      .rpc("feature_enabled", { p_school_id: sp.school_id, p_key: "online_payments" });
+
+    if (featureErr || !paymentsEnabled) {
+      return new Response(
+        JSON.stringify({ error: "Online payments are not enabled for this school" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // ERP-63: per-school gateway credentials, replacing the old global env keys.
+    const { data: gateway } = await adminClient
+      .from("school_payment_gateways")
+      .select("key_id, status")
+      .eq("school_id", sp.school_id)
+      .maybeSingle();
+
+    if (!gateway || gateway.status !== "configured" || !gateway.key_id) {
+      return new Response(
+        JSON.stringify({ error: "Payments are not set up for this school yet" }),
+        { status: 409, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: keySecret, error: secretErr } = await adminClient
+      .rpc("get_payment_secret", { p_school_id: sp.school_id, p_kind: "key_secret" });
+
+    if (secretErr || !keySecret) {
+      console.error("Missing Razorpay key secret for school:", sp.school_id, secretErr);
+      return new Response(
+        JSON.stringify({ error: "Payments are not set up for this school yet" }),
+        { status: 409, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     const razorpayRes = await fetch("https://api.razorpay.com/v1/orders", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: "Basic " + btoa(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`),
+        Authorization: "Basic " + btoa(`${gateway.key_id}:${keySecret}`),
       },
       body: JSON.stringify({
         amount: Math.round(amount_paise),
@@ -114,6 +147,9 @@ serve(async (req) => {
         order_id: order.id,
         amount: order.amount,
         currency: order.currency,
+        // New: lets mobile drop the build-time EXPO_PUBLIC_RAZORPAY_KEY_ID env
+        // var, which couldn't vary per school. Phase 3 wires this up.
+        key_id: gateway.key_id,
       }),
       {
         headers: {

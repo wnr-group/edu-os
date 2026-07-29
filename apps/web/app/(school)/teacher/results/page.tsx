@@ -3,6 +3,8 @@ import { getSchoolId } from "@/lib/school";
 import { getActiveSection } from "@/lib/section-context";
 import { NoSectionPrompt } from "../no-section-prompt";
 import { DataTable } from "@/components/data-table";
+import { getSchoolFeatures } from "@/lib/school-brand";
+import { ModuleUnavailable } from "@/components/module-unavailable";
 import Link from "next/link";
 
 export default async function ResultsPage() {
@@ -12,9 +14,13 @@ export default async function ResultsPage() {
     return <NoSectionPrompt />;
   }
 
-  const supabase = await createServerSupabaseClient();
   const schoolId = (await getSchoolId())!;
+  const features = await getSchoolFeatures(schoolId);
+  if (features.exams !== true) {
+    return <ModuleUnavailable module="Exams" />;
+  }
 
+  const supabase = await createServerSupabaseClient();
   const { data: exams } = await supabase
     .from("exams")
     .select("id, name, start_date, end_date, academic_year:academic_years(name)")

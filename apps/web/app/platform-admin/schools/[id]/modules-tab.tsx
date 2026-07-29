@@ -12,10 +12,19 @@ import type { LucideIcon } from "lucide-react";
 import { FEATURE_REGISTRY, type FeatureKey, type FeatureDef } from "@erp/shared";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
+import { RazorpayGatewayPanel } from "./razorpay-gateway-panel";
+
+interface GatewayConfig {
+  key_id: string | null;
+  mode: "test" | "live" | null;
+  status: "configured" | "unconfigured";
+  account_name: string | null;
+}
 
 interface Props {
   schoolId: string;
   featuresEnabled: Partial<Record<FeatureKey, boolean>>;
+  paymentGateway: GatewayConfig;
 }
 
 const CATEGORY_ORDER: FeatureDef["category"][] = [
@@ -58,7 +67,7 @@ const CORE_MODULES = [
 
 const REGISTRY_ENTRIES = Object.values(FEATURE_REGISTRY);
 
-export function ModulesTab({ schoolId, featuresEnabled }: Props) {
+export function ModulesTab({ schoolId, featuresEnabled, paymentGateway }: Props) {
   const router = useRouter();
   const [features, setFeatures] = useState<Partial<Record<FeatureKey, boolean>>>(featuresEnabled);
   const [pendingKey, setPendingKey] = useState<FeatureKey | null>(null);
@@ -183,44 +192,49 @@ export function ModulesTab({ schoolId, featuresEnabled }: Props) {
           </p>
           <div className="divide-y">
             {group.items.map((feature) => {
-              const Icon = ICONS[feature.key] ?? Sparkles;
-              const on = isOn(feature.key);
-              const blockedDeps = feature.dependsOn?.filter((dep) => !isOn(dep)) ?? [];
-              return (
-                <div key={feature.key} className="flex items-center justify-between gap-4 py-3">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                      <Icon className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-gray-900">{feature.label}</span>
-                        {feature.status === "new" && (
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                            NEW
-                          </span>
-                        )}
-                        {blockedDeps.length > 0 && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                            <Link2 className="h-3 w-3" />
-                            Uses {blockedDeps.map((d) => FEATURE_REGISTRY[d]?.label ?? d).join(", ")}
-                          </span>
-                        )}
+                const Icon = ICONS[feature.key] ?? Sparkles;
+                const on = isOn(feature.key);
+                const blockedDeps = feature.dependsOn?.filter((dep) => !isOn(dep)) ?? [];
+                return (
+                  <div key={feature.key}>
+                    <div className="flex items-center justify-between gap-4 py-3">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                          <Icon className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium text-gray-900">{feature.label}</span>
+                            {feature.status === "new" && (
+                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                                NEW
+                              </span>
+                            )}
+                            {blockedDeps.length > 0 && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                                <Link2 className="h-3 w-3" />
+                                Uses {blockedDeps.map((d) => FEATURE_REGISTRY[d]?.label ?? d).join(", ")}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{feature.description}</p>
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground">{feature.description}</p>
+                      <Switch
+                        checked={on}
+                        disabled={pendingKey === feature.key}
+                        onCheckedChange={(next: boolean) => handleToggle(feature, next)}
+                      />
                     </div>
+                    {feature.key === "online_payments" && on && (
+                      <RazorpayGatewayPanel schoolId={schoolId} gateway={paymentGateway} />
+                    )}
                   </div>
-                  <Switch
-                    checked={on}
-                    disabled={pendingKey === feature.key}
-                    onCheckedChange={(next: boolean) => handleToggle(feature, next)}
-                  />
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
     </div>
   );
 }
