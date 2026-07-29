@@ -1,0 +1,5 @@
+              student_id              | status  | geo_status | captured_lat | captured_lng | gps_accuracy_m |  geo_distance_m  | matched_geofence_id 
+--------------------------------------+---------+------------+--------------+--------------+----------------+------------------+---------------------
+ d8c1a736-fb59-4af2-a20d-55802c4bfd71 | present | outside    |    18.463076 |    73.865803 |             12 | 455.964361056185 | 
+(1 row)
+

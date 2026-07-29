@@ -1,0 +1,6 @@
+ geo_status | count 
+------------+-------
+ outside    |     1
+ no_gps     |     1
+(2 rows)
+

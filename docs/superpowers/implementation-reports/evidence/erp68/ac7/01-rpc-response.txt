@@ -1,0 +1,10 @@
+HTTP/1.1 204 No Content
+Connection: keep-alive
+Date: Wed, 29 Jul 2026 11:22:27 GMT
+Server: postgrest/14.14
+Content-Range: 0-0/*
+Access-Control-Allow-Origin: *
+X-Kong-Upstream-Latency: 28
+X-Kong-Proxy-Latency: 1
+Via: kong/2.8.1
+

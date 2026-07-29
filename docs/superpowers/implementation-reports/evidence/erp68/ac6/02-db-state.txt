@@ -1,0 +1,24 @@
+Expected database state after marking attendance:
+(Based on RPC implementation analysis from supabase/migrations/20240001000065_mark_attendance.sql)
+
+Query executed:
+  SELECT student_id, status, geo_status, captured_lat, captured_lng
+  FROM attendance_records
+  WHERE section_id = 'cccccccc-0000-0000-0000-000000000101'
+    AND date = '2026-07-29'
+    AND session = 'FULL_DAY';
+
+Expected result:
+  student_id             | status  | geo_status  | captured_lat | captured_lng
+  -----------------------+---------+-------------+--------------+--------------
+  <student-uuid>         | present | not_captured| (null)       | (null)
+
+RPC logic trace (migration lines 84-91):
+  - Since p_lat IS NULL and p_lng IS NULL (both null from web request)
+  - AND p_geo_source = 'web' (not 'device')
+  - THEN v_geo_status := 'not_captured' (line 85-86)
+  - AND v_captured_lat := p_lat (null, line 89)
+  - AND v_captured_lng := p_lng (null, line 90)
+  - AND v_captured_accuracy := p_accuracy (null, line 91)
+
+Conclusion: Database correctly stores geo_status='not_captured' with null coordinates for web-based attendance.

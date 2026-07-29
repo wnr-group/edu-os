@@ -1,0 +1,6 @@
+[WARN] The "pnpm" field in package.json is no longer read by pnpm. The following keys were ignored: "pnpm.overrides". See https://pnpm.io/settings for the new home of each setting.
+
+> @erp/mobile@0.1.0 type-check C:\Users\Eshwar\WNR\edu-os\apps\mobile
+> tsc --noEmit
+
+exit: 0
