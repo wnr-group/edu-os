@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { upsertGeofence, deleteGeofence, type GeofenceRow } from "@/lib/geo-attendance";
+import { GeoSearch } from "./geo-search";
+import type { GeoSearchResult } from "@/lib/geocoding";
 
 const GeofenceMap = dynamic(() => import("./geofence-map"), {
   ssr: false,
@@ -30,6 +32,7 @@ export function GeofenceSetupClient({ schoolId, initialGeofences }: { schoolId: 
   const [draft, setDraft] = useState<DraftGeofence | null>(initialGeofences[0] ? toDraft(initialGeofences[0]) : null);
   const [dropPinArmed, setDropPinArmed] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [flyToRequest, setFlyToRequest] = useState<{ lat: number; lng: number } | null>(null);
 
   function selectGeofence(row: GeofenceRow) {
     setSelectedId(row.id);
@@ -49,6 +52,11 @@ export function GeofenceSetupClient({ schoolId, initialGeofences }: { schoolId: 
     const selected = geofences.find((g) => g.id === selectedId);
     setDraft(selected ? toDraft(selected) : geofences[0] ? toDraft(geofences[0]) : null);
     setDropPinArmed(false);
+  }
+
+  function handleSearchSelect(result: GeoSearchResult) {
+    setDraft((d) => (d ? { ...d, center_lat: result.lat, center_lng: result.lng } : d));
+    setFlyToRequest({ lat: result.lat, lng: result.lng });
   }
 
   async function saveDraft() {
@@ -140,9 +148,7 @@ export function GeofenceSetupClient({ schoolId, initialGeofences }: { schoolId: 
 
           <div className="overflow-hidden rounded-[14px] border">
             <div className="flex items-center gap-2.5 border-b px-3.5 py-2.5">
-              <div className="flex h-9 flex-1 items-center gap-2 rounded-lg border px-3 text-sm text-muted-foreground">
-                <MapPin className="h-3.5 w-3.5" /> {draft?.name ?? "Search or pick a campus"}
-              </div>
+              <GeoSearch onSelect={handleSearchSelect} />
               <Button
                 type="button"
                 variant={dropPinArmed ? "default" : "outline"}
@@ -162,6 +168,7 @@ export function GeofenceSetupClient({ schoolId, initialGeofences }: { schoolId: 
                 onRadiusChange={(radiusM) => setDraft((d) => (d ? { ...d, radius_m: radiusM } : d))}
                 dropPinArmed={dropPinArmed}
                 onPinDropped={() => setDropPinArmed(false)}
+                flyToRequest={flyToRequest}
               />
             )}
 
