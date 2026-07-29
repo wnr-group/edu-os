@@ -1,2 +1,7 @@
-GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role, authenticated;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role, authenticated;
+select
+    user_id,
+    school_id,
+    role,
+    is_active
+from user_roles
+order by role;
