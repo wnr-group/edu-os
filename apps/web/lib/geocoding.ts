@@ -1,0 +1,184 @@
+﻿export interface GeoSearchResult {
+  id: string;
+  primaryName: string;
+  secondaryAddress: string;
+  country: string;
+  lat: number;
+  lng: number;
+}
+
+export type GeoSearchErrorCode =
+  | "not_found"
+  | "rate_limited"
+  | "server_error"
+  | "network"
+  | "aborted"
+  | "timeout"
+  | "invalid_input";
+
+export interface GeoSearchError {
+  code: GeoSearchErrorCode;
+  message: string;
+}
+
+interface NominatimAddress {
+  country?: string;
+  [key: string]: string | undefined;
+}
+
+interface NominatimResult {
+  place_id: number;
+  display_name: string;
+  lat: string;
+  lon: string;
+  address?: NominatimAddress;
+}
+
+const MAX_QUERY_LENGTH = 200;
+const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+const COORD_PATTERN = /^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/;
+
+function tryParseCoordinates(query: string): GeoSearchResult | null {
+  const match = COORD_PATTERN.exec(query);
+  if (!match) return null;
+  const lat = Number(match[1]);
+  const lng = Number(match[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return {
+    id: `coord:${lat},${lng}`,
+    primaryName: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+    secondaryAddress: "Custom coordinates",
+    country: "",
+    lat,
+    lng,
+  };
+}
+
+// Never trust the upstream response shape — reject anything that doesn't have
+// a valid place id, a non-empty display name, and coordinates in range, rather
+// than letting a malformed item crash the mapping step or produce NaN/garbage
+// coordinates that would silently corrupt a saved geofence.
+function isValidNominatimResult(item: unknown): item is NominatimResult {
+  if (!item || typeof item !== "object") return false;
+  const candidate = item as Record<string, unknown>;
+  const lat = Number(candidate.lat);
+  const lon = Number(candidate.lon);
+  return (
+    typeof candidate.place_id === "number" &&
+    typeof candidate.display_name === "string" &&
+    candidate.display_name.trim().length > 0 &&
+    Number.isFinite(lat) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    Number.isFinite(lon) &&
+    lon >= -180 &&
+    lon <= 180
+  );
+}
+
+function toSearchResult(item: NominatimResult): GeoSearchResult {
+  const segments = item.display_name.split(",").map((s) => s.trim()).filter(Boolean);
+  const primaryName = segments[0] ?? item.display_name;
+  const country = item.address?.country ?? segments[segments.length - 1] ?? "";
+  const middle = segments.slice(1, segments.length - (country ? 1 : 0));
+  const secondaryAddress = middle.slice(0, 2).join(", ");
+  return {
+    id: String(item.place_id),
+    primaryName,
+    secondaryAddress,
+    country,
+    lat: Number(item.lat),
+    lng: Number(item.lon),
+  };
+}
+
+async function fetchGeocode(
+  params: Record<string, string>,
+  signal?: AbortSignal,
+): Promise<{ data: unknown; error: GeoSearchError | null }> {
+  const search = new URLSearchParams(params).toString();
+
+  try {
+    const response = await fetch(`/api/geocode?${search}`, { signal });
+
+    if (response.status === 429) {
+      return {
+        data: null,
+        error: { code: "rate_limited", message: "Too many searches. Please wait a moment and try again." },
+      };
+    }
+    if (response.status === 504) {
+      return { data: null, error: { code: "timeout", message: "The search took too long. Please try again." } };
+    }
+    if (response.status === 401 || response.status === 403) {
+      return {
+        data: null,
+        error: { code: "server_error", message: "Your session has expired. Please refresh the page." },
+      };
+    }
+    if (response.status === 400) {
+      return {
+        data: null,
+        error: { code: "invalid_input", message: "That search isn't valid. Try a different place name." },
+      };
+    }
+    if (!response.ok) {
+      return { data: null, error: { code: "server_error", message: "Unable to search right now. Please try again." } };
+    }
+    const data = await response.json();
+    return { data, error: null };
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      return { data: null, error: { code: "aborted", message: "" } };
+    }
+    // Same-origin relative fetch failing to even complete (not a non-2xx status,
+    // an actual throw) means the browser couldn't reach our own server at all —
+    // the practical signature of being offline. A raw DNS failure on Nominatim
+    // itself can never surface here, because the client never talks to Nominatim
+    // directly — only to this same-origin route.
+    return {
+      data: null,
+      error: { code: "network", message: "You appear to be offline. Check your connection and try again." },
+    };
+  }
+}
+
+export async function searchLocation(
+  query: string,
+  signal?: AbortSignal,
+): Promise<{ data: GeoSearchResult[] | null; error: GeoSearchError | null }> {
+  const trimmed = query.replace(CONTROL_CHARS, "").trim();
+  if (!trimmed) return { data: [], error: null };
+  if (trimmed.length > MAX_QUERY_LENGTH) {
+    return {
+      data: null,
+      error: { code: "invalid_input", message: `Search text is too long (max ${MAX_QUERY_LENGTH} characters).` },
+    };
+  }
+
+  const coordinateResult = tryParseCoordinates(trimmed);
+  if (coordinateResult) return { data: [coordinateResult], error: null };
+
+  const { data, error } = await fetchGeocode({ type: "search", q: trimmed }, signal);
+  if (error) return { data: null, error };
+  const rawItems = Array.isArray(data) ? data : [];
+  const validItems = rawItems.filter(isValidNominatimResult);
+  return { data: validItems.map(toSearchResult), error: null };
+}
+
+export async function reverseGeocode(
+  lat: number,
+  lng: number,
+  signal?: AbortSignal,
+): Promise<{ data: GeoSearchResult | null; error: GeoSearchError | null }> {
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180) {
+    return { data: null, error: { code: "invalid_input", message: "Invalid coordinates." } };
+  }
+  const { data, error } = await fetchGeocode({ type: "reverse", lat: String(lat), lon: String(lng) }, signal);
+  if (error) return { data: null, error };
+  if (!isValidNominatimResult(data)) {
+    return { data: null, error: { code: "not_found", message: "No address found for these coordinates." } };
+  }
+  return { data: toSearchResult(data), error: null };
+}

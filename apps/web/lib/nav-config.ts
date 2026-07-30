@@ -3,7 +3,7 @@ import type { FeatureKey } from "@erp/shared";
 export interface NavItem {
   label: string;
   href: string;
-  /** When set, hidden unless this module is enabled for the school (see `@erp/shared` feature registry). */
+ /** When set, hidden unless this module is enabled for the school (see `@erp/shared` feature registry). */
   feature?: FeatureKey;
 }
 
@@ -105,7 +105,8 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
     sections: sections({
       academic: [{ label: "Certificates", href: "/principal/certificates" }],
       administration: [
-        { label: "Discipline", href: "/principal/discipline", feature: "discipline" },
+        { label: "Discipline", href: "/principal/discipline" },
+        { label: "Geo Review", href: "/principal/attendance/geo-review" },
         { label: "Reports", href: "/principal/reports" },
       ],
       communication: [{ label: "Feedback", href: "/principal/feedback", feature: "feedback" }],
@@ -116,4 +117,14 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
 /** Every nav item for a role, flattened — used for active-route matching and the mobile bottom tab bar. */
 export function allNavItems(config: RoleNavConfig): NavItem[] {
   return [...config.frequent, ...config.sections.flatMap((s) => s.items)];
+}
+
+/** Returns a copy of `config` with `badge` attached to the item matching `href`. */
+export function withBadge(config: RoleNavConfig, href: string, count: number): RoleNavConfig {
+  if (count <= 0) return config;
+  const patch = (item: NavItem): NavItem => (item.href === href ? { ...item, badge: count } : item);
+  return {
+    frequent: config.frequent.map(patch),
+    sections: config.sections.map((s) => ({ ...s, items: s.items.map(patch) })),
+  };
 }

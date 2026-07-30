@@ -6,7 +6,7 @@ const PUBLIC_PATHS = ["/login", "/auth/callback", "/download-app"];
 const PLATFORM_ADMIN_DOMAINS = ["admin.balajierp.com", "core.lvh.me", "core.connectmyskool.com", "core.eduos.com"];
 const MARKETING_DOMAINS = ["connectmyskool.com", "www.connectmyskool.com", "eduos.com", "www.eduos.com", "lvh.me"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const host = request.headers.get("host") ?? "";
   const domain = host.replace(/:\d+$/, "");
@@ -31,8 +31,8 @@ export async function middleware(request: NextRequest) {
   let resolvedSchoolId: string | null = null;
   if (!isPlatformAdmin) {
     const service = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321",
+      process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.qGOA8n458FvP100B26l0_27lS383xT7N5Fw43_t-X8s"
     );
     const { data: school } = await service
       .from("schools")
@@ -54,8 +54,8 @@ export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0",
     {
       cookies: {
         getAll() {
@@ -119,8 +119,8 @@ export async function middleware(request: NextRequest) {
   // Use service-role client for role lookups to bypass RLS — middleware is
   // server-side and the service client is already created above for school validation.
   const serviceForRoles = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321",
+    process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.qGOA8n458FvP100B26l0_27lS383xT7N5Fw43_t-X8s"
   );
 
   let role: string | null = null;

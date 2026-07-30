@@ -1,0 +1,9 @@
+{
+  "step": "after create (Step 3)",
+  "url": "http://school1.lvh.me:3000/principal/dashboard",
+  "geoReviewSpanTexts": [
+    "Geo Review",
+    "1"
+  ],
+  "moreTriggerOuterHTML": "<button type=\"button\" tabindex=\"0\" aria-haspopup=\"menu\" id=\"base-ui-_R_1pmirdlb_\" data-slot=\"dropdown-menu-trigger\" class=\"group relative flex shrink-0 items-center gap-1 px-1 py-1.5 text-sm outline-none\" style=\"color:#475569;font-weight:500\" aria-expanded=\"true\" data-popup-open=\"\" data-pressed=\"\" aria-controls=\"_R_9mirdlbH2_\">More<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-chevron-down h-3.5 w-3.5 transition-transform group-data-[popup-open]:rotate-180\" aria-hidden=\"true\"><path d=\"m6 9 6 6 6-6\"></path></svg><span class=\"absolute -right-1.5 -top-1 h-2 w-2 rounded-full bg-[#F59E0B]\"></span><span class=\"absolute inset-x-0 -bottom-[5px] h-[2px] origin-left scale-x-0 rounded-full bg-slate-300 transition-transform duration-300 ease-out group-hover:scale-x-100\"></span></button>"
+}

@@ -1,0 +1,14 @@
+[console:info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[console:log] [HMR] connected
+[console:log] [Fast Refresh] rebuilding
+[console:log] [Fast Refresh] done in 1953ms
+[console:info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[console:log] [HMR] connected
+[console:log] [Fast Refresh] rebuilding
+[console:log] [Fast Refresh] done in 699ms
+[console:info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[console:log] [HMR] connected
+[console:log] [Fast Refresh] rebuilding
+[console:log] [Fast Refresh] done in 598ms
+[console:info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[console:log] [HMR] connected

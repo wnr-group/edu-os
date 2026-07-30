@@ -1,0 +1,1 @@
+{"code":"PGRST200","details":"Searched for a foreign key relationship between 'attendance_records' and 'profiles' using the hint 'marked_by' in the schema 'public', but no matches were found.","hint":"Perhaps you meant 'student_profiles' instead of 'profiles'.","message":"Could not find a relationship between 'attendance_records' and 'profiles' in the schema cache"}

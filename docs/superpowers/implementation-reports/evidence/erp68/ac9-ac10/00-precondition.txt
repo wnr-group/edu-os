@@ -1,0 +1,6 @@
+                  id                  | session | geo_status | geo_reviewed_at 
+--------------------------------------+---------+------------+-----------------
+ a8c73733-f9c0-4bd9-a327-60928efbaa1b | FN      | outside    | 
+ e303c02b-30cb-426e-8754-0fdd97f1c7df | AN      | no_gps     | 
+(2 rows)
+

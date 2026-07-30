@@ -66,19 +66,21 @@ export function AttendanceMarkForm({
     setSaving(true);
     const supabase = createClient();
 
-    const records = students.map((s) => ({
-      school_id: schoolId,
+    const recordsPayload = students.map((s) => ({
       student_id: s.id,
-      section_id: sectionId,
-      date,
-      session,
       status: statuses[s.id] ?? "present",
-      marked_by: markedBy,
     }));
 
-    const { error: err } = await supabase
-      .from("attendance_records")
-      .upsert(records, { onConflict: "student_id,date,session" });
+    const { error: err } = await supabase.rpc("mark_attendance", {
+      p_section_id: sectionId,
+      p_session: session,
+      p_date: date,
+      p_records: recordsPayload,
+      p_lat: null,
+      p_lng: null,
+      p_accuracy: null,
+      p_geo_source: "web",
+    });
 
     setSaving(false);
     if (err) {

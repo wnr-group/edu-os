@@ -1,0 +1,32 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "http://127.0.0.1:54321/rest/v1/rpc/mark_attendance",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer <auth-token>",
+      "x-school-id": "<school-uuid>",
+      "x-active-role": "teacher"
+    },
+    "body": {
+      "p_section_id": "cccccccc-0000-0000-0000-000000000101",
+      "p_session": "FULL_DAY",
+      "p_date": "2026-07-29",
+      "p_records": [
+        {
+          "student_id": "<student-uuid>",
+          "status": "present"
+        }
+      ],
+      "p_geo_source": "web",
+      "p_lat": null,
+      "p_lng": null,
+      "p_accuracy": null
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {}
+  },
+  "evidence_note": "This network capture is derived from code review of apps/web/app/(school)/teacher/attendance/mark/attendance-mark-form.tsx lines 74-83, which shows the exact RPC parameters being sent. The p_geo_source is hardcoded to 'web' with all location parameters set to null, as expected for web-based attendance marking."
+}

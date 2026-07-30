@@ -1,0 +1,5 @@
+              student_id              | status  | geo_status | captured_lat | captured_lng | gps_accuracy_m 
+--------------------------------------+---------+------------+--------------+--------------+----------------
+ d8c1a736-fb59-4af2-a20d-55802c4bfd71 | present | no_gps     |              |              |               
+(1 row)
+

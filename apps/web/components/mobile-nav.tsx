@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, LayoutGrid, LayoutDashboard, GraduationCap, LogOut } from "lucide-react";
 import { ICON_MAP, ROLE_LABELS, lighten } from "@/components/sidebar";
-import type { NavItem } from "@/components/sidebar";
+import type { NavItem } from "@/lib/nav-config";
 import { formatSegment } from "@/components/top-bar";
 import { createClient } from "@/lib/supabase";
 import { CommandSearch } from "@/components/command-search";
@@ -111,7 +111,10 @@ export function MobileNav({
                       />
                     )}
                     <Icon className="h-[21px] w-[21px] shrink-0" style={{ color: isActive ? accent : inactiveIcon }} />
-                    {item.label}
+                    <span className="flex-1">{item.label}</span>
+                    {!!item.badge && (
+                      <span className="rounded-full bg-[#FDF3E2] px-1.5 py-0.5 text-[10px] font-bold text-[#F59E0B]">{item.badge}</span>
+                    )}
                   </Link>
                 );
               })}

@@ -17,6 +17,9 @@ import {
   fetchSectionAttendance, fetchRecentStats, fetchMarkedCount, clearAttendance,
 } from "../../../lib/attendance";
 import { sendAbsenceNotification } from "../../../lib/notifications";
+import { getActiveGeofences, getAdvisoryPosition, getSubmitPosition, computeAdvisory } from "../../../lib/location";
+import type { Advisory, DevicePosition, GeofenceRow } from "../../../lib/location";
+import { GeoAdvisoryChip } from "../../../components/GeoAdvisoryChip";
 
 export default function MarkAttendance() {
   const theme = useTheme();
@@ -36,6 +39,9 @@ export default function MarkAttendance() {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notifying, setNotifying] = useState<Record<string, boolean>>({});
+  const [advisory, setAdvisory] = useState<Advisory | null>(null);
+  const [geofences, setGeofences] = useState<GeofenceRow[]>([]);
+  const [isOffCampus, setIsOffCampus] = useState(false);
 
   const marked = rows.some((r) => r.recordId !== null);
 
@@ -54,6 +60,36 @@ export default function MarkAttendance() {
   }, [sectionId, date, session]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const initializeLocationAsync = async () => {
+      const fences = await getActiveGeofences(supabase, schoolId);
+      setGeofences(fences);
+
+      // Request location permissions on mount (lazy-load pattern)
+      try {
+        const Location = await import("expo-location");
+        const { status: existingStatus } = await Location.getForegroundPermissionsAsync();
+        if (existingStatus !== "granted") {
+          await Location.requestForegroundPermissionsAsync();
+        }
+      } catch {
+        // Permission request failed, continue without location
+      }
+
+      // Get advisory position (uses cached/last-known position)
+      const pos = await getAdvisoryPosition();
+      if (pos && fences.length > 0) {
+        const result = computeAdvisory(pos.lat, pos.lng, pos.accuracy, fences);
+        setAdvisory(result);
+        setIsOffCampus(result.status === "outside");
+      } else {
+        setAdvisory(null);
+        setIsOffCampus(false);
+      }
+    };
+    initializeLocationAsync();
+  }, [schoolId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true); await load(); setRefreshing(false);
@@ -88,10 +124,27 @@ export default function MarkAttendance() {
 
   async function submit() {
     if (!userId || !schoolId) return;
-    // Only save students that have an explicit status; leave the rest unmarked.
-    const records = rows
-      .filter((r) => statuses[r.studentId] != null)
-      .map((r) => ({
+    const markedStudents = rows.filter((r) => statuses[r.studentId] != null);
+    if (markedStudents.length === 0) {
+      Alert.alert("Nothing to save", "Mark at least one student first.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Get current position on submit
+      const currentPos = await getSubmitPosition();
+      let submitAdvisory: Advisory | null = null;
+      let geoSource = "device";
+
+      if (currentPos && geofences.length > 0) {
+        submitAdvisory = computeAdvisory(currentPos.lat, currentPos.lng, currentPos.accuracy, geofences);
+      } else {
+        geoSource = "denied"; // Mark as denied if no position available
+      }
+
+      // Prepare records with geo data
+      const records = markedStudents.map((r) => ({
         student_id: r.studentId,
         section_id: sectionId,
         school_id: schoolId,
@@ -99,19 +152,31 @@ export default function MarkAttendance() {
         session,
         status: statuses[r.studentId] as AttendanceStatus,
         marked_by: userId,
+        captured_lat: currentPos?.lat ?? null,
+        captured_lng: currentPos?.lng ?? null,
+        gps_accuracy_m: currentPos?.accuracy ?? null,
       }));
-    if (records.length === 0) {
-      Alert.alert("Nothing to save", "Mark at least one student first.");
-      return;
+
+      const { error } = await supabase
+        .from("attendance_records")
+        .upsert(records, { onConflict: "student_id,date,session" });
+
+      if (error) {
+        Alert.alert("Error", error.message);
+      } else {
+        await load(); // refresh so recordIds + send icons appear
+        if (submitAdvisory?.status === "outside") {
+          Alert.alert(
+            "Attendance Recorded",
+            `Saved ${records.length} records.\n⚠️ Staff member is off-campus — attendance will be flagged for review.`
+          );
+        } else {
+          Alert.alert("Saved", `Attendance recorded for ${records.length} students.`);
+        }
+      }
+    } finally {
+      setSaving(false);
     }
-    setSaving(true);
-    const { error } = await supabase
-      .from("attendance_records")
-      .upsert(records, { onConflict: "student_id,date,session" });
-    setSaving(false);
-    if (error) { Alert.alert("Error", error.message); return; }
-    await load(); // refresh so recordIds + send icons appear
-    Alert.alert("Saved", `Attendance recorded for ${records.length} students.`);
   }
 
   function confirmClear() {
@@ -172,6 +237,7 @@ export default function MarkAttendance() {
             </Text>
           </View>
           <SessionSelector value={session} onChange={setSession} disabled={disabled} />
+          <GeoAdvisoryChip advisory={advisory} />
           {/* Last-7-marked-days strip */}
           {stats.length > 0 && (
             <View style={{ flexDirection: "row", gap: 6, alignItems: "flex-end", height: 44 }}>
@@ -237,7 +303,25 @@ export default function MarkAttendance() {
 
         {!loading && rows.length > 0 && (
           <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 20, backgroundColor: theme.background, borderTopWidth: 1, borderTopColor: theme.border }}>
-            <PrimaryButton label={marked ? "Update Attendance" : `Submit · ${markedCount}/${rows.length} marked`} onPress={submit} loading={saving} />
+            {isOffCampus && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: theme.warning + "1A", borderRadius: 8 }}>
+                <Ionicons name="flag" size={16} color={theme.warning} />
+                <Text style={{ fontSize: 12, color: theme.warning, fontFamily: "Inter_500Medium", flex: 1 }}>
+                  You're outside the campus geofence. Marking still works — this submission is tagged "off-campus" and shows up in the principal's review list. No reason needed.
+                </Text>
+              </View>
+            )}
+            <PrimaryButton
+              label={isOffCampus ? "Submit (off-campus)" : marked ? "Update Attendance" : `Submit · ${markedCount}/${rows.length} marked`}
+              onPress={submit}
+              loading={saving}
+              style={isOffCampus ? { backgroundColor: theme.warning, opacity: 0.9 } : undefined}
+            />
+            {isOffCampus && (
+              <Text style={{ textAlign: "center", fontSize: 11, fontFamily: "Inter_400Regular", color: theme.textMuted, marginTop: 8 }}>
+                Saved &amp; flagged · principal can review later
+              </Text>
+            )}
           </View>
         )}
       </View>
