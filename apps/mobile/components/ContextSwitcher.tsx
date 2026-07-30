@@ -37,11 +37,11 @@ export function ContextSwitcher() {
         onPress={() => setOpen(true)}
         style={{
           flexDirection: "row", alignItems: "center", gap: 6,
-          backgroundColor: "#eef2ff", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999,
+          backgroundColor: "#eff6ff", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999,
         }}
       >
-        <Text style={{ color: "#4f46e5", fontWeight: "600", fontSize: 13 }}>{label}</Text>
-        <Ionicons name="chevron-down" size={14} color="#4f46e5" />
+        <Text style={{ color: "#1d4ed8", fontWeight: "600", fontSize: 13 }}>{label}</Text>
+        <Ionicons name="chevron-down" size={14} color="#1d4ed8" />
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
@@ -86,10 +86,10 @@ function Row({ label, active, onPress }: { label: string; active: boolean; onPre
       onPress={onPress}
       style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 12 }}
     >
-      <Text style={{ fontSize: 15, color: active ? "#4f46e5" : "#111827", fontWeight: active ? "700" : "400" }}>
+      <Text style={{ fontSize: 15, color: active ? "#1d4ed8" : "#111827", fontWeight: active ? "700" : "400" }}>
         {label}
       </Text>
-      {active && <Ionicons name="checkmark" size={18} color="#4f46e5" />}
+      {active && <Ionicons name="checkmark" size={18} color="#1d4ed8" />}
     </TouchableOpacity>
   );
 }

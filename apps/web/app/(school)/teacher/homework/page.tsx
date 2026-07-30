@@ -5,14 +5,19 @@ import { getAcademicYearId } from "@/lib/academic-year";
 import { DataTable } from "@/components/data-table";
 import { CreateHomeworkForm } from "./create-homework-form";
 import { NoSectionPrompt } from "../no-section-prompt";
+import { getSchoolFeatures } from "@/lib/school-brand";
+import { ModuleUnavailable } from "@/components/module-unavailable";
 
 export default async function HomeworkPage() {
   const sectionId = await getActiveSection();
   if (!sectionId) return <NoSectionPrompt />;
 
+  const schoolId = (await getSchoolId())!;
+  const features = await getSchoolFeatures(schoolId);
+  if (features.homework !== true) return <ModuleUnavailable module="Homework" />;
+
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const schoolId = (await getSchoolId())!;
   const yearId = await getAcademicYearId(schoolId);
 
   // A teacher may only assign homework to sections they actually teach

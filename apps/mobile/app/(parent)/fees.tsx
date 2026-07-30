@@ -6,7 +6,7 @@ import RazorpayCheckout from "react-native-razorpay";
 import Svg, { Circle, G, Text as SvgText } from "react-native-svg";
 import { supabase } from "../../lib/supabase";
 import { useActiveContext } from "../../lib/active-context";
-import { useTheme } from "../../lib/theme";
+import { useTheme, useFeature } from "../../lib/theme";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { StatusBadge } from "../../components/StatusBadge";
 import { SectionHeader } from "../../components/SectionHeader";
@@ -186,6 +186,8 @@ function groupByYear<T extends { yearName: string; yearStart: string }>(rows: T[
 
 export default function ParentFees() {
   const theme = useTheme();
+  const paymentsEnabled = useFeature("online_payments");
+  const feesEnabled = useFeature("fees");
   const { studentId: activeStudentId } = useActiveContext();
   const [lineItems, setLineItems] = useState<FeeLineItem[]>([]);
   const [history, setHistory] = useState<PaymentHistoryRow[]>([]);
@@ -343,8 +345,10 @@ export default function ParentFees() {
 
       if (!orderData.order_id) throw new Error("No order ID returned from server");
 
-      const razorpayKey = process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID ?? "";
-      if (!razorpayKey) throw new Error("Razorpay key not configured");
+      // ERP-63: key_id now comes from the order response (per-school), not a
+      // build-time env var that couldn't vary between schools.
+      const razorpayKey = orderData.key_id ?? "";
+      if (!razorpayKey) throw new Error("Payments are not set up for this school yet");
 
       const options = {
         description: selected.map((li) => li.fee_type).join(", "),
@@ -375,7 +379,17 @@ export default function ParentFees() {
   return (
     <SafeAreaView edges={["bottom"]} style={{ flex: 1, backgroundColor: theme.background }}>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 20 }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+        
         <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: theme.textPrimary }}>Fees</Text>
+
+        {!loading && !feesEnabled ? (
+          <View style={{ alignItems: "center", paddingVertical: 60, gap: 12 }}>
+            <Ionicons name="wallet-outline" size={40} color={theme.textMuted} />
+            <Text style={{ fontSize: 15, fontFamily: "Inter_500Medium", color: theme.textMuted, textAlign: "center", paddingHorizontal: 32 }}>
+              Fees aren't available for your school right now.
+            </Text>
+          </View>
+        ) : (<>
 
         {/* Balance card */}
         {loading ? <SkeletonCard /> : (<>
@@ -388,7 +402,7 @@ export default function ParentFees() {
                 Next due: {nextDue.due_date ? new Date(nextDue.due_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
               </Text>
             )}
-            {totalDue > 0 && (
+            {totalDue > 0 && paymentsEnabled && (
               <TouchableOpacity activeOpacity={0.85} onPress={() => {
                 const pendingIds = lineItems.filter((li) => li.status !== "paid").map((li) => li.id);
                 setSelectedIds(new Set(pendingIds));
@@ -413,8 +427,8 @@ export default function ParentFees() {
               {group.rows.map((li) => (
                 <TouchableOpacity
                   key={li.id}
-                  onPress={() => toggleSelect(li.id)}
-                  activeOpacity={0.7}
+                  onPress={paymentsEnabled ? () => toggleSelect(li.id) : undefined}
+                  activeOpacity={paymentsEnabled ? 0.7 : 1}
                   style={{
                     backgroundColor: selectedIds.has(li.id) ? `${theme.primary}18` : theme.surface,
                     borderRadius: 16,
@@ -428,14 +442,16 @@ export default function ParentFees() {
                   }}
                 >
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                    <View style={{
-                      width: 20, height: 20, borderRadius: 4, borderWidth: 1.5,
-                      borderColor: selectedIds.has(li.id) ? theme.primary : theme.border,
-                      backgroundColor: selectedIds.has(li.id) ? theme.primary : "transparent",
-                      alignItems: "center", justifyContent: "center",
-                    }}>
-                      {selectedIds.has(li.id) && <Ionicons name="checkmark" size={13} color="#fff" />}
-                    </View>
+                    {paymentsEnabled && (
+                      <View style={{
+                        width: 20, height: 20, borderRadius: 4, borderWidth: 1.5,
+                        borderColor: selectedIds.has(li.id) ? theme.primary : theme.border,
+                        backgroundColor: selectedIds.has(li.id) ? theme.primary : "transparent",
+                        alignItems: "center", justifyContent: "center",
+                      }}>
+                        {selectedIds.has(li.id) && <Ionicons name="checkmark" size={13} color="#fff" />}
+                      </View>
+                    )}
                     <View>
                       <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: theme.textPrimary }}>{li.fee_type}</Text>
                       <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary, marginTop: 2 }}>
@@ -451,7 +467,7 @@ export default function ParentFees() {
             </View>
           ))}
 
-          {selectedIds.size > 0 && (
+          {selectedIds.size > 0 && paymentsEnabled && (
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={handlePaySelected}
@@ -463,7 +479,11 @@ export default function ParentFees() {
                 alignItems: "center",
                 marginTop: 8,
               }}
+<<<<<<< HEAD
             >
+=======
+             >
+>>>>>>> origin/main
               <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#fff" }}>
                 {payingId === "selected" ? "Processing…" : `Pay ₹${lineItems.filter((li) => selectedIds.has(li.id)).reduce((s, li) => s + li.outstanding, 0).toLocaleString("en-IN")}`}
               </Text>
@@ -500,6 +520,7 @@ export default function ParentFees() {
             </View>
           ))}
         </View>
+        </>)}
       </ScrollView>
 
       {/* Receipt modal */}

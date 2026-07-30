@@ -4,8 +4,9 @@ import { cookies, headers } from "next/headers";
 import { createServerSupabaseClient } from "../../lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getActiveRoles, topRole } from "@/lib/auth/roles";
-import { NAV_CONFIG, allNavItems, withBadge } from "@/lib/nav-config";
-import { fetchUnreviewedFlagGroupCount } from "@/lib/geo-attendance";
+import { NAV_CONFIG, allNavItems } from "@/lib/nav-config";
+import { FeaturesProvider } from "@/lib/features-context";
+import type { FeatureKey } from "@erp/shared";
 import { TopBar } from "@/components/top-bar";
 import { MobileNav } from "@/components/mobile-nav";
 import { Breadcrumbs } from "@/components/breadcrumbs";
@@ -59,15 +60,17 @@ export default async function SchoolLayout({
 
   let brandColor: string | undefined;
   let schoolName = "School ERP";
+  let schoolFeatures: Partial<Record<FeatureKey, boolean>> = {};
   const schoolId = await getSchoolId();
   if (schoolId) {
     const { data: school } = await supabase
       .from("schools")
-      .select("name, primary_color")
+      .select("name, primary_color, features_enabled")
       .eq("id", schoolId)
       .single();
     brandColor = school?.primary_color ?? undefined;
     schoolName = school?.name ?? "School ERP";
+    schoolFeatures = (school?.features_enabled ?? {}) as Partial<Record<FeatureKey, boolean>>;
   }
 
   // Fetch years for switcher (admin/principal only)
@@ -169,6 +172,7 @@ export default async function SchoolLayout({
     navKey = realRole === "super_admin" ? "school_admin" : realRole;
     displayRole = realRole;
   }
+<<<<<<< HEAD
 
   let navConfig = NAV_CONFIG[navKey] ?? { frequent: [], sections: [] };
   if (schoolId && (displayRole === "school_admin" || displayRole === "principal")) {
@@ -176,6 +180,19 @@ export default async function SchoolLayout({
     const badgeHref = displayRole === "school_admin" ? "/admin/settings/geo-attendance" : "/principal/attendance/geo-review";
     navConfig = withBadge(navConfig, badgeHref, unreviewedCount);
   }
+=======
+const rawNavConfig = NAV_CONFIG[navKey] ?? { frequent: [], sections: [] };
+  // Hide nav items behind a disabled feature flag. Absent/false both resolve
+  // to hidden — matches the DB's fail-safe-off default (feature_enabled()).
+  const isNavItemVisible = (item: { feature?: FeatureKey }) =>
+    !item.feature || schoolFeatures[item.feature] === true;
+  const navConfig = {
+    frequent: rawNavConfig.frequent.filter(isNavItemVisible),
+    sections: rawNavConfig.sections
+      .map((section) => ({ ...section, items: section.items.filter(isNavItemVisible) }))
+      .filter((section) => section.items.length > 0),
+  };
+>>>>>>> origin/main
 // Mobile has no top nav, so its drawer/bottom-tab-bar needs every page,
 // frequent + sectioned, flattened into one list (the original pattern).
 const allItems = allNavItems(navConfig);
@@ -198,6 +215,7 @@ const settingsHref = displayRole === "school_admin" ? "/admin/settings" : undefi
   };
 
   return (
+     <FeaturesProvider features={schoolFeatures}>
     <div className="flex h-screen flex-col overflow-hidden bg-app-shell">
       <TopBar
         title={schoolName}
@@ -242,5 +260,6 @@ const settingsHref = displayRole === "school_admin" ? "/admin/settings" : undefi
         {children}
       </main>
     </div>
+     </FeaturesProvider>
   );
 }

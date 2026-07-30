@@ -9,7 +9,7 @@ import { clearActiveContext } from "../../lib/active-context";
 const schoolLogo = require("../../assets/logo-header.png");
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const BRAND = "#4f46e5";
+const BRAND = "#1d4ed8";
 
 export default function LoginScreen() {
   const [step, setStep] = useState<"phone" | "otp">("phone");
@@ -96,7 +96,7 @@ export default function LoginScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <RNStatusBar barStyle="dark-content" backgroundColor="#f0f4ff" translucent={false} />
+      <RNStatusBar barStyle="dark-content" backgroundColor="#eff6ff" translucent={false} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView
           contentContainerStyle={{ flexGrow: 1 }}
@@ -105,19 +105,25 @@ export default function LoginScreen() {
         >
           {/* Top branded section */}
           <View style={{
-            backgroundColor: "#f0f4ff",
+            backgroundColor: "#eff6ff",
             paddingTop: insets.top + 16,
             paddingBottom: 44,
             alignItems: "center",
             borderBottomLeftRadius: 32,
             borderBottomRightRadius: 32,
           }}>
-            <Animated.View entering={FadeInDown.duration(600).delay(100)}>
+            <Animated.View entering={FadeInDown.duration(600).delay(100)} style={{ alignItems: "center" }}>
               <Image
                 source={schoolLogo}
-                style={{ width: 300, height: 190 }}
+                style={{ width: 120, height: 120 }}
                 resizeMode="contain"
               />
+              <Text style={{ fontSize: 28, fontFamily: "Inter_700Bold", color: "#0D1B2A", marginTop: 14, letterSpacing: -0.5 }}>
+                EduOS
+              </Text>
+              <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: "#6b7280", marginTop: 4 }}>
+                One Stop Mobile App Solution
+              </Text>
             </Animated.View>
           </View>
 
@@ -265,7 +271,7 @@ export default function LoginScreen() {
           {/* Footer */}
           <SafeAreaView edges={["bottom"]} style={{ paddingBottom: 8 }}>
             <TouchableOpacity
-              onPress={() => Linking.openURL("mailto:support@connectmyskool.com")}
+              onPress={() => Linking.openURL("mailto:support@eduos.app")}
               style={{ alignItems: "center", paddingVertical: 12 }}
               hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}
             >

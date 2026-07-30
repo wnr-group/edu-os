@@ -6,7 +6,7 @@ import Animated, { FadeInDown, FadeInRight, useSharedValue, useAnimatedStyle, wi
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { supabase, fixStorageUrl, SCHOOL_ID } from "../../lib/supabase";
 import { useActiveContext } from "../../lib/active-context";
-import { useTheme } from "../../lib/theme";
+import { useTheme, useFeature } from "../../lib/theme";
 import { Skeleton, SkeletonCard } from "../../components/Skeleton";
 import { Avatar } from "../../components/Avatar";
 
@@ -35,6 +35,11 @@ interface DashboardData {
 
 export default function ParentDashboard() {
   const theme = useTheme();
+  const paymentsEnabled = useFeature("online_payments");
+  const feesEnabled = useFeature("fees");
+ const attendanceEnabled = useFeature("attendance");
+  const homeworkEnabled = useFeature("homework");
+  const announcementsEnabled = useFeature("announcements");
   const router = useRouter();
   const { studentId: activeStudentId } = useActiveContext();
   const [data, setData] = useState<DashboardData | null>(null);
@@ -138,7 +143,8 @@ export default function ParentDashboard() {
     { icon: "trophy-outline" as const, label: "Results", route: "/(parent)/academics", color: "#059669" },
     { icon: "book-outline" as const, label: "Homework", route: "/(parent)/academics", color: "#d97706" },
     { icon: "megaphone-outline" as const, label: "News", route: "/(parent)/more?section=announcements", color: "#dc2626" },
-  ];
+  ].filter((action) => (paymentsEnabled && feesEnabled) || action.label !== "Pay Fees")
+   .filter((action) => announcementsEnabled || action.label !== "News");
 
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
@@ -195,22 +201,28 @@ export default function ParentDashboard() {
         {/* ── Stats strip ── */}
         <Animated.View entering={FadeInDown.duration(500).delay(300)} style={{ flexDirection: "row", gap: 10, paddingHorizontal: 20, marginTop: 20 }}>
           {loading ? (
-            [0,1,2].map(i => <View key={i} style={{ flex: 1 }}><SkeletonCard /></View>)
+            [0, 1, 2].map(i => <View key={i} style={{ flex: 1 }}><SkeletonCard /></View>)
           ) : (
             <>
-              <View style={{ flex: 1, backgroundColor: "#f0fdf4", borderRadius: 14, padding: 14, alignItems: "center" }}>
-                <Ionicons name="checkmark-circle" size={22} color="#059669" />
-                <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: "#111827", marginTop: 6 }}>{data?.attendancePct}%</Text>
+              <View style={{ flex: 1, backgroundColor: !attendanceEnabled ? "#f3f4f6" : "#f0fdf4", borderRadius: 14, padding: 14, alignItems: "center" }}>
+                <Ionicons name="checkmark-circle" size={22} color={!attendanceEnabled ? "#9ca3af" : "#059669"} />
+                <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: "#111827", marginTop: 6 }}>
+                  {attendanceEnabled ? `${data?.attendancePct}%` : "—"}
+                </Text>
                 <Text style={{ fontSize: 11, fontFamily: "Inter_500Medium", color: "#6b7280", marginTop: 2 }}>Attendance</Text>
               </View>
-              <View style={{ flex: 1, backgroundColor: (data?.pendingFees ?? 0) > 0 ? "#fef3c7" : "#f0fdf4", borderRadius: 14, padding: 14, alignItems: "center" }}>
-                <Ionicons name="wallet" size={22} color={(data?.pendingFees ?? 0) > 0 ? "#d97706" : "#059669"} />
-                <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: "#111827", marginTop: 6 }}>₹{((data?.pendingFees ?? 0) / 1000).toFixed(0)}k</Text>
+              <View style={{ flex: 1, backgroundColor: !feesEnabled ? "#f3f4f6" : (data?.pendingFees ?? 0) > 0 ? "#fef3c7" : "#f0fdf4", borderRadius: 14, padding: 14, alignItems: "center" }}>
+                <Ionicons name="wallet" size={22} color={!feesEnabled ? "#9ca3af" : (data?.pendingFees ?? 0) > 0 ? "#d97706" : "#059669"} />
+                <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: "#111827", marginTop: 6 }}>
+                  {feesEnabled ? `₹${((data?.pendingFees ?? 0) / 1000).toFixed(0)}k` : "—"}
+                </Text>
                 <Text style={{ fontSize: 11, fontFamily: "Inter_500Medium", color: "#6b7280", marginTop: 2 }}>Pending</Text>
               </View>
-              <View style={{ flex: 1, backgroundColor: (data?.homeworkDue ?? 0) > 0 ? "#fef2f2" : "#f0fdf4", borderRadius: 14, padding: 14, alignItems: "center" }}>
-                <Ionicons name="book" size={22} color={(data?.homeworkDue ?? 0) > 0 ? "#dc2626" : "#059669"} />
-                <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: "#111827", marginTop: 6 }}>{data?.homeworkDue}</Text>
+               <View style={{ flex: 1, backgroundColor: !homeworkEnabled ? "#f3f4f6" : (data?.homeworkDue ?? 0) > 0 ? "#fef2f2" : "#f0fdf4", borderRadius: 14, padding: 14, alignItems: "center" }}>
+                <Ionicons name="book" size={22} color={!homeworkEnabled ? "#9ca3af" : (data?.homeworkDue ?? 0) > 0 ? "#dc2626" : "#059669"} />
+                <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: "#111827", marginTop: 6 }}>
+                  {homeworkEnabled ? data?.homeworkDue : "—"}
+                </Text>
                 <Text style={{ fontSize: 11, fontFamily: "Inter_500Medium", color: "#6b7280", marginTop: 2 }}>Due Today</Text>
               </View>
             </>
@@ -287,7 +299,8 @@ export default function ParentDashboard() {
           )}
         </Modal>
 
-        {/* ── Latest news ── */}
+ {/* ── Latest news ── */}
+        {announcementsEnabled && (
         <Animated.View entering={FadeInDown.duration(500).delay(600)} style={{ paddingHorizontal: 20, marginTop: 24 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#111827" }}>Latest News</Text>
@@ -319,9 +332,10 @@ export default function ParentDashboard() {
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
-            </TouchableOpacity>
+           </TouchableOpacity>
           ))}
         </Animated.View>
+        )}
       </ScrollView>
     </View>
   );
