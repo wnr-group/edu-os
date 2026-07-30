@@ -52,12 +52,13 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
         { label: "Report Cards", href: "/admin/report-cards", feature: "report_cards" },
         { label: "Certificates", href: "/admin/certificates" },
       ],
-      administration: [
-        { label: "Fees", href: "/admin/fees", feature: "fees" },
-        { label: "Discipline", href: "/admin/discipline", feature: "discipline" },
-        { label: "Fee Types", href: "/admin/settings/fee-types", feature: "fees" },
-        { label: "Reports", href: "/admin/reports" },
-      ],
+        administration: [
+      { label: "Fees", href: "/admin/fees", feature: "fees" },
+      { label: "Discipline", href: "/admin/discipline", feature: "discipline" },
+      { label: "Fee Types", href: "/admin/settings/fee-types", feature: "fees" },
+      { label: "Geo Attendance", href: "/admin/settings/geo-attendance", feature: "attendance_geo" },
+      { label: "Reports", href: "/admin/reports" },
+    ],
       communication: [
         { label: "Announcements", href: "/admin/announcements", feature: "announcements" },
         { label: "Gallery", href: "/admin/gallery", feature: "gallery" },

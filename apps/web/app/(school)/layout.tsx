@@ -4,7 +4,8 @@ import { cookies, headers } from "next/headers";
 import { createServerSupabaseClient } from "../../lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getActiveRoles, topRole } from "@/lib/auth/roles";
-import { NAV_CONFIG, allNavItems } from "@/lib/nav-config";
+import { NAV_CONFIG, allNavItems, withBadge } from "@/lib/nav-config";
+import { fetchUnreviewedFlagGroupCount } from "@/lib/geo-attendance";
 import { FeaturesProvider } from "@/lib/features-context";
 import type { FeatureKey } from "@erp/shared";
 import { TopBar } from "@/components/top-bar";
@@ -172,27 +173,23 @@ export default async function SchoolLayout({
     navKey = realRole === "super_admin" ? "school_admin" : realRole;
     displayRole = realRole;
   }
-<<<<<<< HEAD
 
-  let navConfig = NAV_CONFIG[navKey] ?? { frequent: [], sections: [] };
-  if (schoolId && (displayRole === "school_admin" || displayRole === "principal")) {
-    const unreviewedCount = await fetchUnreviewedFlagGroupCount(supabase, schoolId);
-    const badgeHref = displayRole === "school_admin" ? "/admin/settings/geo-attendance" : "/principal/attendance/geo-review";
-    navConfig = withBadge(navConfig, badgeHref, unreviewedCount);
-  }
-=======
-const rawNavConfig = NAV_CONFIG[navKey] ?? { frequent: [], sections: [] };
+  const rawNavConfig = NAV_CONFIG[navKey] ?? { frequent: [], sections: [] };
   // Hide nav items behind a disabled feature flag. Absent/false both resolve
   // to hidden — matches the DB's fail-safe-off default (feature_enabled()).
   const isNavItemVisible = (item: { feature?: FeatureKey }) =>
     !item.feature || schoolFeatures[item.feature] === true;
-  const navConfig = {
+  let navConfig = {
     frequent: rawNavConfig.frequent.filter(isNavItemVisible),
     sections: rawNavConfig.sections
       .map((section) => ({ ...section, items: section.items.filter(isNavItemVisible) }))
       .filter((section) => section.items.length > 0),
   };
->>>>>>> origin/main
+  if (schoolId && (displayRole === "school_admin" || displayRole === "principal")) {
+    const unreviewedCount = await fetchUnreviewedFlagGroupCount(supabase, schoolId);
+    const badgeHref = displayRole === "school_admin" ? "/admin/settings/geo-attendance" : "/principal/attendance/geo-review";
+    navConfig = withBadge(navConfig, badgeHref, unreviewedCount);
+  }
 // Mobile has no top nav, so its drawer/bottom-tab-bar needs every page,
 // frequent + sectioned, flattened into one list (the original pattern).
 const allItems = allNavItems(navConfig);
