@@ -37,9 +37,10 @@ function sections(map: Partial<Record<keyof typeof SECTION_LABELS, NavItem[]>>):
 // now the feature tags) is new.
 export const NAV_CONFIG: Record<string, RoleNavConfig> = {
   school_admin: {
-    frequent: [
+   frequent: [
       { label: "Dashboard", href: "/admin/dashboard" },
       { label: "Students", href: "/admin/students" },
+      { label: "Fees", href: "/admin/fees", feature: "fees" },
       { label: "Teachers", href: "/admin/teachers" },
       { label: "Classes", href: "/admin/classes" },
       { label: "Timetable", href: "/admin/timetable", feature: "timetable" },
@@ -53,7 +54,6 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
         { label: "Certificates", href: "/admin/certificates" },
       ],
         administration: [
-      { label: "Fees", href: "/admin/fees", feature: "fees" },
       { label: "Discipline", href: "/admin/discipline", feature: "discipline" },
       { label: "Fee Types", href: "/admin/settings/fee-types", feature: "fees" },
       { label: "Geo Attendance", href: "/admin/settings/geo-attendance", feature: "attendance_geo" },
