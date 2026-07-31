@@ -96,7 +96,7 @@ export default async function PrincipalDashboard() {
   // Weekly attendance trend
   const weeklyAttendance: DayAttendance[] = schoolDays.map((d) => {
     const key = d.toISOString().slice(0, 10);
-    const dayRecords = (attendanceRows ?? []).filter((r) => r.date === key);
+    const dayRecords = (attendanceRows ?? []).filter((r) => r.date === key && r.status !== "excused");
     if (dayRecords.length === 0) return null;
     const present = dayRecords.filter((r) => r.status === "present").length;
     const pct = Math.round((present / dayRecords.length) * 100);
@@ -116,6 +116,7 @@ export default async function PrincipalDashboard() {
 
   const classAttMap = new Map<string, { name: string; order: number; present: number; total: number }>();
   for (const r of classAttendanceRows ?? []) {
+    if (r.status === "excused") continue; // neutral — excluded from both numerator and denominator
     const sp = r.student_enrollments as unknown as { class_id: string; classes: { name: string; order: number } } | null;
     if (!sp?.classes) continue;
     const key = sp.class_id;

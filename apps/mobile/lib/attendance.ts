@@ -115,6 +115,7 @@ export async function fetchRecentStats(
 
   const byDate = new Map<string, { present: number; total: number }>();
   (data ?? []).forEach((r: any) => {
+    if (r.status === "excused") return; // neutral — excluded from both numerator and denominator
     const agg = byDate.get(r.date) ?? { present: 0, total: 0 };
     agg.total += 1;
     if (r.status === "present" || r.status === "late") agg.present += 1;

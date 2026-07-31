@@ -3,8 +3,9 @@ import type { FeatureKey } from "@erp/shared";
 export interface NavItem {
   label: string;
   href: string;
- /** When set, hidden unless this module is enabled for the school (see `@erp/shared` feature registry). */
+  /** When set, hidden unless this module is enabled for the school (see `@erp/shared` feature registry). */
   feature?: FeatureKey;
+  badge?: number;
 }
 
 export interface NavSection {
@@ -40,6 +41,7 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
     frequent: [
       { label: "Dashboard", href: "/admin/dashboard" },
       { label: "Students", href: "/admin/students" },
+      { label: "Fees", href: "/admin/fees", feature: "fees" },
       { label: "Teachers", href: "/admin/teachers" },
       { label: "Classes", href: "/admin/classes" },
       { label: "Timetable", href: "/admin/timetable", feature: "timetable" },
@@ -52,13 +54,13 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
         { label: "Report Cards", href: "/admin/report-cards", feature: "report_cards" },
         { label: "Certificates", href: "/admin/certificates" },
       ],
-        administration: [
-      { label: "Fees", href: "/admin/fees", feature: "fees" },
-      { label: "Discipline", href: "/admin/discipline", feature: "discipline" },
-      { label: "Fee Types", href: "/admin/settings/fee-types", feature: "fees" },
-      { label: "Geo Attendance", href: "/admin/settings/geo-attendance", feature: "attendance_geo" },
-      { label: "Reports", href: "/admin/reports" },
-    ],
+      administration: [
+        { label: "Discipline", href: "/admin/discipline", feature: "discipline" },
+        { label: "Leave", href: "/admin/leave", feature: "leave" },
+        { label: "Fee Types", href: "/admin/settings/fee-types", feature: "fees" },
+        { label: "Geo Attendance", href: "/admin/settings/geo-attendance", feature: "attendance_geo" },
+        { label: "Reports", href: "/admin/reports" },
+      ],
       communication: [
         { label: "Announcements", href: "/admin/announcements", feature: "announcements" },
         { label: "Gallery", href: "/admin/gallery", feature: "gallery" },
@@ -72,6 +74,7 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
       { label: "Dashboard", href: "/teacher/dashboard" },
       { label: "Students", href: "/teacher/students" },
       { label: "Attendance", href: "/teacher/attendance", feature: "attendance" },
+      { label: "Leave", href: "/teacher/leave", feature: "leave" },
       { label: "Homework", href: "/teacher/homework", feature: "homework" },
     ],
     sections: sections({
@@ -88,6 +91,7 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
       { label: "Dashboard", href: "/teacher/dashboard" },
       { label: "Students", href: "/teacher/students" },
       { label: "Attendance", href: "/teacher/attendance", feature: "attendance" },
+      { label: "Leave", href: "/teacher/leave", feature: "leave" },
       { label: "Homework", href: "/teacher/homework", feature: "homework" },
     ],
     sections: sections({
@@ -107,6 +111,7 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
       academic: [{ label: "Certificates", href: "/principal/certificates" }],
       administration: [
         { label: "Discipline", href: "/principal/discipline" },
+        { label: "Leave", href: "/principal/leave", feature: "leave" },
         { label: "Geo Review", href: "/principal/attendance/geo-review" },
         { label: "Reports", href: "/principal/reports" },
       ],
