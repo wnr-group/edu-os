@@ -1,0 +1,1 @@
+export { default } from "@/app/(school)/admin/kyc/page";

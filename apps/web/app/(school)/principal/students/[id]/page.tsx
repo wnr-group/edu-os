@@ -10,9 +10,10 @@ import { DetailPageTemplate } from "@/components/detail-page-template";
 import { StudentAttendanceTab } from "@/app/(school)/admin/students/[id]/student-attendance-tab";
 import { StudentAcademicsTab } from "@/app/(school)/admin/students/[id]/student-academics-tab";
 import { StudentFeesTab } from "@/app/(school)/admin/students/[id]/student-fees-tab";
+import { StudentDocumentsTab } from "@/app/(school)/admin/students/[id]/student-documents-tab";
 import { avatarColor, initialsOf } from "@/lib/student-avatar";
 
-type Tab = "attendance" | "academics" | "fees";
+type Tab = "attendance" | "academics" | "fees" | "documents";
 
 export default async function PrincipalStudentDetailPage({
   params,
@@ -32,12 +33,19 @@ export default async function PrincipalStudentDetailPage({
   const schoolId = (await getSchoolId())!;
   const academicYearId = await getAcademicYearId(schoolId);
 
-  const { data: student } = await supabase
-    .from("student_profiles")
-    .select("id, full_name, email, admission_number, date_of_birth, gender, profile:profiles!profile_id(full_name, email, avatar_url), parent:profiles!parent_profile_id(full_name, phone)")
-    .eq("id", id)
-    .eq("school_id", schoolId)
-    .single();
+ const [{ data: student }, { data: kycCompleteness }] = await Promise.all([
+    supabase
+      .from("student_profiles")
+      .select("id, full_name, email, admission_number, date_of_birth, gender, profile:profiles!profile_id(full_name, email, avatar_url), parent:profiles!parent_profile_id(full_name, phone)")
+      .eq("id", id)
+      .eq("school_id", schoolId)
+      .single(),
+    supabase
+      .from("student_kyc_completeness")
+      .select("required_total, verified_count")
+      .eq("student_id", id)
+      .maybeSingle(),
+  ]);
 
   if (!student) notFound();
 
@@ -143,6 +151,11 @@ export default async function PrincipalStudentDetailPage({
         { key: "attendance", label: "Attendance", content: attendanceContent },
         { key: "academics", label: "Academics", content: <StudentAcademicsTab studentId={id} /> },
         { key: "fees", label: "Fees", content: <StudentFeesTab studentId={id} studentName={displayName} /> },
+        {
+          key: "documents",
+          label: kycCompleteness ? `Documents (${kycCompleteness.verified_count}/${kycCompleteness.required_total})` : "Documents",
+          content: <StudentDocumentsTab studentId={id} schoolId={schoolId} />,
+        },
       ]}
     />
   );
