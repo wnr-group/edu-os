@@ -16,6 +16,7 @@ import {
   AttendanceSession, AttendanceStatus, SectionAttendanceRow, DayStat,
   fetchSectionAttendance, fetchRecentStats, fetchMarkedCount, clearAttendance,
 } from "../../../lib/attendance";
+import { loadApprovedLeaveForSectionDate } from "../../../lib/leave";
 import { sendAbsenceNotification } from "../../../lib/notifications";
 import { getActiveGeofences, getAdvisoryPosition, getSubmitPosition, computeAdvisory } from "../../../lib/location";
 import type { Advisory, DevicePosition, GeofenceRow } from "../../../lib/location";
@@ -42,20 +43,23 @@ export default function MarkAttendance() {
   const [advisory, setAdvisory] = useState<Advisory | null>(null);
   const [geofences, setGeofences] = useState<GeofenceRow[]>([]);
   const [isOffCampus, setIsOffCampus] = useState(false);
+  const [excusedIds, setExcusedIds] = useState<Set<string>>(new Set());
 
   const marked = rows.some((r) => r.recordId !== null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [roster, count, recent] = await Promise.all([
+    const [roster, count, recent, excused] = await Promise.all([
       fetchSectionAttendance(sectionId, date, session),
       fetchMarkedCount(sectionId, date, session),
       fetchRecentStats(sectionId, 7),
+      loadApprovedLeaveForSectionDate(sectionId, date),
     ]);
     setRows(roster);
     setStatuses(Object.fromEntries(roster.map((r) => [r.studentId, r.status])));
     setExistingMode(count.existingMode);
     setStats(recent);
+    setExcusedIds(excused);
     setLoading(false);
   }, [sectionId, date, session]);
 
@@ -105,10 +109,10 @@ export default function MarkAttendance() {
   }
 
   function cycleStatus(studentId: string) {
+    if (excusedIds.has(studentId)) return; // locked — approved leave covers this day
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setStatuses((prev) => {
       const cur = prev[studentId];
-      // First tap marks Present; then cycle Present → Absent → Late → Present.
       const next: AttendanceStatus =
         cur == null ? "present" : cur === "present" ? "absent" : cur === "absent" ? "late" : "present";
       return { ...prev, [studentId]: next };
@@ -117,7 +121,11 @@ export default function MarkAttendance() {
 
   function markAll(status: AttendanceStatus) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setStatuses(Object.fromEntries(rows.map((r) => [r.studentId, status])));
+    setStatuses((prev) => {
+      const next = { ...prev };
+      for (const r of rows) if (!excusedIds.has(r.studentId)) next[r.studentId] = status;
+      return next;
+    });
   }
 
   const markedCount = rows.filter((r) => statuses[r.studentId] != null).length;
@@ -268,15 +276,23 @@ export default function MarkAttendance() {
           ) : rows.map((row) => {
             const status = statuses[row.studentId] ?? null;
             const showSend = marked && row.recordId && status === "absent";
+            const isExcused = excusedIds.has(row.studentId);
             return (
               <View key={row.studentId} style={{ backgroundColor: theme.surface, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <TouchableOpacity onPress={() => cycleStatus(row.studentId)} activeOpacity={0.7} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <TouchableOpacity onPress={() => cycleStatus(row.studentId)} activeOpacity={isExcused ? 1 : 0.7} disabled={isExcused} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 12 }}>
                   <Avatar name={row.fullName} size={44} />
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: theme.textPrimary }}>{row.fullName}</Text>
                     <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary }}>Roll #{row.rollNumber}</Text>
                   </View>
-                  <StatusBadge variant={status ?? "unmarked"} />
+                  {isExcused ? (
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: theme.primary + "1A", borderRadius: 100, paddingHorizontal: 10, paddingVertical: 4 }}>
+                      <Ionicons name="shield-checkmark" size={12} color={theme.primary} />
+                      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: theme.primary }}>Excused</Text>
+                    </View>
+                  ) : (
+                    <StatusBadge variant={status ?? "unmarked"} />
+                  )}
                 </TouchableOpacity>
                 {showSend ? (
                   !row.hasParent ? (

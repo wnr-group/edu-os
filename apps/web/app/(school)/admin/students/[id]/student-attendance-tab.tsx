@@ -30,8 +30,10 @@ export async function StudentAttendanceTab({ studentId, month, year }: Props) {
   const present = rows.filter((r) => r.status === "present").length;
   const absent = rows.filter((r) => r.status === "absent").length;
   const late = rows.filter((r) => r.status === "late").length;
-  const total = rows.length; // total sessions, not days
-  const pct = total > 0 ? Math.round((rows.filter((r) => isPresent(r.status)).length / total) * 100) : 0;
+  // excused is neutral — excluded from both numerator and denominator
+  const countable = rows.filter((r) => r.status !== "excused");
+  const total = countable.length; // total sessions, not days
+  const pct = total > 0 ? Math.round((countable.filter((r) => isPresent(r.status)).length / total) * 100) : 0;
 
   // Per-day grouping for the calendar (a day may hold FN + AN).
   const dayMap: Record<string, Rec[]> = {};
@@ -51,6 +53,7 @@ export async function StudentAttendanceTab({ studentId, month, year }: Props) {
       : recs.some((r) => r.status === "absent")
       ? "absent"
       : "late";
+    if (status === "excused") return "bg-sky-500 text-white";
     if (status === "present") return "bg-emerald-500 text-white";
     if (status === "absent") return "bg-rose-500 text-white";
     if (status === "late") return "bg-amber-400 text-white";
@@ -97,6 +100,7 @@ export async function StudentAttendanceTab({ studentId, month, year }: Props) {
           { color: "bg-emerald-500", label: "Present" },
           { color: "bg-rose-500", label: "Absent" },
           { color: "bg-amber-400", label: "Late" },
+          { color: "bg-sky-500", label: "Excused" },
           { color: "bg-muted", label: "No record" },
         ].map((l) => (
           <div key={l.label} className="flex items-center gap-1.5">
