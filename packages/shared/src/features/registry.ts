@@ -78,6 +78,7 @@ export const FEATURE_REGISTRY: Record<FeatureKey, FeatureDef> = {
     defaultOn: false,
     status: "new",
     dependsOn: ["exams"],
+    gatesTables: ["exam_schedule_slots", "rooms"],
   },
   report_cards: {
     key: "report_cards",
@@ -123,6 +124,7 @@ export const FEATURE_REGISTRY: Record<FeatureKey, FeatureDef> = {
     category: "Operations",
     defaultOn: false,
     status: "new",
+    gatesTables: ["kyc_documents", "document_types"],
   },
   leave: {
     key: "leave",

@@ -34,6 +34,7 @@ export function AttendanceMarkForm({
   session,
   schoolId,
   markedBy,
+  excusedStudentIds = [],
 }: {
   students: StudentRow[];
   sectionId: string;
@@ -41,7 +42,9 @@ export function AttendanceMarkForm({
   session: AttendanceSession;
   schoolId: string;
   markedBy: string;
+  excusedStudentIds?: string[];
 }) {
+  const excusedSet = new Set(excusedStudentIds);
   const router = useRouter();
   const [statuses, setStatuses] = useState<Record<string, AttendanceStatus>>(
     () => {
@@ -117,6 +120,7 @@ export function AttendanceMarkForm({
       <div className="divide-y">
         {students.map((s) => {
           const current = statuses[s.id] ?? "present";
+          const isExcused = excusedSet.has(s.id);
           return (
             <div
               key={s.id}
@@ -128,27 +132,33 @@ export function AttendanceMarkForm({
                 </span>
                 <span className="font-medium text-gray-900">{s.full_name}</span>
               </div>
-              <div className="flex gap-1">
-                {STATUS_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() =>
-                      setStatuses((prev) => ({
-                        ...prev,
-                        [s.id]: opt.value,
-                      }))
-                    }
-                    className={`rounded border px-2 py-1 text-xs font-medium transition-all ${
-                      current === opt.value
-                        ? activeColors(opt.value) + " ring-2 ring-offset-1"
-                        : "border-gray-200 text-gray-500 hover:bg-gray-50"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+              {isExcused ? (
+                <span className="flex items-center gap-1.5 rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">
+                  On leave · Excused
+                </span>
+              ) : (
+                <div className="flex gap-1">
+                  {STATUS_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() =>
+                        setStatuses((prev) => ({
+                          ...prev,
+                          [s.id]: opt.value,
+                        }))
+                      }
+                      className={`rounded border px-2 py-1 text-xs font-medium transition-all ${
+                        current === opt.value
+                          ? activeColors(opt.value) + " ring-2 ring-offset-1"
+                          : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}

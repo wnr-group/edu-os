@@ -6,6 +6,7 @@ import { useActiveContext } from "../../lib/active-context";
 import { useTheme, useFeature } from "../../lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { Skeleton } from "../../components/Skeleton";
+import { useRouter } from "expo-router";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const DAY_LABELS = ["S","M","T","W","T","F","S"];
@@ -14,6 +15,7 @@ interface AttendanceRecord { date: string; status: "present" | "absent" | "late"
 
 export default function ParentAttendance() {
   const theme = useTheme();
+  const router = useRouter();
   const attendanceEnabled = useFeature("attendance");
   const { studentId: activeStudentId, activeYearId } = useActiveContext();
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -79,6 +81,16 @@ export default function ParentAttendance() {
     <SafeAreaView edges={["bottom"]} style={{ flex: 1, backgroundColor: theme.background }}>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 20 }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
          <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: theme.textPrimary }}>Attendance</Text>
+        <TouchableOpacity
+          onPress={() => router.push("/(parent)/leave-status")}
+          style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: theme.surfaceRaised, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: theme.border }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Ionicons name="airplane-outline" size={18} color={theme.primary} />
+            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.textPrimary }}>Apply for / track leave</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+        </TouchableOpacity>
         {!attendanceEnabled ? (
           <View style={{ alignItems: "center", paddingVertical: 60, gap: 12 }}>
             <Ionicons name="calendar-outline" size={40} color={theme.textMuted} />

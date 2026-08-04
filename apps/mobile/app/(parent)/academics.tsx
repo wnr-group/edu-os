@@ -336,6 +336,18 @@ export default function ParentAcademics() {
       <ScrollView contentContainerStyle={{ padding: 20, gap: 20 }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: theme.textPrimary }}>Academics</Text>
 
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => router.push("/(parent)/exam-datesheet")}
+          style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: theme.surfaceRaised, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: theme.border }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Ionicons name="calendar-outline" size={18} color={theme.primary} />
+            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.textPrimary }}>Exam datesheet</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+        </TouchableOpacity>
+
         {/* Segmented control */}
         <View style={{ flexDirection: "row", backgroundColor: theme.surface, borderRadius: 12, padding: 4, borderWidth: 1, borderColor: theme.border }}>
           {(["homework", "results"] as const).map((t) => (

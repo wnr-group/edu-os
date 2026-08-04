@@ -55,6 +55,15 @@ export default async function AttendanceMarkPage({
     if (rec.session === session) existingMap[rec.student_id] = rec.status ?? "present";
   }
 
+  const { data: approvedLeaveRows } = await supabase
+    .from("leave_requests")
+    .select("student_id")
+    .eq("status", "approved")
+    .lte("from_date", date)
+    .gte("to_date", date)
+    .in("student_id", (studentEnrollments ?? []).map((e) => e.student_profile_id));
+  const excusedStudentIds = [...new Set((approvedLeaveRows ?? []).map((r) => r.student_id))];
+
   const studentRows = (studentEnrollments ?? []).map((e) => {
     const sp = e.student_profile as unknown as { id: string; full_name: string | null } | null;
     return {
@@ -133,6 +142,7 @@ export default async function AttendanceMarkPage({
           session={session}
           schoolId={schoolId}
           markedBy={user!.id}
+          excusedStudentIds={excusedStudentIds}
         />
       </div>
     </div>
