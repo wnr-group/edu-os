@@ -59,7 +59,14 @@ export function FindSchoolForm({ host }: { host: string }) {
               autoCorrect="off"
               spellCheck={false}
               value={slug}
-              onChange={(e) => setSlug(e.target.value.replace(/[^a-zA-Z0-9-]/g, ""))}
+             onChange={(e) => {
+                // Tolerate someone pasting/typing the full domain (e.g.
+                // "school1.lvh.me") instead of just the slug — take only
+                // the part before the first dot rather than silently
+                // mangling the rest into a nonexistent subdomain.
+                const raw = e.target.value.split(".")[0];
+                setSlug(raw.replace(/[^a-zA-Z0-9-]/g, ""));
+              }}
               placeholder="your-school"
               className="min-w-0 flex-1 bg-transparent px-2.5 py-3 text-sm text-[#0D1B2A] outline-none placeholder:text-slate-400"
             />
