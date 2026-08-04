@@ -3,10 +3,12 @@ import { getSchoolId } from "@/lib/school";
 import { PushFeeForm } from "./push-fee-form";
 import { FeeLineItemsTable } from "./fee-line-items-table";
 import type { FeeType } from "@/components/fee-type-select";
+import Link from "next/link";
 
 export default async function FeesPage() {
   const supabase = await createServerSupabaseClient();
   const schoolId = (await getSchoolId())!;
+  void schoolId; // (existing usage below unaffected — see link addition)
 
   const [classesRes, academicYearsRes, lineItemsRes, feeTypesRes] = await Promise.all([
     supabase.from("classes").select("id, name").eq("school_id", schoolId).order("name"),
@@ -38,7 +40,12 @@ export default async function FeesPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Fees</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Fees</h1>
+        <Link href="/admin/fees/status" className="text-sm font-semibold text-indigo-600 hover:underline">
+          View Fee Status →
+        </Link>
+      </div>
 
       <h2 className="mb-4 text-xl font-semibold text-gray-800">Push Fee to Class</h2>
       <div className="mb-6 rounded-lg bg-white p-6 shadow-sm">
