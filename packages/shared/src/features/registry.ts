@@ -123,6 +123,7 @@ export const FEATURE_REGISTRY: Record<FeatureKey, FeatureDef> = {
     category: "Operations",
     defaultOn: false,
     status: "new",
+    gatesTables: ["kyc_documents", "document_types"],
   },
   leave: {
     key: "leave",

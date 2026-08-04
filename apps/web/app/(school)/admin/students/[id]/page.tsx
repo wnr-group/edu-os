@@ -11,8 +11,9 @@ import { StudentEditForm } from "./student-edit-form";
 import { StudentAttendanceTab } from "./student-attendance-tab";
 import { StudentAcademicsTab } from "./student-academics-tab";
 import { StudentFeesTab } from "./student-fees-tab";
+import { StudentDocumentsTab } from "./student-documents-tab";
 
-type Tab = "attendance" | "academics" | "fees";
+type Tab = "attendance" | "academics" | "fees" | "documents";
 
 export default async function StudentDetailPage({
   params,
@@ -31,6 +32,12 @@ export default async function StudentDetailPage({
   const supabase = await createServerSupabaseClient();
   const schoolId = (await getSchoolId())!;
   const academicYearId = await getAcademicYearId(schoolId);
+
+  const { data: kycCompleteness } = await supabase
+    .from("student_kyc_completeness")
+    .select("required_total, verified_count")
+    .eq("student_id", id)
+    .maybeSingle();
 
   const [{ data: student }, { data: classes }] = await Promise.all([
     supabase
@@ -142,6 +149,11 @@ export default async function StudentDetailPage({
         { key: "attendance", label: "Attendance", content: attendanceContent },
         { key: "academics", label: "Academics", content: <StudentAcademicsTab studentId={id} /> },
         { key: "fees", label: "Fees", content: <StudentFeesTab studentId={id} studentName={displayName} /> },
+        {
+          key: "documents",
+          label: kycCompleteness ? `Documents (${kycCompleteness.verified_count}/${kycCompleteness.required_total})` : "Documents",
+          content: <StudentDocumentsTab studentId={id} schoolId={schoolId} />,
+        },
       ]}
     />
   );

@@ -55,15 +55,15 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
         { label: "Report Cards", href: "/admin/report-cards", feature: "report_cards" },
         { label: "Certificates", href: "/admin/certificates" },
       ],
-
-      administration: [
-        { label: "Discipline", href: "/admin/discipline", feature: "discipline" },
-        { label: "Leave", href: "/admin/leave", feature: "leave" },
-        { label: "Fee Types", href: "/admin/settings/fee-types", feature: "fees" },
-        { label: "Geo Attendance", href: "/admin/settings/geo-attendance", feature: "attendance_geo" },
-        { label: "Reports", href: "/admin/reports" },
-      ],
-
+administration: [
+  { label: "Fees", href: "/admin/fees", feature: "fees" },
+  { label: "Discipline", href: "/admin/discipline", feature: "discipline" },
+  { label: "Leave", href: "/admin/leave", feature: "leave" },
+  { label: "KYC", href: "/admin/kyc", feature: "kyc_documents" },
+  { label: "Fee Types", href: "/admin/settings/fee-types", feature: "fees" },
+  { label: "Geo Attendance", href: "/admin/settings/geo-attendance", feature: "attendance_geo" },
+  { label: "Reports", href: "/admin/reports" },
+],
       communication: [
         { label: "Announcements", href: "/admin/announcements", feature: "announcements" },
         { label: "Gallery", href: "/admin/gallery", feature: "gallery" },
@@ -112,12 +112,13 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
     ],
     sections: sections({
       academic: [{ label: "Certificates", href: "/principal/certificates" }],
-      administration: [
-        { label: "Discipline", href: "/principal/discipline" },
-        { label: "Leave", href: "/principal/leave", feature: "leave" },
-        { label: "Geo Review", href: "/principal/attendance/geo-review" },
-        { label: "Reports", href: "/principal/reports" },
-      ],
+       administration: [
+  { label: "Discipline", href: "/principal/discipline" },
+  { label: "Leave", href: "/principal/leave", feature: "leave" },
+  { label: "KYC", href: "/principal/kyc", feature: "kyc_documents" },
+  { label: "Geo Review", href: "/principal/attendance/geo-review" },
+  { label: "Reports", href: "/principal/reports" },
+],
       communication: [{ label: "Feedback", href: "/principal/feedback", feature: "feedback" }],
     }),
   },
