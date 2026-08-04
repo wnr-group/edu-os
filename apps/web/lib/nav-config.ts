@@ -40,6 +40,7 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
    frequent: [
       { label: "Dashboard", href: "/admin/dashboard" },
       { label: "Students", href: "/admin/students" },
+      { label: "Fees", href: "/admin/fees", feature: "fees" },
       { label: "Teachers", href: "/admin/teachers" },
       { label: "Classes", href: "/admin/classes" },
       { label: "Exams", href: "/admin/exams", feature: "exams" },
@@ -54,7 +55,6 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
         { label: "Certificates", href: "/admin/certificates" },
       ],
         administration: [
-      { label: "Fees", href: "/admin/fees", feature: "fees" },
       { label: "Discipline", href: "/admin/discipline", feature: "discipline" },
       { label: "Fee Types", href: "/admin/settings/fee-types", feature: "fees" },
       { label: "Geo Attendance", href: "/admin/settings/geo-attendance", feature: "attendance_geo" },
