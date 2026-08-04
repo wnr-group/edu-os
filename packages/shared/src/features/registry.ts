@@ -108,13 +108,14 @@ export const FEATURE_REGISTRY: Record<FeatureKey, FeatureDef> = {
     status: "existing",
     gatesTables: ["timetable"],
   },
-  admissions: {
+ admissions: {
     key: "admissions",
     label: "Admissions",
     description: "Public enquiry form → application pipeline → convert to student.",
     category: "Operations",
     defaultOn: false,
     status: "new",
+    gatesTables: ["admission_applications", "admission_settings", "admission_stage_events"],
   },
   kyc_documents: {
     key: "kyc_documents",

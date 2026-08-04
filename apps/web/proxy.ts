@@ -2,7 +2,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/download-app"];
+const PUBLIC_PATHS = ["/login", "/auth/callback", "/download-app", "/apply"];
 const PLATFORM_ADMIN_DOMAINS = ["admin.balajierp.com", "core.lvh.me", "core.connectmyskool.com", "core.eduos.com"];
 const MARKETING_DOMAINS = ["connectmyskool.com", "www.connectmyskool.com", "eduos.com", "www.eduos.com", "lvh.me"];
 

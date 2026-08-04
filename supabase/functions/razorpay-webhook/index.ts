@@ -56,9 +56,47 @@ Deno.serve(async (req: Request) => {
     return new Response("Invalid JSON", { status: 400 });
   }
 
-  const paymentEntity = (event.payload as Record<string, unknown>)?.payment as Record<string, unknown>;
+   const paymentEntity = (event.payload as Record<string, unknown>)?.payment as Record<string, unknown>;
   const payment = paymentEntity?.entity as Record<string, unknown>;
   const notes = (payment?.notes ?? {}) as Record<string, string>;
+
+  // Admissions branch — a distinct reconciliation key (notes.application_id)
+  // from the student-fee path (notes.student_id). NOT gated on any feature
+  // flag: money already moved. Existing idempotency check below still applies.
+  if (notes.application_id) {
+    const paymentId = String(payment.id ?? "");
+    const { data: existingApp } = await supabase
+      .from("admission_applications")
+      .select("id, payment_status")
+      .eq("razorpay_payment_id", paymentId)
+      .maybeSingle();
+    if (existingApp) {
+      return new Response(JSON.stringify({ received: true, duplicate: true }), {
+        headers: { "Content-Type": "application/json" }, status: 200,
+      });
+    }
+
+    const { data: updatedApp, error: updateErr } = await supabase
+      .from("admission_applications")
+      .update({ payment_status: "paid", razorpay_payment_id: paymentId })
+      .eq("id", notes.application_id)
+      .eq("payment_status", "pending")
+      .select("id, school_id")
+      .maybeSingle();
+
+    if (updateErr || !updatedApp) {
+      return new Response("Application not found or already processed", { status: 200 });
+    }
+
+    await supabase.from("admission_stage_events").insert({
+      application_id: updatedApp.id, school_id: updatedApp.school_id,
+      from_stage: null, to_stage: "enquiry", actor_id: null, note: "Payment confirmed via webhook",
+    });
+
+    return new Response(JSON.stringify({ received: true }), {
+      headers: { "Content-Type": "application/json" }, status: 200,
+    });
+  }
   const studentId = notes.student_id ?? "";
 
   if (!payment || !studentId) {
