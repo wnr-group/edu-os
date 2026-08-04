@@ -55,6 +55,7 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
         administration: [
       { label: "Fees", href: "/admin/fees", feature: "fees" },
       { label: "Discipline", href: "/admin/discipline", feature: "discipline" },
+      { label: "Admissions", href: "/admin/admissions", feature: "admissions" },
       { label: "Fee Types", href: "/admin/settings/fee-types", feature: "fees" },
       { label: "Geo Attendance", href: "/admin/settings/geo-attendance", feature: "attendance_geo" },
       { label: "Reports", href: "/admin/reports" },
@@ -107,6 +108,7 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
       academic: [{ label: "Certificates", href: "/principal/certificates" }],
       administration: [
         { label: "Discipline", href: "/principal/discipline" },
+        { label: "Admissions", href: "/principal/admissions", feature: "admissions" },
         { label: "Geo Review", href: "/principal/attendance/geo-review" },
         { label: "Reports", href: "/principal/reports" },
       ],

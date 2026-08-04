@@ -6,6 +6,7 @@ import { getSchoolId } from "@/lib/school";
 import { getActiveRoles, topRole } from "@/lib/auth/roles";
 import { NAV_CONFIG, allNavItems, withBadge } from "@/lib/nav-config";
 import { fetchUnreviewedFlagGroupCount } from "@/lib/geo-attendance";
+import { fetchAdmissionEnquiryCount } from "@/lib/admissions";
 import { FeaturesProvider } from "@/lib/features-context";
 import type { FeatureKey } from "@erp/shared";
 import { TopBar } from "@/components/top-bar";
@@ -189,6 +190,11 @@ export default async function SchoolLayout({
     const unreviewedCount = await fetchUnreviewedFlagGroupCount(supabase, schoolId);
     const badgeHref = displayRole === "school_admin" ? "/admin/settings/geo-attendance" : "/principal/attendance/geo-review";
     navConfig = withBadge(navConfig, badgeHref, unreviewedCount);
+  }
+  if (schoolId && schoolFeatures.admissions === true && (displayRole === "school_admin" || displayRole === "principal")) {
+    const enquiryCount = await fetchAdmissionEnquiryCount(supabase, schoolId);
+    const admissionsBadgeHref = displayRole === "school_admin" ? "/admin/admissions" : "/principal/admissions";
+    navConfig = withBadge(navConfig, admissionsBadgeHref, enquiryCount);
   }
 // Mobile has no top nav, so its drawer/bottom-tab-bar needs every page,
 // frequent + sectioned, flattened into one list (the original pattern).
