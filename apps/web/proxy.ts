@@ -55,9 +55,13 @@ export async function proxy(request: NextRequest) {
       // preview URL is covered automatically with no code change.
       return NextResponse.next();
     } else {
-      return NextResponse.rewrite(new URL("/school-not-found", request.url), {
-        status: 404,
-      });
+      // No `status: 404` here deliberately — in Next.js 16's App Router, a
+      // rewrite carrying an explicit 404 status is treated as "route not
+      // found" and renders the framework's own app/not-found.tsx instead
+      // of the destination page, regardless of what that page actually is.
+      // We want /school-not-found's own content to render, so the rewrite
+      // is left as a plain 200 to the browser.
+      return NextResponse.rewrite(new URL("/school-not-found", request.url));
     }
   }
 
