@@ -80,9 +80,10 @@ export default async function TeacherDashboard() {
   const ctProfiles = classTeacher?.profiles as unknown as { full_name: string } | null;
   const classTeacherName = ctProfiles?.full_name ?? null;
 
-  // Today's attendance numbers
-  const totalToday = todayAttRows?.length ?? 0;
-  const presentToday = (todayAttRows ?? []).filter((r) => r.status === "present").length;
+  // Today's attendance numbers — excused is neutral, excluded from the total.
+  const todayRows = (todayAttRows ?? []).filter((r) => r.status !== "excused");
+  const totalToday = todayRows.length;
+  const presentToday = todayRows.filter((r) => r.status === "present").length;
   const absentToday = totalToday - presentToday;
   const presentPct = totalToday > 0 ? Math.round((presentToday / totalToday) * 100) : null;
 
@@ -100,9 +101,9 @@ export default async function TeacherDashboard() {
     .gte("date", earliest)
     .lte("date", today);
 
-  const trendData: SectionAttendance[] = schoolDays.map((day) => {
+   const trendData: SectionAttendance[] = schoolDays.map((day) => {
     const dateStr = day.toISOString().slice(0, 10);
-    const dayRows = (trendRows ?? []).filter((r) => r.date === dateStr);
+    const dayRows = (trendRows ?? []).filter((r) => r.date === dateStr && r.status !== "excused");
     const total = dayRows.length;
     const present = dayRows.filter((r) => r.status === "present").length;
     const percent = total > 0 ? Math.round((present / total) * 100) : 0;

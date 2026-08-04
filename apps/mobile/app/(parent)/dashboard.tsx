@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import Animated, { FadeInDown, FadeInRight, useSharedValue, useAnimatedStyle, withTiming, runOnJS } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { supabase, fixStorageUrl, SCHOOL_ID } from "../../lib/supabase";
+import { loadActiveDatesheet, type ExamDatesheet } from "../../lib/exam-schedule";
 import { useActiveContext } from "../../lib/active-context";
 import { useTheme, useFeature } from "../../lib/theme";
 import { Skeleton, SkeletonCard } from "../../components/Skeleton";
@@ -31,6 +32,7 @@ interface DashboardData {
   homeworkDue: number;
   announcements: { id: string; title: string; created_at: string }[];
   gallery: GalleryItem[];
+  datesheet: ExamDatesheet | null;
 }
 
 export default function ParentDashboard() {
@@ -113,6 +115,9 @@ export default function ParentDashboard() {
     const presentDays = attendanceData.filter((r: any) => r.status === "present" || r.status === "late").length;
     const pendingFees = (feesRes.data ?? []).reduce((s: number, f: any) => s + Number(f.total_amount ?? 0), 0);
 
+    const classId = activeEnrollment?.sections?.classes?.id as string | undefined;
+    const datesheet = classId ? await loadActiveDatesheet(classId) : null;
+
     const student: StudentInfo | null = sp ? {
       id: sp.id,
       name: sp.full_name ?? "Student",
@@ -131,6 +136,7 @@ export default function ParentDashboard() {
       homeworkDue: homeworkRes.data?.length ?? 0,
       announcements: announcementsRes.data ?? [],
       gallery: (galleryRes.data ?? []).map((g: any) => ({ ...g, image_url: fixStorageUrl(g.image_url) })),
+      datesheet,
     });
     setLoading(false);
   }
@@ -195,6 +201,42 @@ export default function ParentDashboard() {
               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#10b981" }} />
               <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: "#059669" }}>Active</Text>
             </View>
+          </Animated.View>
+        )}
+
+        {/* ── Exam datesheet home card (seasonal — self-dismissing) ── */}
+        {!loading && data?.datesheet && (
+          <Animated.View entering={FadeInDown.duration(500).delay(250)} style={{ marginHorizontal: 20, marginTop: 16 }}>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => router.push("/(parent)/exam-datesheet")}
+              style={{ backgroundColor: "#4f46e5", borderRadius: 16, padding: 18 }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <View style={{ backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                  <Text style={{ fontSize: 10, fontFamily: "Inter_700Bold", color: "#fff" }}>
+                    {data.datesheet.examName.toUpperCase()}
+                  </Text>
+                </View>
+              </View>
+              <Text style={{ fontSize: 17, fontFamily: "Inter_700Bold", color: "#fff", marginTop: 8 }}>
+                Term datesheet is out
+              </Text>
+              <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.8)", marginTop: 2 }}>
+                {data.datesheet.slots.length} papers
+              </Text>
+              {data.datesheet.slots[0] && (
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#fff", borderRadius: 12, padding: 12, marginTop: 12 }}>
+                  <View>
+                    <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: "#4f46e5" }}>
+                      {Math.max(0, Math.round((new Date(data.datesheet.slots[0].exam_date + "T00:00:00").getTime() - Date.now()) / 86400000))}
+                    </Text>
+                    <Text style={{ fontSize: 11, fontFamily: "Inter_500Medium", color: "#6b7280" }}>days until first paper</Text>
+                  </View>
+                  <Ionicons name="arrow-forward-circle" size={32} color="#4f46e5" />
+                </View>
+              )}
+            </TouchableOpacity>
           </Animated.View>
         )}
 
