@@ -18,13 +18,8 @@ export async function getSchoolId(): Promise<string | null> {
   const domain = host.replace(/:\d+$/, "");
   if (domain) {
     const supabase = createServiceSupabaseClient();
-    const { data: school } = await supabase
-      .from("schools")
-      .select("id")
-      .eq("domain", domain)
-      .single();
-    if (school) return school.id;
+    const { data: schoolId } = await supabase.rpc("get_school_id_by_domain", { p_domain: domain });
+    if (schoolId) return schoolId;
   }
-
   return null;
 }

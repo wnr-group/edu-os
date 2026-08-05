@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { headers } from "next/headers";
 import { HeroReveal } from "@/components/hero-animations";
 
 export const metadata: Metadata = {
@@ -7,11 +8,33 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function SchoolNotFound() {
+// Mirrors the same known-apex-family detection already used for cookie
+// domains in proxy.ts / lib/supabase/server.ts / lib/supabase/index.ts, so
+// "Go to EduOS" always lands on the real marketing site for whichever apex
+// the visitor is on — no environment-specific config needed in Local,
+// Preview, or Production. Vercel preview/default URLs with no matching
+// school never reach this page at all (proxy.ts sends them to marketing
+// directly), so no .vercel.app branch is needed here.
+function resolveMarketingUrl(host: string): string {
+  if (host.includes("lvh.me")) {
+    const port = host.split(":")[1];
+    return `http://lvh.me${port ? `:${port}` : ""}`;
+  }
+  if (host.includes("connectmyskool.com")) return "https://connectmyskool.com";
+  // eduos.com itself, and any other/unknown host (including balajierp.com
+  // white-label school subdomains, which have no dedicated marketing page
+  // in this codebase) fall back to the confirmed production marketing apex.
+  return "https://eduos.com";
+}
+
+export default async function SchoolNotFound() {
+  const headersList = await headers();
+  const host = headersList.get("host") ?? "";
+  const marketingUrl = resolveMarketingUrl(host);
+
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#F6F9FB] px-6 py-16 font-[family-name:var(--font-display)] text-[#0D1B2A]">
       <div className="pointer-events-none absolute left-1/2 top-1/3 h-[500px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#2B6CB0]/10 blur-[120px]" />
-
 
       <div className="relative flex flex-col items-center text-center">
         <HeroReveal delay={0}>
@@ -49,7 +72,7 @@ export default function SchoolNotFound() {
         <HeroReveal delay={400}>
           <div className="mt-9 flex w-full flex-wrap items-center justify-center gap-3 sm:w-auto">
             <a
-              href="https://eduos.com"
+              href={marketingUrl}
               className="w-full rounded-full bg-[#0D1B2A] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#0D1B2A]/15 transition-all hover:scale-[1.03] hover:bg-[#16283b] active:scale-[0.97] sm:w-auto"
             >
               Go to EduOS

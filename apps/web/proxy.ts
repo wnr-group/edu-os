@@ -4,7 +4,17 @@ import { type NextRequest, NextResponse } from "next/server";
 
 const PUBLIC_PATHS = ["/login", "/auth/callback", "/download-app", "/apply"];
 const PLATFORM_ADMIN_DOMAINS = ["admin.balajierp.com", "core.lvh.me", "core.connectmyskool.com", "core.eduos.com"];
-const MARKETING_DOMAINS = ["connectmyskool.com", "www.connectmyskool.com", "eduos.com", "www.eduos.com", "lvh.me"];
+
+// Fixed apex domains that are marketing on every deployment and will never
+// have a schools row — safe to short-circuit without a DB round trip.
+const MARKETING_EXACT_HOSTS = new Set([
+  "eduos.com",
+  "www.eduos.com",
+  "connectmyskool.com",
+  "www.connectmyskool.com",
+  "lvh.me",
+  "localhost",
+]);
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -14,9 +24,7 @@ export async function proxy(request: NextRequest) {
     PLATFORM_ADMIN_DOMAINS.includes(domain) ||
     pathname.startsWith("/platform-admin");
 
-  const isMarketingDomain = MARKETING_DOMAINS.includes(domain);
-
-  if (isMarketingDomain) {
+  if (!isPlatformAdmin && MARKETING_EXACT_HOSTS.has(domain)) {
     return NextResponse.next();
   }
 
@@ -34,17 +42,27 @@ export async function proxy(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321",
       process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.qGOA8n458FvP100B26l0_27lS383xT7N5Fw43_t-X8s"
     );
-    const { data: school } = await service
-      .from("schools")
-      .select("id, is_active")
-      .eq("domain", domain)
-      .maybeSingle();
-    if (!school || !school.is_active) {
-      return NextResponse.rewrite(new URL("/school-not-found", request.url), {
-        status: 404,
-      });
+    const { data: schoolId } = await service.rpc("get_school_id_by_domain", { p_domain: domain });
+
+    if (schoolId) {
+      // Real tenant — matched schools.domain directly, or a school_domains
+      // alias (e.g. a Vercel branch-preview URL assigned for a no-DNS demo).
+      resolvedSchoolId = schoolId;
+    } else if (domain.endsWith(".vercel.app")) {
+      // No school claims this Vercel URL — the default project alias, or
+      // an unassigned preview deployment. Show branding, not a 404.
+      // Suffix match (not a fixed list), so every current and future
+      // preview URL is covered automatically with no code change.
+      return NextResponse.next();
+    } else {
+      // No `status: 404` here deliberately — in Next.js 16's App Router, a
+      // rewrite carrying an explicit 404 status is treated as "route not
+      // found" and renders the framework's own app/not-found.tsx instead
+      // of the destination page, regardless of what that page actually is.
+      // We want /school-not-found's own content to render, so the rewrite
+      // is left as a plain 200 to the browser.
+      return NextResponse.rewrite(new URL("/school-not-found", request.url));
     }
-    resolvedSchoolId = school.id;
   }
 
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
