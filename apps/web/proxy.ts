@@ -10,6 +10,8 @@ const PLATFORM_ADMIN_DOMAINS = ["admin.balajierp.com", "core.lvh.me", "core.conn
 const MARKETING_EXACT_HOSTS = new Set([
   "eduos.com",
   "www.eduos.com",
+  "eduos.wnradvisory.com",
+  "www.eduos.wnradvisory.com",
   "connectmyskool.com",
   "www.connectmyskool.com",
   "lvh.me",
@@ -86,8 +88,9 @@ export async function proxy(request: NextRequest) {
           const isLvh = host.includes("lvh.me");
           const isBalaji = host.includes("balajierp.com");
           const isConnectmyskool = host.includes("connectmyskool.com");
+          const isEduosWnr = host.includes("eduos.wnradvisory.com");
           const isEduos = host.includes("eduos.com");
-          const cookieDomain = isLvh ? ".lvh.me" : isBalaji ? ".balajierp.com" : isEduos ? ".eduos.com" : isConnectmyskool ? ".connectmyskool.com" : undefined;
+          const cookieDomain = isLvh ? ".lvh.me" : isBalaji ? ".balajierp.com" : isEduosWnr ? ".eduos.wnradvisory.com" : isEduos ? ".eduos.com" : isConnectmyskool ? ".connectmyskool.com" : undefined;
 
 
           // Set all cookies on the request first, then create ONE response and
@@ -190,11 +193,13 @@ export async function proxy(request: NextRequest) {
       ? ".lvh.me"
       : host.includes("balajierp.com")
         ? ".balajierp.com"
-        : host.includes("eduos.com")
-          ? ".eduos.com"
-          : host.includes("connectmyskool.com")
-            ? ".connectmyskool.com"
-            : undefined;
+        : host.includes("eduos.wnradvisory.com")
+          ? ".eduos.wnradvisory.com"
+          : host.includes("eduos.com")
+            ? ".eduos.com"
+            : host.includes("connectmyskool.com")
+              ? ".connectmyskool.com"
+              : undefined;
     const scopeCookie = { path: "/", sameSite: "lax" as const, domain: cookieDomain };
     response.cookies.set("x-school-id", schoolId, scopeCookie);
     response.cookies.set("x-active-role", role, scopeCookie);
