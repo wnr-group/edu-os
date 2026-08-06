@@ -5,6 +5,7 @@ function getCookieDomain(): string | undefined {
   const host = window.location.hostname;
   if (host.includes("lvh.me")) return ".lvh.me";
   if (host.includes("balajierp.com")) return ".balajierp.com";
+  if (host.includes("eduos.wnradvisory.com")) return ".eduos.wnradvisory.com";
   if (host.includes("eduos.com")) return ".eduos.com";
   if (host.includes("connectmyskool.com")) return ".connectmyskool.com";
   return undefined;

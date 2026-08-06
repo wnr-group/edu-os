@@ -21,10 +21,12 @@ function resolveMarketingUrl(host: string): string {
     return `http://lvh.me${port ? `:${port}` : ""}`;
   }
   if (host.includes("connectmyskool.com")) return "https://connectmyskool.com";
-  // eduos.com itself, and any other/unknown host (including balajierp.com
+  // eduos.wnradvisory.com is the confirmed production marketing apex — used
+  // as the default here (not just one branch among several) for both this
+  // host family and any other/unknown host, including balajierp.com
   // white-label school subdomains, which have no dedicated marketing page
-  // in this codebase) fall back to the confirmed production marketing apex.
-  return "https://eduos.com";
+  // in this codebase.
+  return "https://eduos.wnradvisory.com";
 }
 
 export default async function SchoolNotFound() {
