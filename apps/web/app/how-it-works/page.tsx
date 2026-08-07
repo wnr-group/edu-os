@@ -121,7 +121,7 @@ export default function HowItWorksPage() {
       <section className="relative h-[calc(100vh-73px)] w-full overflow-hidden bg-[#052247]">
         <HeroFloat delay={100} className="absolute inset-0">
           <Image
-            src="/sample.jpg"
+            src="/sample.png"
             alt="EduOS dashboard preview showing key metrics, schedule, and campus overview"
             fill
             priority
