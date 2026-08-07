@@ -7,10 +7,10 @@ import type { LucideIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { DashboardTemplate, DashboardWidget } from "@/components/dashboard-template";
 import { FeeCollectionChart } from "./fee-collection-chart";
-import { AttendanceChart } from "./attendance-chart";
+import { AttendanceTodayWidget } from "./attendance-today-widget";
 import { StudentsByClassChart } from "./students-by-class-chart";
-import type { FeeMonth } from "./fee-collection-chart";
-import type { AttendanceData } from "./attendance-chart";
+import type { TermFee } from "./fee-collection-chart";
+import type { AttendanceSummary } from "./attendance-chart";
 import type { ClassCount } from "./students-by-class-chart";
 import { PostOnboardingBanner } from "./post-onboarding-banner";
 
@@ -54,11 +54,13 @@ export default async function AdminDashboard() {
       .eq("academic_year_id", academicYearId ?? ""),
   ]);
 
-  // Fee data for this academic year
-  const [{ data: feeLineItems }, { data: payments }] = await Promise.all([
+ // Fee data for this academic year — due_date added so amounts can be
+  // bucketed into terms below (no dedicated "term" column exists in the
+  // schema; terms are derived from the academic year's own date range).
+  const [{ data: feeLineItems }, { data: payments }, { data: yearRow }] = await Promise.all([
     supabase
       .from("fee_line_items")
-      .select("total_amount")
+      .select("total_amount, due_date")
       .eq("school_id", schoolId!)
       .eq("academic_year_id", academicYearId ?? ""),
     supabase
@@ -66,6 +68,11 @@ export default async function AdminDashboard() {
       .select("total_amount, payment_date, status")
       .eq("school_id", schoolId!)
       .eq("status", "success"),
+    supabase
+      .from("academic_years")
+      .select("start_date, end_date")
+      .eq("id", academicYearId ?? "")
+      .maybeSingle(),
   ]);
 
   // Total due = sum of all fee line item amounts for the year
@@ -78,36 +85,107 @@ export default async function AdminDashboard() {
     (sum, p) => sum + Number(p.total_amount), 0
   );
 
-  // Compute fee chart: last 6 months collected vs due
-  const now = new Date();
-  const monthlyDue = totalDue > 0 ? Math.round(totalDue / 12) : 0;
-  const feeChartData: FeeMonth[] = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const label = MONTHS[d.getMonth()];
+  // Fee chart: 3 equal terms spanning the academic year's own start/end
+  // dates (not hardcoded calendar months, so this adapts to any school's
+  // configured year). Line items with no due_date can't be attributed to a
+  // term and are excluded from the term buckets (they still count in the
+  // totalDue KPI above).
+  const feeChartData: TermFee[] = [];
+  if (yearRow?.start_date && yearRow?.end_date) {
+    const start = new Date(yearRow.start_date);
+    const end = new Date(yearRow.end_date);
+    const third = (end.getTime() - start.getTime()) / 3;
+    const fmt = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 
-    const monthPayments = (payments ?? []).filter((p) => {
-      if (!p.payment_date) return false;
-      return p.payment_date.slice(0, 7) === monthKey;
-    });
+    for (let i = 0; i < 3; i++) {
+      const termStart = new Date(start.getTime() + i * third);
+      // Last term's boundary is inclusive of end_date (+1 day) so an item
+      // due exactly on the last day of the year still falls inside a term.
+      const termEnd = i === 2 ? new Date(end.getTime() + 24 * 60 * 60 * 1000) : new Date(start.getTime() + (i + 1) * third);
 
-    const collected = monthPayments.reduce((s, p) => s + Number(p.total_amount), 0);
+      const due = (feeLineItems ?? [])
+        .filter((li) => li.due_date && new Date(li.due_date) >= termStart && new Date(li.due_date) < termEnd)
+        .reduce((sum, li) => sum + Number(li.total_amount), 0);
 
-    feeChartData.push({ month: label, collected, due: monthlyDue });
+      const collected = (payments ?? [])
+        .filter((p) => p.payment_date && new Date(p.payment_date) >= termStart && new Date(p.payment_date) < termEnd)
+        .reduce((sum, p) => sum + Number(p.total_amount), 0);
+
+      feeChartData.push({
+        term: `Term ${i + 1}`,
+        range: `${fmt(termStart)} – ${fmt(i === 2 ? end : new Date(termEnd.getTime() - 24 * 60 * 60 * 1000))}`,
+        collected,
+        due,
+      });
+    }
   }
 
-  // Attendance donut (today)
-  const [{ count: presentToday }, { count: absentToday }] = await Promise.all([
-    supabase.from("attendance_records").select("*", { count: "exact", head: true })
-      .eq("school_id", schoolId!).eq("date", today).in("status", ["present", "late"]),
-    supabase.from("attendance_records").select("*", { count: "exact", head: true })
-      .eq("school_id", schoolId!).eq("date", today).eq("status", "absent"),
-  ]);
-  const totalToday = (presentToday ?? 0) + (absentToday ?? 0);
-  const presentPct = totalToday > 0 ? Math.round(((presentToday ?? 0) / totalToday) * 100) : 0;
-  const attendanceData: AttendanceData = { present: presentPct, absent: 100 - presentPct };
+  // Attendance Today — class-wise marking status, not a present/absent %.
+  // "Relevant classes" = sections with a timetable entry for today's
+  // weekday (1=Monday..6=Saturday, matching timetable-grid.tsx's DAYS
+  // convention — Sunday's getDay()=0 naturally matches zero rows, no
+  // special-casing needed). "Marked" mirrors the exact definition already
+  // used in teacher/attendance/page.tsx: any attendance_records row exists
+  // for that section+date.
+  const dayOfWeek = new Date().getDay();
 
+  const { data: todaysTimetable } = await supabase
+    .from("timetable")
+    .select("section_id")
+    .eq("school_id", schoolId!)
+    .eq("academic_year_id", academicYearId ?? "")
+    .eq("day_of_week", dayOfWeek);
+
+  const todaysSectionIds = Array.from(new Set((todaysTimetable ?? []).map((t) => t.section_id as string)));
+
+  let attendanceClasses: {
+    id: string; className: string; sectionName: string; order: number;
+    status: "marked" | "pending"; markedStudents: number; totalStudents: number;
+  }[] = [];
+
+  if (todaysSectionIds.length > 0) {
+    const [{ data: sectionRows }, { data: markedRows }, { data: enrollmentRows }] = await Promise.all([
+      supabase.from("sections").select("id, name, class:classes(name, order)").in("id", todaysSectionIds),
+      supabase.from("attendance_records").select("section_id, student_id")
+        .eq("school_id", schoolId!).eq("date", today).in("section_id", todaysSectionIds),
+      supabase.from("student_enrollments").select("section_id, student_profile_id")
+        .eq("school_id", schoolId!).eq("academic_year_id", academicYearId ?? "").eq("is_active", true)
+        .in("section_id", todaysSectionIds),
+    ]);
+
+    const markedBySection = new Map<string, Set<string>>();
+    for (const r of markedRows ?? []) {
+      const key = r.section_id as string;
+      if (!markedBySection.has(key)) markedBySection.set(key, new Set());
+      markedBySection.get(key)!.add(r.student_id as string);
+    }
+    const totalBySection = new Map<string, number>();
+    for (const e of enrollmentRows ?? []) {
+      const key = e.section_id as string;
+      totalBySection.set(key, (totalBySection.get(key) ?? 0) + 1);
+    }
+
+    attendanceClasses = (sectionRows ?? [])
+      .map((s) => {
+        const cls = s.class as unknown as { name: string; order: number } | null;
+        const id = s.id as string;
+        const markedStudents = markedBySection.get(id)?.size ?? 0;
+        const totalStudents = totalBySection.get(id) ?? 0;
+        return {
+          id,
+          className: cls?.name ?? "",
+          order: cls?.order ?? 0,
+          sectionName: s.name as string,
+          status: (markedStudents > 0 ? "marked" : "pending") as "marked" | "pending",
+          markedStudents,
+          totalStudents,
+        };
+      })
+      .sort((a, b) => a.order - b.order || a.sectionName.localeCompare(b.sectionName));
+  }
+
+  const markedCount = attendanceClasses.filter((c) => c.status === "marked").length;
+  const attendanceSummary: AttendanceSummary = { markedCount, totalCount: attendanceClasses.length };
   // Students by class
   const { data: classStudents } = await supabase
     .from("student_enrollments")
@@ -156,7 +234,7 @@ export default async function AdminDashboard() {
         title="School Overview"
         stats={stats}
         chart={
-          <DashboardWidget title="Monthly Fee Collection">
+          <DashboardWidget title="Fee Collection (Term Wise)">
             <FeeCollectionChart data={feeChartData} />
           </DashboardWidget>
         }
@@ -166,9 +244,7 @@ export default async function AdminDashboard() {
           </DashboardWidget>
         }
         alerts={
-          <DashboardWidget title="Attendance Today">
-            <div className="flex justify-center"><AttendanceChart data={attendanceData} /></div>
-          </DashboardWidget>
+          <AttendanceTodayWidget summary={attendanceSummary} classes={attendanceClasses} />
         }
         activity={
           <DashboardWidget title="Recent Announcements">

@@ -11,14 +11,15 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-export type FeeMonth = {
-  month: string;
+export type TermFee = {
+  term: string;
+  range: string;
   collected: number;
   due: number;
 };
 
 interface FeeCollectionChartProps {
-  data: FeeMonth[];
+  data: TermFee[];
 }
 
 export function FeeCollectionChart({ data }: FeeCollectionChartProps) {
@@ -26,7 +27,7 @@ export function FeeCollectionChart({ data }: FeeCollectionChartProps) {
     <ResponsiveContainer width="100%" height={260}>
       <BarChart data={data} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-        <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+        <XAxis dataKey="term" tick={{ fontSize: 12 }} />
         <YAxis
           tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`}
           tick={{ fontSize: 12 }}
@@ -35,6 +36,10 @@ export function FeeCollectionChart({ data }: FeeCollectionChartProps) {
           formatter={(value) =>
             typeof value === "number" ? `₹${value.toLocaleString("en-IN")}` : value
           }
+          labelFormatter={(label, payload) => {
+            const range = payload?.[0]?.payload?.range;
+            return range ? `${label} (${range})` : label;
+          }}
         />
         <Legend />
         <Bar dataKey="collected" name="Collected" fill="#6366f1" radius={[4, 4, 0, 0]} />
