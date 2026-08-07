@@ -279,7 +279,7 @@ export default function AiIntelligencePage() {
             {ENGINE_SIGNALS.map((signal) => (
               <div
                 key={signal.title}
-                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-[#72A9E2]/40 hover:bg-white/10 hover:shadow-xl hover:shadow-black/20"
+                className="group relative h-full overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-[#72A9E2]/40 hover:bg-white/10 hover:shadow-xl hover:shadow-black/20"
               >
                 {/* Soft glow that blooms on hover */}
                 <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#72A9E2]/0 blur-2xl transition-all duration-500 group-hover:bg-[#72A9E2]/20" />

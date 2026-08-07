@@ -491,21 +491,26 @@ export default function MarketingPage() {
                 education.
               </p>
 
-              <div className="relative mt-9 flex flex-col gap-7">
-                <div className="pointer-events-none absolute bottom-2 left-[19px] top-2 w-px bg-white/15" />
+              <div className="relative mt-9 flex flex-col">
                 {[
                   { label: "Data", icon: Database, desc: "Every signal, captured continuously" },
                   { label: "Intelligence", icon: BrainCircuit, desc: "Patterns identified, responsibly" },
                   { label: "Action", icon: Lightbulb, desc: "Insight an educator can use" },
-                ].map((stage) => (
-                  <div key={stage.label} className="relative flex items-start gap-4">
-                    <span className="relative z-10 grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-[#72A9E2]/15 ring-4 ring-[#073571]">
-                      <stage.icon className="h-4 w-4 text-[#72A9E2]" />
-                    </span>
-                    <div className="pt-1.5">
-                      <p className="text-base font-bold text-white">{stage.label}</p>
-                      <p className="mt-0.5 text-xs text-[#AFC6E8]">{stage.desc}</p>
+                ].map((stage, i, arr) => (
+                  <div key={stage.label}>
+                    <div className="relative flex items-start gap-4">
+                      <span className="relative z-10 grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-[#72A9E2]/15 ring-4 ring-[#073571]">
+                        <stage.icon className="h-4 w-4 text-[#72A9E2]" />
+                      </span>
+                      <div className="pt-1.5">
+                        <p className="text-base font-bold text-white">{stage.label}</p>
+                        <p className="mt-0.5 text-xs text-[#AFC6E8]">{stage.desc}</p>
+                      </div>
                     </div>
+                    {/* Connector segment — a real, separate flow element that only
+                        occupies the gap between this icon and the next, so it can
+                        never overlap either icon (no z-index/masking involved). */}
+                    {i < arr.length - 1 && <div className="ml-5 h-6 w-px bg-white/15" />}
                   </div>
                 ))}
               </div>
@@ -750,17 +755,21 @@ export default function MarketingPage() {
 
             {/* Right — connected vertical checklist, count-agnostic */}
            <div className="relative mx-auto w-full max-w-sm">
-              <div className="pointer-events-none absolute bottom-3 left-7 top-3 w-px bg-white/10" />
-              <div className="flex flex-col gap-2">
-                {PRIVACY_COMMITMENTS.map((item, i) => (
-                  <AnimateOnScroll key={item.text} from="right" delay={i * 90}>
-                    <div className="group relative flex items-center gap-4 rounded-xl px-3 py-3 transition-all duration-300 hover:bg-white/5">
-                      <span className="relative z-10 grid h-8 w-8 flex-shrink-0 place-items-center rounded-full bg-[#72A9E2]/15 ring-4 ring-[#073571] transition-transform duration-300 group-hover:scale-110">
-                        <item.icon className="h-4 w-4 text-[#72A9E2]" />
-                      </span>
-                      <span className="text-sm font-medium text-white sm:text-base">{item.text}</span>
-                    </div>
-                  </AnimateOnScroll>
+              <div className="flex flex-col">
+                {PRIVACY_COMMITMENTS.map((item, i, arr) => (
+                  <div key={item.text}>
+                    <AnimateOnScroll from="right" delay={i * 90}>
+                      <div className="group relative flex items-center gap-4 rounded-xl px-3 py-3 transition-all duration-300 hover:bg-white/5">
+                        <span className="relative z-10 grid h-8 w-8 flex-shrink-0 place-items-center rounded-full bg-[#72A9E2]/15 ring-4 ring-[#073571] transition-transform duration-300 group-hover:scale-110">
+                          <item.icon className="h-4 w-4 text-[#72A9E2]" />
+                        </span>
+                        <span className="text-sm font-medium text-white sm:text-base">{item.text}</span>
+                      </div>
+                    </AnimateOnScroll>
+                    {/* Same fix as the AI Powered Insights section — a real flow
+                        element occupying only the gap, not an overlaid line. */}
+                    {i < arr.length - 1 && <div className="ml-7 h-2 w-px bg-white/10" />}
+                  </div>
                 ))}
               </div>
             </div>

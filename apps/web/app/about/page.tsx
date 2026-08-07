@@ -535,10 +535,11 @@ export default function AboutPage() {
         </AnimateOnScroll>
 
         <div className="relative mx-auto mt-16 max-w-4xl">
-          <div className="absolute left-[18px] top-0 h-full border-l-2 border-dotted border-slate-400/60 sm:hidden" />
-          <div className="absolute left-1/2 top-0 hidden h-full -translate-x-1/2 border-l-2 border-dotted border-slate-400/60 sm:block" />
-
           <div className="relative flex flex-col gap-10 sm:gap-0">
+            {/* Scoped to this block only (not the "Beyond 2030" copy below),
+                so the dotted line ends exactly at the last roadmap item. */}
+            <div className="absolute left-[18px] top-0 h-full border-l-2 border-dotted border-slate-400/60 sm:hidden" />
+            <div className="absolute left-1/2 top-0 hidden h-full -translate-x-1/2 border-l-2 border-dotted border-slate-400/60 sm:block" />
             {ROADMAP.map((item, i) => {
               const isLeft = i % 2 === 0;
               const body = (
@@ -579,7 +580,7 @@ export default function AboutPage() {
             })}
           </div>
 
-          <AnimateOnScroll delay={ROADMAP.length * 80} className="mt-14 text-center">
+          <AnimateOnScroll delay={ROADMAP.length * 80} className="relative mt-14 text-center">
             <span className="inline-block rounded-full bg-white px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#72A9E2] md:text-xs">
               Beyond 2030
             </span>

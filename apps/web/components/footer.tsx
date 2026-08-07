@@ -5,7 +5,7 @@ import { AnimateOnScroll } from "@/components/animate-on-scroll";
 
 const CONTACT = {
   email: "admin@wnradvisory.com",
-  whatsapp: "https://wa.me/919789471572",
+  whatsapp: "https://wa.me/919080121533",
   linkedin: "https://www.linkedin.com/company/wnrgroup",
   instagram: "https://www.instagram.com/wnr__group",
 };
