@@ -82,7 +82,10 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
       { label: "Homework", href: "/teacher/homework", feature: "homework" },
     ],
     sections: sections({
-      academic: [{ label: "Results", href: "/teacher/results", feature: "exams" }],
+      academic: [
+        { label: "Results", href: "/teacher/results", feature: "exams" },
+        { label: "Testing", href: "/teacher/testing", feature: "testing" },
+      ],
       administration: [
         { label: "Discipline", href: "/teacher/discipline", feature: "discipline" },
         { label: "Fees", href: "/teacher/fees", feature: "fees" },
@@ -99,7 +102,10 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
       { label: "Homework", href: "/teacher/homework", feature: "homework" },
     ],
     sections: sections({
-      academic: [{ label: "Results", href: "/teacher/results", feature: "exams" }],
+      academic: [
+        { label: "Results", href: "/teacher/results", feature: "exams" },
+        { label: "Testing", href: "/teacher/testing", feature: "testing" },
+      ],
       administration: [
         { label: "Discipline", href: "/teacher/discipline", feature: "discipline" },
         { label: "Fees", href: "/teacher/fees", feature: "fees" },

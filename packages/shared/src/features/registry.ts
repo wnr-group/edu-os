@@ -140,7 +140,8 @@ export const FEATURE_REGISTRY: Record<FeatureKey, FeatureDef> = {
     description: "Live or async quizzes with auto-grading.",
     category: "Operations",
     defaultOn: false,
-    status: "new",
+    status: "existing",
+    gatesTables: ["quizzes", "quiz_questions", "quiz_options", "quiz_assignments", "quiz_attempts", "quiz_answers", "quiz_results"],
   },
   discipline: {
     key: "discipline",
