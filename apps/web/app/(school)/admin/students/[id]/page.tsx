@@ -35,11 +35,18 @@ export default async function StudentDetailPage({
   const schoolId = (await getSchoolId())!;
   const academicYearId = await getAcademicYearId(schoolId);
 
-  const { data: kycCompleteness } = await supabase
-    .from("student_kyc_completeness")
-    .select("required_total, verified_count")
-    .eq("student_id", id)
-    .maybeSingle();
+  const [{ data: kycCompleteness }, { count: pendingHealthCount }] = await Promise.all([
+    supabase
+      .from("student_kyc_completeness")
+      .select("required_total, verified_count")
+      .eq("student_id", id)
+      .maybeSingle(),
+    supabase
+      .from("student_health_record_submissions")
+      .select("id", { count: "exact", head: true })
+      .eq("student_id", id)
+      .eq("status", "pending"),
+  ]);
 
   const [{ data: student }, { data: classes }] = await Promise.all([
     supabase
@@ -157,7 +164,18 @@ export default async function StudentDetailPage({
           content: <StudentDocumentsTab studentId={id} schoolId={schoolId} />,
         },
         { key: "id-card", label: "ID Card", content: <StudentIdCardTab studentId={id} schoolId={schoolId} /> },
-        { key: "health", label: "Health", content: <StudentHealthTab studentId={id} schoolId={schoolId} /> },
+        {
+          key: "health",
+          label: (pendingHealthCount ?? 0) > 0 ? (
+            <span className="inline-flex items-center gap-1.5">
+              Health
+              <span className="h-2 w-2 rounded-full bg-amber-400" title="Pending parent submission awaiting review" />
+            </span>
+          ) : (
+            "Health"
+          ),
+          content: <StudentHealthTab studentId={id} schoolId={schoolId} />,
+        },
       ]}
     />
   );
