@@ -41,14 +41,20 @@ export default function ParentQuizResult() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    if (!quizId || !studentId) return;
-    setLoading(true);
-    const r = await loadResult(quizId, studentId);
-    setResult(r);
-    if (r && r.status === "graded" && r.showAnswersAfterClose) {
-      setReview(await loadReview(r.attemptId));
+    if (!quizId || !studentId) {
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+    setLoading(true);
+    try {
+      const r = await loadResult(quizId, studentId);
+      setResult(r);
+      if (r && r.status === "graded" && r.showAnswersAfterClose) {
+        setReview(await loadReview(r.attemptId));
+      }
+    } finally {
+      setLoading(false);
+    }
   }, [quizId, studentId]);
 
   useEffect(() => { load(); }, [load]);
@@ -152,7 +158,15 @@ export default function ParentQuizResult() {
 
             {result.quizStatus === "open" && result.attemptNumber < result.attemptsAllowed && (
               <TouchableOpacity
-                onPress={() => router.push({ pathname: "/(parent)/testing/[quizId]/attempt", params: { quizId } })}
+                onPress={() =>
+                  router.push({
+                    pathname:
+                      result.quizMode === "live"
+                        ? "/(parent)/testing/[quizId]/waiting-room"
+                        : "/(parent)/testing/[quizId]/attempt",
+                    params: { quizId },
+                  })
+                }
                 style={{ alignItems: "center", paddingVertical: 10, borderWidth: 1.5, borderColor: theme.border, borderRadius: 13 }}
               >
                 <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.primary }}>

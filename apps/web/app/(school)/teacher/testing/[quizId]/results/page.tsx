@@ -150,8 +150,8 @@ export default async function QuizResultsPage({ params }: { params: Promise<{ qu
           {
             header: "Status",
             accessor: (row) => (
-              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold uppercase ${STATUS_STYLE[row.status]}`}>
-                {STATUS_LABEL[row.status]}
+              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold uppercase ${STATUS_STYLE[row.status] ?? "bg-gray-100 text-gray-500"}`}>
+                {STATUS_LABEL[row.status] ?? row.status}
               </span>
             ),
           },

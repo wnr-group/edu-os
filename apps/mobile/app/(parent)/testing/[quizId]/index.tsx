@@ -27,13 +27,19 @@ export default function ParentQuizDetails() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    if (!quizId || !studentId) return;
+    if (!quizId || !studentId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    const [q, a] = await Promise.all([loadQuizDetail(quizId), loadExistingAttempt(quizId, studentId)]);
-    setQuiz(q);
-    setAttemptStatus(a?.status ?? null);
-    setAttemptNumber(a?.attemptNumber ?? 0);
-    setLoading(false);
+    try {
+      const [q, a] = await Promise.all([loadQuizDetail(quizId), loadExistingAttempt(quizId, studentId)]);
+      setQuiz(q);
+      setAttemptStatus(a?.status ?? null);
+      setAttemptNumber(a?.attemptNumber ?? 0);
+    } finally {
+      setLoading(false);
+    }
   }, [quizId, studentId]);
 
   useEffect(() => { load(); }, [load]);

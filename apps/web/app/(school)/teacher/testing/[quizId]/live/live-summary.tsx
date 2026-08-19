@@ -30,8 +30,8 @@ export function LiveSummary({ quizId, sectionId }: { quizId: string; sectionId: 
       ]);
       if (cancelled) return;
 
-      const joined = participants?.length ?? 0;
       const excluded = (participants ?? []).filter((p) => p.status === "excluded").length;
+      const joined = (participants?.length ?? 0) - excluded;
       const completed = (attempts ?? []).filter((a) => a.status === "submitted" || a.status === "graded").length;
       const notJoined = Math.max(0, (totalAssigned ?? 0) - joined);
 

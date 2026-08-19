@@ -15,7 +15,10 @@ export function GradeAnswerForm({ answerId, maxPoints }: { answerId: string; max
 
   async function handleSave() {
     const value = parseFloat(points);
-    if (points === "" || Number.isNaN(value) || value < 0 || value > maxPoints) return;
+    if (points === "" || Number.isNaN(value) || value < 0 || value > maxPoints) {
+      toast.error(`Enter a value between 0 and ${maxPoints}.`);
+      return;
+    }
     setSaving(true);
     const supabase = createClient();
     const { error } = await supabase.rpc("grade_short_answer", {

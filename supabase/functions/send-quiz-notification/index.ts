@@ -222,6 +222,7 @@ async function sendExpoPush(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ to: token, title, body, sound: "default" }),
+      signal: AbortSignal.timeout(10_000),
     });
     const data = await res.json();
     const status = data?.data?.status;

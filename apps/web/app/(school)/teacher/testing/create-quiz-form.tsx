@@ -81,6 +81,7 @@ export function CreateQuizForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     if (!title || !classId || !sectionId || !subjectId || !academicYearId) return;
     const minutes = parseInt(durationMinutes, 10);
     if (!minutes || minutes <= 0) {

@@ -141,7 +141,11 @@ export const FEATURE_REGISTRY: Record<FeatureKey, FeatureDef> = {
     category: "Operations",
     defaultOn: false,
     status: "existing",
-    gatesTables: ["quizzes", "quiz_questions", "quiz_options", "quiz_assignments", "quiz_attempts", "quiz_answers", "quiz_results"],
+    gatesTables: [
+      "quizzes", "quiz_questions", "quiz_options", "quiz_assignments", "quiz_attempts", "quiz_answers", "quiz_results",
+      "quiz_live_participants", "quiz_blocker_reports",
+    ],
+    gatesFunctions: ["send-quiz-notification"],
   },
   discipline: {
     key: "discipline",

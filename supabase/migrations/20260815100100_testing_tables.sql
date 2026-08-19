@@ -127,13 +127,21 @@ CREATE OR REPLACE FUNCTION public.sync_quiz_totals()
 RETURNS trigger LANGUAGE plpgsql SET search_path = '' AS $$
 DECLARE v_quiz_id uuid;
 BEGIN
-  v_quiz_id := COALESCE(NEW.quiz_id, OLD.quiz_id);
+  IF TG_OP = 'DELETE' THEN
+    v_quiz_id := OLD.quiz_id;
+  ELSE
+    v_quiz_id := NEW.quiz_id;
+  END IF;
   UPDATE public.quizzes SET
     question_count = (SELECT count(*) FROM public.quiz_questions WHERE quiz_id = v_quiz_id),
     total_points   = (SELECT COALESCE(sum(points), 0) FROM public.quiz_questions WHERE quiz_id = v_quiz_id),
     updated_at = now()
   WHERE id = v_quiz_id;
-  RETURN COALESCE(NEW, OLD);
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  ELSE
+    RETURN NEW;
+  END IF;
 END $$;
 
 CREATE TRIGGER trg_sync_quiz_totals

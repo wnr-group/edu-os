@@ -43,17 +43,20 @@ export default function ParentLiveWaitingRoom() {
   const load = useCallback(async () => {
     if (!quizId || !studentId) return;
     setLoading(true);
-    const [q, live, status, blocker] = await Promise.all([
-      loadQuizDetail(quizId),
-      loadLiveQuizState(quizId),
-      loadMyParticipantStatus(quizId, studentId),
-      loadMyBlockerReport(quizId, studentId),
-    ]);
-    setQuiz(q);
-    setLiveState(live);
-    setMyStatus(status);
-    setMyBlockerReport(blocker);
-    setLoading(false);
+    try {
+      const [q, live, status, blocker] = await Promise.all([
+        loadQuizDetail(quizId),
+        loadLiveQuizState(quizId),
+        loadMyParticipantStatus(quizId, studentId),
+        loadMyBlockerReport(quizId, studentId),
+      ]);
+      setQuiz(q);
+      setLiveState(live);
+      setMyStatus(status);
+      setMyBlockerReport(blocker);
+    } finally {
+      setLoading(false);
+    }
   }, [quizId, studentId]);
 
   useEffect(() => { load(); }, [load]);
@@ -63,11 +66,13 @@ export default function ParentLiveWaitingRoom() {
   // running (late join, if the host allowed it).
   useEffect(() => {
     if (navigatedRef.current) return;
-    if (liveState?.liveStatus === "in_progress" && myStatus !== "excluded") {
-      navigatedRef.current = true;
-      router.replace({ pathname: "/(parent)/testing/[quizId]/live-attempt", params: { quizId } });
-    }
-  }, [liveState?.liveStatus, myStatus, quizId, router]);
+    if (liveState?.liveStatus !== "in_progress") return;
+    if (myStatus === "excluded") return;
+    const canEnter = myStatus === "joined" || liveState.lateJoinAllowed;
+    if (!canEnter) return;
+    navigatedRef.current = true;
+    router.replace({ pathname: "/(parent)/testing/[quizId]/live-attempt", params: { quizId } });
+  }, [liveState?.liveStatus, liveState?.lateJoinAllowed, myStatus, quizId, router]);
 
   useEffect(() => {
     if (!quizId) return;

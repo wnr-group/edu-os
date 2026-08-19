@@ -18,7 +18,8 @@ function tabOf(q: ParentQuizListItem): Tab {
 }
 
 function pillOf(q: ParentQuizListItem): QuizPillVariant {
-  if (q.attemptStatus === "graded" || q.attemptStatus === "submitted") return "graded";
+  if (q.attemptStatus === "graded") return "graded";
+  if (q.attemptStatus === "submitted") return "submitted";
   if (q.attemptStatus === "in_progress") return "in_progress";
   if (q.status === "scheduled") return "upcoming";
   if (q.status === "closed") return "closed";
@@ -30,7 +31,7 @@ function formatWindow(closesAt: string | null): string | null {
   const diffMs = new Date(closesAt).getTime() - Date.now();
   if (diffMs <= 0) return null;
   const hours = Math.floor(diffMs / 3600000);
-  const mins = Math.round((diffMs % 3600000) / 60000);
+  const mins = Math.floor((diffMs % 3600000) / 60000);
   if (hours >= 24) return `Closes in ${Math.floor(hours / 24)}d`;
   if (hours > 0) return `Closes in ${hours}h ${mins}m`;
   return `Closes in ${mins}m`;

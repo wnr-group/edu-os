@@ -91,14 +91,22 @@ REVOKE EXECUTE ON FUNCTION public._grade_and_finalize_attempt(uuid, boolean) FRO
 -- ── submit_quiz_attempt — student/parent-facing, single attempt id only ────
 CREATE OR REPLACE FUNCTION public.submit_quiz_attempt(p_attempt_id uuid)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
-DECLARE v_student_id uuid; v_status public.quiz_attempt_status; v_school_id uuid;
+DECLARE
+  v_student_id uuid; v_status public.quiz_attempt_status; v_school_id uuid;
+  v_mode public.quiz_mode; v_started_at timestamptz; v_duration integer; v_closes_at timestamptz;
 BEGIN
-  SELECT student_id, status, school_id INTO v_student_id, v_status, v_school_id
-  FROM public.quiz_attempts WHERE id = p_attempt_id;
+  SELECT a.student_id, a.status, a.school_id, q.mode, a.started_at, q.duration_seconds, q.closes_at
+    INTO v_student_id, v_status, v_school_id, v_mode, v_started_at, v_duration, v_closes_at
+  FROM public.quiz_attempts a JOIN public.quizzes q ON q.id = a.quiz_id
+  WHERE a.id = p_attempt_id;
   IF v_student_id IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
   IF NOT public.is_parent_of_student(v_student_id) THEN RAISE EXCEPTION 'not_authorized'; END IF;
   IF NOT public.feature_enabled(v_school_id, 'testing') THEN RAISE EXCEPTION 'feature_disabled'; END IF;
   IF v_status <> 'in_progress' THEN RAISE EXCEPTION 'already_submitted'; END IF;
+  IF v_mode = 'async' AND ((v_closes_at IS NOT NULL AND now() > v_closes_at) OR now() > v_started_at + make_interval(secs => v_duration)) THEN
+    PERFORM public._grade_and_finalize_attempt(p_attempt_id, true);
+    RETURN;
+  END IF;
 
   PERFORM public._grade_and_finalize_attempt(p_attempt_id, false);
 END $$;
@@ -286,14 +294,18 @@ BEGIN
     WHERE qa.quiz_id = p_quiz_id AND se.student_profile_id = p_student_id
   ) THEN RAISE EXCEPTION 'not_assigned'; END IF;
 
-  SELECT COALESCE(max(attempt_number), 0) + 1 INTO v_next_attempt
-  FROM public.quiz_attempts WHERE quiz_id = p_quiz_id AND student_id = p_student_id;
-  IF v_next_attempt > v_attempts_allowed THEN RAISE EXCEPTION 'no_attempts_remaining'; END IF;
-
-  -- resume an existing in_progress attempt instead of starting a new one
+  -- resume an existing in_progress attempt instead of starting a new one —
+  -- must happen BEFORE the attempts_allowed check below: an in-progress
+  -- attempt already counts toward max(attempt_number), so checking the
+  -- quota first would incorrectly block a student who simply reloaded
+  -- mid-attempt (the default attempts_allowed=1 made this always fail).
   SELECT id INTO v_id FROM public.quiz_attempts
   WHERE quiz_id = p_quiz_id AND student_id = p_student_id AND status = 'in_progress';
   IF v_id IS NOT NULL THEN RETURN v_id; END IF;
+
+  SELECT COALESCE(max(attempt_number), 0) + 1 INTO v_next_attempt
+  FROM public.quiz_attempts WHERE quiz_id = p_quiz_id AND student_id = p_student_id;
+  IF v_next_attempt > v_attempts_allowed THEN RAISE EXCEPTION 'no_attempts_remaining'; END IF;
 
   INSERT INTO public.quiz_attempts (quiz_id, school_id, student_id, attempt_number, created_by)
   VALUES (p_quiz_id, v_school_id, p_student_id, v_next_attempt, auth.uid())
@@ -307,14 +319,21 @@ GRANT EXECUTE ON FUNCTION public.start_quiz_attempt(uuid, uuid) TO authenticated
 CREATE OR REPLACE FUNCTION public.save_quiz_answer(
   p_attempt_id uuid, p_question_id uuid, p_selected_option_id uuid, p_short_text text
 ) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
-DECLARE v_student_id uuid; v_status public.quiz_attempt_status; v_school_id uuid; v_quiz_id uuid;
+DECLARE
+  v_student_id uuid; v_status public.quiz_attempt_status; v_school_id uuid; v_quiz_id uuid;
+  v_mode public.quiz_mode; v_started_at timestamptz; v_duration integer; v_closes_at timestamptz;
 BEGIN
-  SELECT student_id, status, school_id, quiz_id INTO v_student_id, v_status, v_school_id, v_quiz_id
-  FROM public.quiz_attempts WHERE id = p_attempt_id;
+  SELECT a.student_id, a.status, a.school_id, a.quiz_id, q.mode, a.started_at, q.duration_seconds, q.closes_at
+    INTO v_student_id, v_status, v_school_id, v_quiz_id, v_mode, v_started_at, v_duration, v_closes_at
+  FROM public.quiz_attempts a JOIN public.quizzes q ON q.id = a.quiz_id
+  WHERE a.id = p_attempt_id;
   IF v_student_id IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
   IF NOT public.is_parent_of_student(v_student_id) THEN RAISE EXCEPTION 'not_authorized'; END IF;
   IF NOT public.feature_enabled(v_school_id, 'testing') THEN RAISE EXCEPTION 'feature_disabled'; END IF;
   IF v_status <> 'in_progress' THEN RAISE EXCEPTION 'attempt_closed'; END IF;
+  IF v_mode = 'async' AND ((v_closes_at IS NOT NULL AND now() > v_closes_at) OR now() > v_started_at + make_interval(secs => v_duration)) THEN
+    RAISE EXCEPTION 'attempt_expired';
+  END IF;
 
   IF NOT EXISTS (SELECT 1 FROM public.quiz_questions WHERE id = p_question_id AND quiz_id = v_quiz_id) THEN
     RAISE EXCEPTION 'question_not_in_quiz';
@@ -361,11 +380,13 @@ BEGIN
       grading_status = 'manually_graded', graded_by = auth.uid(), graded_at = now()
   WHERE id = p_answer_id;
 
-  SELECT COALESCE(sum(points_awarded), 0), qz.total_points, qz.pass_mark_pct
+  SELECT COALESCE(sum(a.points_awarded), 0), r.max_points, qz.pass_mark_pct
     INTO v_total, v_max, v_pass
-  FROM public.quiz_answers a JOIN public.quizzes qz ON qz.id = v_quiz_id
+  FROM public.quiz_answers a
+  JOIN public.quiz_results r ON r.attempt_id = v_attempt_id
+  JOIN public.quizzes qz ON qz.id = v_quiz_id
   WHERE a.attempt_id = v_attempt_id
-  GROUP BY qz.total_points, qz.pass_mark_pct;
+  GROUP BY r.max_points, qz.pass_mark_pct;
 
   SELECT NOT EXISTS (
     SELECT 1 FROM public.quiz_answers WHERE attempt_id = v_attempt_id AND grading_status = 'pending_manual_grade'

@@ -26,30 +26,33 @@ export interface ParentQuizListItem {
 // explicit section_id filter here additionally scopes it to THIS child, so
 // switching the active child re-queries rather than showing a merged list.
 export async function loadQuizzesForChild(studentId: string): Promise<ParentQuizListItem[]> {
-  const { data: enrollment } = await supabase
+  const { data: enrollment, error: enrollmentErr } = await supabase
     .from("student_enrollments")
     .select("section_id")
     .eq("student_profile_id", studentId)
     .eq("is_active", true)
     .maybeSingle();
+  if (enrollmentErr) throw enrollmentErr;
   const sectionId = enrollment?.section_id;
   if (!sectionId) return [];
 
-  const { data: quizzes } = await supabase
+  const { data: quizzes, error: quizzesErr } = await supabase
     .from("quizzes")
     .select("id, title, mode, status, opens_at, closes_at, duration_seconds, question_count, total_points, subject:subjects(name)")
     .eq("section_id", sectionId)
     .order("opens_at", { ascending: true, nullsFirst: true });
+  if (quizzesErr) throw quizzesErr;
 
   const quizIds = (quizzes ?? []).map((q) => q.id);
-  const { data: attempts } = quizIds.length > 0
+  const { data: attempts, error: attemptsErr } = quizIds.length > 0
     ? await supabase
         .from("quiz_attempts")
         .select("id, quiz_id, status")
         .eq("student_id", studentId)
         .in("quiz_id", quizIds)
         .order("attempt_number", { ascending: false })
-    : { data: [] as { id: string; quiz_id: string; status: AttemptStatus }[] };
+    : { data: [] as { id: string; quiz_id: string; status: AttemptStatus }[], error: null };
+  if (attemptsErr) throw attemptsErr;
 
   const latestAttemptByQuiz: Record<string, { id: string; status: AttemptStatus }> = {};
   for (const a of attempts ?? []) {
@@ -57,9 +60,10 @@ export async function loadQuizzesForChild(studentId: string): Promise<ParentQuiz
   }
 
   const attemptIds = Object.values(latestAttemptByQuiz).map((a) => a.id);
-  const { data: results } = attemptIds.length > 0
+  const { data: results, error: resultsErr } = attemptIds.length > 0
     ? await supabase.from("quiz_results").select("attempt_id, total_points, max_points, percentage").in("attempt_id", attemptIds)
-    : { data: [] as { attempt_id: string; total_points: number; max_points: number; percentage: number }[] };
+    : { data: [] as { attempt_id: string; total_points: number; max_points: number; percentage: number }[], error: null };
+  if (resultsErr) throw resultsErr;
   const resultByAttempt: Record<string, { total_points: number; max_points: number; percentage: number }> = {};
   for (const r of results ?? []) resultByAttempt[r.attempt_id] = r;
 
@@ -101,13 +105,14 @@ export interface QuizDetail {
 }
 
 export async function loadQuizDetail(quizId: string): Promise<QuizDetail | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("quizzes")
     .select(
       "id, title, instructions, mode, status, question_count, total_points, duration_seconds, opens_at, closes_at, attempts_allowed, show_answers_after_close, subject:subjects(name)"
     )
     .eq("id", quizId)
     .maybeSingle();
+  if (error) throw error;
   if (!data) return null;
   const subject = data.subject as unknown as { name: string } | null;
   return {
@@ -133,7 +138,7 @@ export async function loadExistingAttempt(
   quizId: string,
   studentId: string
 ): Promise<{ id: string; status: AttemptStatus; attemptNumber: number } | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("quiz_attempts")
     .select("id, status, attempt_number")
     .eq("quiz_id", quizId)
@@ -141,6 +146,7 @@ export async function loadExistingAttempt(
     .order("attempt_number", { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (error) throw error;
   return data ? { id: data.id, status: data.status as AttemptStatus, attemptNumber: data.attempt_number } : null;
 }
 
@@ -157,12 +163,13 @@ export interface AttemptTiming {
 }
 
 export async function loadAttemptTiming(attemptId: string): Promise<AttemptTiming | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("quiz_attempts")
     .select("started_at, status, quiz:quizzes(duration_seconds, closes_at)")
     .eq("id", attemptId)
     .maybeSingle();
-  if (!data) return null;
+  if (error) throw error;
+  if (!data || !data.quiz) return null;
   const quiz = data.quiz as unknown as { duration_seconds: number; closes_at: string | null };
   return {
     startedAt: data.started_at,
@@ -237,10 +244,11 @@ export interface QuizResultData {
   attemptNumber: number;
   attemptsAllowed: number;
   quizStatus: QuizStatus;
+  quizMode: QuizMode;
 }
 
 export async function loadResult(quizId: string, studentId: string): Promise<QuizResultData | null> {
-  const { data: attempt } = await supabase
+  const { data: attempt, error: attemptErr } = await supabase
     .from("quiz_attempts")
     .select("id, status, started_at, submitted_at, attempt_number")
     .eq("quiz_id", quizId)
@@ -248,12 +256,15 @@ export async function loadResult(quizId: string, studentId: string): Promise<Qui
     .order("attempt_number", { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (attemptErr) throw attemptErr;
   if (!attempt) return null;
 
-  const [{ data: result }, { data: quiz }] = await Promise.all([
+  const [{ data: result, error: resultErr }, { data: quiz, error: quizErr }] = await Promise.all([
     supabase.from("quiz_results").select("total_points, max_points, percentage, passed, fully_graded").eq("attempt_id", attempt.id).maybeSingle(),
-    supabase.from("quizzes").select("show_answers_after_close, attempts_allowed, status").eq("id", quizId).maybeSingle(),
+    supabase.from("quizzes").select("show_answers_after_close, attempts_allowed, status, mode").eq("id", quizId).maybeSingle(),
   ]);
+  if (resultErr) throw resultErr;
+  if (quizErr) throw quizErr;
 
   return {
     attemptId: attempt.id,
@@ -269,6 +280,7 @@ export async function loadResult(quizId: string, studentId: string): Promise<Qui
     attemptNumber: attempt.attempt_number,
     attemptsAllowed: quiz?.attempts_allowed ?? 1,
     quizStatus: (quiz?.status as QuizStatus) ?? "closed",
+    quizMode: (quiz?.mode as QuizMode) ?? "async",
   };
 }
 
@@ -309,11 +321,12 @@ export interface LiveQuizState {
 }
 
 export async function loadLiveQuizState(quizId: string): Promise<LiveQuizState | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("quizzes")
     .select("live_status, live_current_question_index, live_question_started_at, live_late_join_allowed")
     .eq("id", quizId)
     .maybeSingle();
+  if (error) throw error;
   if (!data) return null;
   return {
     liveStatus: data.live_status as LiveStatus | null,
@@ -324,12 +337,13 @@ export async function loadLiveQuizState(quizId: string): Promise<LiveQuizState |
 }
 
 export async function loadMyParticipantStatus(quizId: string, studentId: string): Promise<ParticipantStatus | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("quiz_live_participants")
     .select("status")
     .eq("quiz_id", quizId)
     .eq("student_id", studentId)
     .maybeSingle();
+  if (error) throw error;
   return (data?.status as ParticipantStatus | undefined) ?? null;
 }
 
@@ -344,7 +358,7 @@ export interface MyBlockerReport {
 // waiting room's status banner (open -> acknowledged), kept live via a
 // Realtime subscription in the waiting-room screen rather than polling.
 export async function loadMyBlockerReport(quizId: string, studentId: string): Promise<MyBlockerReport | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("quiz_blocker_reports")
     .select("id, reason, status, reported_at")
     .eq("quiz_id", quizId)
@@ -352,6 +366,7 @@ export async function loadMyBlockerReport(quizId: string, studentId: string): Pr
     .order("reported_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (error) throw error;
   if (!data) return null;
   return {
     id: data.id,

@@ -32,9 +32,13 @@ function windowLabel(row: QuizRow): string {
 }
 
 function hrefFor(row: QuizRow): string {
-  return row.status === "draft" || row.status === "scheduled"
-    ? `/teacher/testing/${row.id}/edit`
-    : `/teacher/testing/${row.id}/results`;
+  if (row.status === "draft" || row.status === "scheduled") {
+    return `/teacher/testing/${row.id}/edit`;
+  }
+  if (row.mode === "Live" && row.status === "open") {
+    return `/teacher/testing/${row.id}/live`;
+  }
+  return `/teacher/testing/${row.id}/results`;
 }
 
 export function QuizListTable({ rows }: { rows: QuizRow[] }) {

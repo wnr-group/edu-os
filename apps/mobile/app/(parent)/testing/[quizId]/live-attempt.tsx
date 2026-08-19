@@ -39,9 +39,13 @@ export default function ParentLiveAttempt() {
       router.replace({ pathname: "/(parent)/testing/[quizId]/result", params: { quizId } });
       return;
     }
-    setQuestion(q);
-    setSelectedOptionId(null);
-    setShortText("");
+    setQuestion((prev) => {
+      if (prev?.questionId !== q.questionId) {
+        setSelectedOptionId(null);
+        setShortText("");
+      }
+      return q;
+    });
     setLoading(false);
   }, [quizId, studentId, router]);
 

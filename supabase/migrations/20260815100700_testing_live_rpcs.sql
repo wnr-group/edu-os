@@ -144,14 +144,18 @@ BEGIN
     IF v_closes IS NOT NULL AND now() > v_closes THEN RAISE EXCEPTION 'closed'; END IF;
   END IF;
 
-  SELECT COALESCE(max(attempt_number), 0) + 1 INTO v_next_attempt
-  FROM public.quiz_attempts WHERE quiz_id = p_quiz_id AND student_id = p_student_id;
-  IF v_next_attempt > v_attempts_allowed THEN RAISE EXCEPTION 'no_attempts_remaining'; END IF;
-
-  -- resume an existing in_progress attempt instead of starting a new one
+  -- resume an existing in_progress attempt instead of starting a new one —
+  -- must happen BEFORE the attempts_allowed check below: an in-progress
+  -- attempt already counts toward max(attempt_number), so checking the
+  -- quota first would incorrectly block a student who simply reloaded
+  -- mid-attempt (the default attempts_allowed=1 made this always fail).
   SELECT id INTO v_id FROM public.quiz_attempts
   WHERE quiz_id = p_quiz_id AND student_id = p_student_id AND status = 'in_progress';
   IF v_id IS NOT NULL THEN RETURN v_id; END IF;
+
+  SELECT COALESCE(max(attempt_number), 0) + 1 INTO v_next_attempt
+  FROM public.quiz_attempts WHERE quiz_id = p_quiz_id AND student_id = p_student_id;
+  IF v_next_attempt > v_attempts_allowed THEN RAISE EXCEPTION 'no_attempts_remaining'; END IF;
 
   INSERT INTO public.quiz_attempts (quiz_id, school_id, student_id, attempt_number, created_by, joined_at_question_index)
   VALUES (p_quiz_id, v_school_id, p_student_id, v_next_attempt, auth.uid(),
@@ -303,6 +307,11 @@ BEGIN
   IF v_school_id IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
   IF NOT public.feature_enabled(v_school_id, 'testing') THEN RAISE EXCEPTION 'feature_disabled'; END IF;
   IF v_mode <> 'live' THEN RAISE EXCEPTION 'not_live_quiz'; END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.quiz_assignments qa
+    JOIN public.student_enrollments se ON se.section_id = qa.section_id AND se.is_active
+    WHERE qa.quiz_id = p_quiz_id AND se.student_profile_id = p_student_id
+  ) THEN RAISE EXCEPTION 'not_assigned'; END IF;
   IF v_live_status IS NOT NULL AND v_live_status <> 'not_started' THEN RAISE EXCEPTION 'session_already_started'; END IF;
 
   INSERT INTO public.quiz_blocker_reports (quiz_id, school_id, student_id, reason, message)
@@ -371,6 +380,7 @@ BEGIN
   SELECT school_id, section_id, live_status INTO v_school_id, v_section_id, v_live_status
   FROM public.quizzes WHERE id = p_quiz_id;
   IF v_school_id IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
+  IF NOT public.feature_enabled(v_school_id, 'testing') THEN RAISE EXCEPTION 'feature_disabled'; END IF;
   IF NOT (public.get_my_role() = 'super_admin' OR public.teaches_section(v_section_id) OR public.get_my_role() IN ('school_admin', 'principal')) THEN
     RAISE EXCEPTION 'not_authorized';
   END IF;
@@ -395,6 +405,7 @@ BEGIN
     INTO v_school_id, v_section_id, v_live_status, v_current_index, v_question_started_at, v_question_count
   FROM public.quizzes WHERE id = p_quiz_id;
   IF v_school_id IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
+  IF NOT public.feature_enabled(v_school_id, 'testing') THEN RAISE EXCEPTION 'feature_disabled'; END IF;
   IF NOT (public.get_my_role() = 'super_admin' OR public.teaches_section(v_section_id) OR public.get_my_role() IN ('school_admin', 'principal')) THEN
     RAISE EXCEPTION 'not_authorized';
   END IF;
@@ -432,6 +443,7 @@ BEGIN
   FROM public.quiz_blocker_reports br JOIN public.quizzes q ON q.id = br.quiz_id
   WHERE br.id = p_report_id;
   IF v_school_id IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
+  IF NOT public.feature_enabled(v_school_id, 'testing') THEN RAISE EXCEPTION 'feature_disabled'; END IF;
   IF NOT (public.get_my_role() = 'super_admin' OR public.teaches_section(v_section_id) OR public.get_my_role() IN ('school_admin', 'principal')) THEN
     RAISE EXCEPTION 'not_authorized';
   END IF;
@@ -449,6 +461,7 @@ DECLARE v_school_id uuid; v_section_id uuid;
 BEGIN
   SELECT school_id, section_id INTO v_school_id, v_section_id FROM public.quizzes WHERE id = p_quiz_id;
   IF v_school_id IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
+  IF NOT public.feature_enabled(v_school_id, 'testing') THEN RAISE EXCEPTION 'feature_disabled'; END IF;
   IF NOT (public.get_my_role() = 'super_admin' OR public.teaches_section(v_section_id) OR public.get_my_role() IN ('school_admin', 'principal')) THEN
     RAISE EXCEPTION 'not_authorized';
   END IF;
@@ -466,6 +479,7 @@ DECLARE v_school_id uuid; v_section_id uuid; v_attempt_id uuid;
 BEGIN
   SELECT school_id, section_id INTO v_school_id, v_section_id FROM public.quizzes WHERE id = p_quiz_id;
   IF v_school_id IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
+  IF NOT public.feature_enabled(v_school_id, 'testing') THEN RAISE EXCEPTION 'feature_disabled'; END IF;
   IF NOT (public.get_my_role() = 'super_admin' OR public.teaches_section(v_section_id) OR public.get_my_role() IN ('school_admin', 'principal')) THEN
     RAISE EXCEPTION 'not_authorized';
   END IF;

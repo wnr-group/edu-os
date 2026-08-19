@@ -77,7 +77,10 @@ export function QuestionsTab({
 
   async function handleSave() {
     const pts = parseFloat(points);
-    if (!prompt || !pts || pts <= 0) return;
+    if (!prompt || !pts || pts <= 0) {
+      toast.error("Enter a prompt and a points value greater than 0.");
+      return;
+    }
     if (type === "mcq") {
       const filled = options.map((o) => o.trim()).filter(Boolean);
       if (filled.length < 2 || correctIndex === null || !options[correctIndex]?.trim()) {
@@ -163,13 +166,21 @@ export function QuestionsTab({
           order_index: o.i + 1,
         }));
       const { error: optErr } = await supabase.from("quiz_options").insert(rows);
-      if (optErr) toast.error(optErr.message);
+      if (optErr) {
+        setSaving(false);
+        toast.error(optErr.message);
+        return;
+      }
     } else if (type === "true_false") {
       const { error: optErr } = await supabase.from("quiz_options").insert([
         { question_id: questionId, school_id: schoolId, option_text: "True", is_correct: tfCorrect === "true", order_index: 1 },
         { question_id: questionId, school_id: schoolId, option_text: "False", is_correct: tfCorrect === "false", order_index: 2 },
       ]);
-      if (optErr) toast.error(optErr.message);
+      if (optErr) {
+        setSaving(false);
+        toast.error(optErr.message);
+        return;
+      }
     }
 
     setSaving(false);
