@@ -12,9 +12,10 @@ import { StudentAcademicsTab } from "@/app/(school)/admin/students/[id]/student-
 import { StudentFeesTab } from "@/app/(school)/admin/students/[id]/student-fees-tab";
 import { StudentDocumentsTab } from "@/app/(school)/admin/students/[id]/student-documents-tab";
 import { StudentIdCardTab } from "@/app/(school)/admin/students/[id]/student-id-card-tab";
+import { StudentHealthTab } from "@/app/(school)/admin/students/[id]/student-health-tab";
 import { avatarColor, initialsOf } from "@/lib/student-avatar";
 
-type Tab = "attendance" | "academics" | "fees" | "documents" | "id-card";
+type Tab = "attendance" | "academics" | "fees" | "documents" | "id-card" | "health";
 
 export default async function PrincipalStudentDetailPage({
   params,
@@ -159,6 +160,7 @@ export default async function PrincipalStudentDetailPage({
           content: <StudentDocumentsTab studentId={id} schoolId={schoolId} />,
         },
         { key: "id-card", label: "ID Card", content: <StudentIdCardTab studentId={id} schoolId={schoolId} /> },
+        { key: "health", label: "Health", content: <StudentHealthTab studentId={id} schoolId={schoolId} /> },
       ]}
     />
   );

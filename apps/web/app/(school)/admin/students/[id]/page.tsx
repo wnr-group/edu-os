@@ -13,8 +13,9 @@ import { StudentAcademicsTab } from "./student-academics-tab";
 import { StudentFeesTab } from "./student-fees-tab";
 import { StudentDocumentsTab } from "./student-documents-tab";
 import { StudentIdCardTab } from "./student-id-card-tab";
+import { StudentHealthTab } from "./student-health-tab";
 
-type Tab = "attendance" | "academics" | "fees" | "documents" | "id-card";
+type Tab = "attendance" | "academics" | "fees" | "documents" | "id-card" | "health";
 
 export default async function StudentDetailPage({
   params,
@@ -156,6 +157,7 @@ export default async function StudentDetailPage({
           content: <StudentDocumentsTab studentId={id} schoolId={schoolId} />,
         },
         { key: "id-card", label: "ID Card", content: <StudentIdCardTab studentId={id} schoolId={schoolId} /> },
+        { key: "health", label: "Health", content: <StudentHealthTab studentId={id} schoolId={schoolId} /> },
       ]}
     />
   );
