@@ -41,6 +41,7 @@ export default function ParentAcademics() {
   const examsEnabled = useFeature("exams");
   const homeworkEnabled = useFeature("homework");
   const reportCardsEnabled = useFeature("report_cards");
+  const testingEnabled = useFeature("testing");
   const router = useRouter();
   const { studentId: activeStudentId } = useActiveContext();
   const [tab, setTab] = useState<"results" | "homework">("homework");
@@ -347,6 +348,20 @@ export default function ParentAcademics() {
           </View>
           <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
         </TouchableOpacity>
+
+        {testingEnabled && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => router.push("/(parent)/testing")}
+            style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: theme.surfaceRaised, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: theme.border }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Ionicons name="document-text-outline" size={18} color={theme.primary} />
+              <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.textPrimary }}>Testing</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+          </TouchableOpacity>
+        )}
 
         {/* Segmented control */}
         <View style={{ flexDirection: "row", backgroundColor: theme.surface, borderRadius: 12, padding: 4, borderWidth: 1, borderColor: theme.border }}>
