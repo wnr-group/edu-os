@@ -4,7 +4,12 @@ import { getAcademicYearId } from "@/lib/academic-year";
 import { PageHeader } from "@/components/page-header";
 import { TimetableGrid } from "./timetable-grid";
 
-export default async function TimetablePage() {
+export default async function TimetablePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ classId?: string; sectionId?: string }>;
+}) {
+  const { classId, sectionId } = await searchParams;
   const supabase = await createServerSupabaseClient();
   const schoolId = (await getSchoolId())!;
   const academicYearId = await getAcademicYearId(schoolId);
@@ -49,7 +54,7 @@ export default async function TimetablePage() {
       .order("name"),
     supabase
       .from("timetable")
-      .select("id, section_id, day_of_week, period, subject_id, teacher_id")
+      .select("id, section_id, day_of_week, period, subject_id, teacher_id, is_elective")
       .eq("school_id", schoolId)
       .eq("academic_year_id", academicYearId),
   ]);
@@ -69,6 +74,8 @@ export default async function TimetablePage() {
         subjects={subjects ?? []}
         teachers={teachers}
         slots={slots ?? []}
+        initialClassId={classId}
+        initialSectionId={sectionId}
       />
     </div>
   );
