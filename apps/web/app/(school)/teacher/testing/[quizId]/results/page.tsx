@@ -48,10 +48,10 @@ export default async function QuizResultsPage({ params }: { params: Promise<{ qu
   const section = quiz.section as unknown as { name: string; class: { name: string } | null } | null;
   const sectionLabel = section ? `${section.class?.name ?? ""} – Section ${section.name}` : "";
 
-  const [{ data: attempts }, { data: enrolled }, { count: totalStudents }] = await Promise.all([
+  const [{ data: allAttempts }, { data: enrolled }, { count: totalStudents }] = await Promise.all([
     supabase
       .from("quiz_attempts")
-      .select("id, student_id, status, started_at, submitted_at, student:student_profiles(id, full_name)")
+      .select("id, student_id, status, started_at, submitted_at, attempt_number, student:student_profiles(id, full_name)")
       .eq("quiz_id", quizId),
     supabase
       .from("student_enrollments")
@@ -60,6 +60,17 @@ export default async function QuizResultsPage({ params }: { params: Promise<{ qu
       .eq("is_active", true),
     supabase.from("student_enrollments").select("id", { count: "exact", head: true }).eq("section_id", quiz.section_id).eq("is_active", true),
   ]);
+
+  // A quiz can allow multiple attempts (quizzes.attempts_allowed) — keep only
+  // each student's latest attempt so retakes don't show as duplicate rows or
+  // get double-counted in the KPIs below. Matches the "latest attempt" rule
+  // already used by the per-student drill-down page and push_quiz_to_gradebook.
+  const latestByStudent = new Map<string, NonNullable<typeof allAttempts>[number]>();
+  for (const a of allAttempts ?? []) {
+    const existing = latestByStudent.get(a.student_id);
+    if (!existing || a.attempt_number > existing.attempt_number) latestByStudent.set(a.student_id, a);
+  }
+  const attempts = Array.from(latestByStudent.values());
 
   const attemptIds = (attempts ?? []).map((a) => a.id);
   const { data: results } = attemptIds.length > 0

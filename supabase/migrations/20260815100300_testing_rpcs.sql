@@ -233,10 +233,21 @@ BEGIN
   VALUES (v_school_id, v_academic_year_id, v_title, current_date, current_date)
   RETURNING id INTO v_exam_id;
 
+  -- A quiz can allow multiple attempts (attempts_allowed) — only the
+  -- student's latest attempt is pushed, matching the "latest attempt" rule
+  -- used everywhere else (results list/drill-down pages). Without this,
+  -- a retaken quiz inserts two rows for the same (exam_id, student_id,
+  -- subject_id) and violates exam_results' unique constraint.
   INSERT INTO public.exam_results (school_id, exam_id, student_id, subject_id, marks_obtained, max_marks, teacher_id)
   SELECT v_school_id, v_exam_id, r.student_id, q.subject_id, r.total_points, r.max_points, auth.uid()
-  FROM public.quiz_results r JOIN public.quizzes q ON q.id = r.quiz_id
-  WHERE r.quiz_id = p_quiz_id AND r.fully_graded;
+  FROM public.quiz_results r
+  JOIN public.quiz_attempts a ON a.id = r.attempt_id
+  JOIN public.quizzes q ON q.id = r.quiz_id
+  WHERE r.quiz_id = p_quiz_id AND r.fully_graded
+    AND a.attempt_number = (
+      SELECT max(a2.attempt_number) FROM public.quiz_attempts a2
+      WHERE a2.quiz_id = p_quiz_id AND a2.student_id = a.student_id
+    );
 
   UPDATE public.quizzes SET exam_id = v_exam_id, pushed_to_gradebook_at = now() WHERE id = p_quiz_id;
 

@@ -5,6 +5,7 @@ import { NoSectionPrompt } from "../no-section-prompt";
 import { DataTable } from "@/components/data-table";
 import { getSchoolFeatures } from "@/lib/school-brand";
 import { ModuleUnavailable } from "@/components/module-unavailable";
+import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 
 export default async function ResultsPage() {
@@ -21,17 +22,26 @@ export default async function ResultsPage() {
   }
 
   const supabase = await createServerSupabaseClient();
-  const { data: exams } = await supabase
-    .from("exams")
-    .select("id, name, start_date, end_date, academic_year:academic_years(name)")
-    .eq("school_id", schoolId)
-    .order("start_date", { ascending: false });
+  const [{ data: exams }, { data: quizLinks }] = await Promise.all([
+    supabase
+      .from("exams")
+      .select("id, name, start_date, end_date, academic_year:academic_years(name)")
+      .eq("school_id", schoolId)
+      .order("start_date", { ascending: false }),
+    // exams created by push_quiz_to_gradebook are stamped on quizzes.exam_id —
+    // used purely to badge which rows below came from a quiz, not a manually
+    // created exam.
+    supabase.from("quizzes").select("exam_id").eq("school_id", schoolId).not("exam_id", "is", null),
+  ]);
+
+  const quizExamIds = new Set((quizLinks ?? []).map((q) => q.exam_id));
 
   const rows = (exams ?? []).map((e) => {
     const ay = e.academic_year as unknown as { name: string } | null;
     return {
       id: e.id,
       name: e.name ?? "—",
+      isQuiz: quizExamIds.has(e.id),
       academic_year: ay?.name ?? "—",
       start_date: e.start_date ?? "—",
       end_date: e.end_date ?? "—",
@@ -44,7 +54,15 @@ export default async function ResultsPage() {
       <DataTable
         data={rows}
         columns={[
-          { header: "Exam", accessor: "name" },
+          {
+            header: "Exam",
+            accessor: (row) => (
+              <span className="inline-flex items-center gap-2">
+                {row.name}
+                <Badge variant={row.isQuiz ? "outline" : "secondary"}>{row.isQuiz ? "Quiz" : "Exam"}</Badge>
+              </span>
+            ),
+          },
           { header: "Academic Year", accessor: "academic_year" },
           { header: "Start", accessor: "start_date" },
           { header: "End", accessor: "end_date" },
