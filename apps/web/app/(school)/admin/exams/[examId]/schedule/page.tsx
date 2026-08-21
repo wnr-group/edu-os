@@ -29,12 +29,19 @@ export default async function ExamSchedulePage({
   if (!exam) notFound();
 
  const [
+    { data: activeRoles },
     { data: classes },
     { data: subjects },
     { data: teacherProfiles },
     { data: rooms },
     { data: slots },
   ] = await Promise.all([
+    supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("school_id", schoolId)
+      .eq("role", "teacher")
+      .eq("is_active", true),
     supabase.from("classes").select("id, name, order").eq("school_id", schoolId).order("order"),
     supabase.from("subjects").select("id, name, class_id").eq("school_id", schoolId),
     supabase
@@ -49,10 +56,14 @@ export default async function ExamSchedulePage({
       .order("exam_date"),
   ]);
 
-  const teachers = (teacherProfiles ?? []).map((t) => {
-    const p = t.profile as unknown as { full_name: string } | null;
-    return { id: t.profile_id, name: p?.full_name ?? "—" };
-  });
+  const activeUserIds = new Set((activeRoles ?? []).map((r) => r.user_id));
+
+  const teachers = (teacherProfiles ?? [])
+    .filter((t) => activeUserIds.has(t.profile_id))
+    .map((t) => {
+      const p = t.profile as unknown as { full_name: string } | null;
+      return { id: t.profile_id, name: p?.full_name ?? "—" };
+    });
 
   const academicYear = exam.academic_year as unknown as { name: string } | null;
 

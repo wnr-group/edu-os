@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
@@ -134,6 +135,7 @@ export function AdmissionsBoard({
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -182,7 +184,20 @@ export function AdmissionsBoard({
       await navigator.clipboard.writeText(publicFormUrl);
       toast.success("Link copied.");
     } catch {
-      toast.error("Couldn't copy automatically — copy the link above manually.");
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = publicFormUrl;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+        toast.success("Link copied.");
+      } catch {
+        toast.error("Couldn't copy automatically — copy the link above manually.");
+      }
     }
   }
 
@@ -218,7 +233,7 @@ export function AdmissionsBoard({
           <button onClick={copyLink} className="flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-xs font-semibold hover:bg-muted">
             <Copy className="h-3.5 w-3.5" /> Copy link
           </button>
-          <button className="flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-xs font-semibold hover:bg-muted">
+          <button onClick={() => setQrModalOpen(true)} className="flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-xs font-semibold hover:bg-muted">
             <QrCode className="h-3.5 w-3.5" /> QR code
           </button>
         </div>
@@ -283,13 +298,73 @@ export function AdmissionsBoard({
       {enrollingApp && (
         <EnrolDialog app={enrollingApp} schoolId={schoolId} classes={classes} onClose={() => setEnrollingId(null)} onEnrolled={() => { setEnrollingId(null); router.refresh(); }} />
       )}
+      {qrModalOpen && (
+        <QrCodeModal url={publicFormUrl} onClose={() => setQrModalOpen(false)} onCopy={copyLink} />
+      )}
     </div>
+  );
+}
+
+function QrCodeModal({ url, onClose, onCopy }: { url: string; onClose: () => void; onCopy: () => void }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) return null;
+
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(url || "")}`;
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-foreground">Application Form QR Code</h3>
+          <button onClick={onClose} className="rounded-lg p-1 text-muted-foreground hover:bg-muted" aria-label="Close">
+            ✕
+          </button>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Scan this QR code with any mobile camera to open the public admission form.
+        </p>
+
+        <div className="my-5 flex justify-center rounded-xl border border-border bg-slate-50 p-4">
+          {url ? (
+            <img src={qrUrl} alt="Public Application Form QR Code" className="h-52 w-52 rounded-lg shadow-sm" />
+          ) : (
+            <p className="py-12 text-xs text-muted-foreground">Public form URL not configured</p>
+          )}
+        </div>
+
+        <div className="mb-4 rounded-lg bg-muted p-2.5 text-center text-xs font-medium text-foreground break-all">
+          {url || "Not configured"}
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={onCopy}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-input px-4 py-2 text-sm font-semibold hover:bg-muted"
+          >
+            <Copy className="h-4 w-4" /> Copy link
+          </button>
+          <button
+            onClick={onClose}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
 function RejectPrompt({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: (reason: string) => void }) {
   const [reason, setReason] = useState("");
-  return (
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) return null;
+
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onCancel}>
       <div className="w-full max-w-sm rounded-xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
         <h3 className="font-semibold">Reject application</h3>
@@ -299,6 +374,7 @@ function RejectPrompt({ onCancel, onConfirm }: { onCancel: () => void; onConfirm
           <button onClick={() => onConfirm(reason)} className="rounded-lg bg-red-600 px-4 py-2 text-sm text-white">Reject</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

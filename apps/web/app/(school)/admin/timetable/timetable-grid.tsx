@@ -502,38 +502,34 @@ export function TimetableGrid({
                     if (slot) {
                       const subj = subjectById.get(slot.subject_id);
                       const teacher = teacherById.get(slot.teacher_id);
-                      const isConflict =
-                        (teacherBusyCount.get(teacherKey(slot.teacher_id, day.value, period)) ?? 0) > 1;
-                      const color = colorForSubject(slot.subject_id);
-                      return (
-                        <button
-                          key={period}
-                          onClick={() => openAssign(day.value, period)}
-                          className="flex min-h-[66px] flex-col justify-center rounded-lg px-2.5 py-2 text-left transition-transform hover:-translate-y-0.5"
-                          style={{
-                            background: color.bg,
-                            color: color.fg,
-                            border: isConflict ? "1px solid #ef4444" : "1px solid rgba(15,23,42,.05)",
-                            boxShadow: isConflict ? "inset 0 0 0 1px #ef4444" : "none",
-                          }}
-                        >
-                          <div className="text-[13.5px] font-bold leading-tight">{subj?.name ?? ""}</div>
-                          <div className="mt-0.5 text-[11.5px] leading-tight opacity-85">{teacher?.name ?? ""}</div>
-                          <div className="mt-1.5 flex flex-wrap gap-1">
-                            {slot.is_elective && (
-                              <span className="inline-flex w-fit items-center gap-1 rounded-full border border-indigo-200 bg-white px-1.5 py-0.5 text-[10.5px] font-bold text-indigo-700">
-                                Elective
-                              </span>
-                            )}
+
+                      if (teacher) {
+                        const isConflict =
+                          (teacherBusyCount.get(teacherKey(slot.teacher_id, day.value, period)) ?? 0) > 1;
+                        const color = colorForSubject(slot.subject_id);
+                        return (
+                          <button
+                            key={period}
+                            onClick={() => openAssign(day.value, period)}
+                            className="flex min-h-[66px] flex-col justify-center rounded-lg px-2.5 py-2 text-left transition-transform hover:-translate-y-0.5"
+                            style={{
+                              background: color.bg,
+                              color: color.fg,
+                              border: isConflict ? "1px solid #ef4444" : "1px solid rgba(15,23,42,.05)",
+                              boxShadow: isConflict ? "inset 0 0 0 1px #ef4444" : "none",
+                            }}
+                          >
+                            <div className="text-[13.5px] font-bold leading-tight">{subj?.name ?? ""}</div>
+                            <div className="mt-0.5 text-[11.5px] leading-tight opacity-85">{teacher.name}</div>
                             {isConflict && (
-                              <span className="inline-flex w-fit items-center gap-1 rounded-full border border-red-200 bg-white px-1.5 py-0.5 text-[10.5px] font-bold text-red-700">
+                              <div className="mt-1.5 inline-flex w-fit items-center gap-1 rounded-full border border-red-200 bg-white px-1.5 py-0.5 text-[10.5px] font-bold text-red-700">
                                 <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                                 Double-booked
-                              </span>
+                              </div>
                             )}
-                          </div>
-                        </button>
-                      );
+                          </button>
+                        );
+                      }
                     }
                     return (
                       <button

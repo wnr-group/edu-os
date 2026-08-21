@@ -38,6 +38,7 @@ export function GeofenceSetupClient({ schoolId, initialGeofences }: { schoolId: 
     setSelectedId(row.id);
     setDraft(toDraft(row));
     setDropPinArmed(false);
+    setFlyToRequest({ lat: row.center_lat, lng: row.center_lng });
   }
 
   function addCampus() {
@@ -46,6 +47,7 @@ export function GeofenceSetupClient({ schoolId, initialGeofences }: { schoolId: 
     setSelectedId(null);
     setDraft({ id: null, school_id: schoolId, name: "New campus", center_lat: center.lat, center_lng: center.lng, radius_m: DEFAULT_RADIUS });
     setDropPinArmed(false);
+    setFlyToRequest({ lat: center.lat, lng: center.lng });
   }
 
   function cancelEdit() {

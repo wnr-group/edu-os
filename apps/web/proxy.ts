@@ -130,11 +130,12 @@ export async function proxy(request: NextRequest) {
 
   // Resolve user's role at this school by fixed precedence.
   const ROLE_PRECEDENCE: Record<string, number> = {
-    school_admin: 1,
-    principal: 2,
-    teacher: 3,
-    parent: 4,
-    student: 5,
+    super_admin: 1,
+    school_admin: 2,
+    principal: 3,
+    teacher: 4,
+    parent: 5,
+    student: 6,
   };
 
   // Use service-role client for role lookups to bypass RLS — middleware is
@@ -176,7 +177,7 @@ export async function proxy(request: NextRequest) {
   // Pass the resolved school role to PostgREST so scope_pre_request validates
   // the exact (user, school, role) triple. Only set when we resolved a real
   // school-level role (platform super_admin uses the NULL-school DB path).
-  if (schoolId && ROLE_PRECEDENCE[role]) {
+  if (schoolId && ROLE_PRECEDENCE[role] !== undefined) {
     request.headers.set("x-active-role", role);
     response = NextResponse.next({ request });
     response.headers.set("x-active-role", role);

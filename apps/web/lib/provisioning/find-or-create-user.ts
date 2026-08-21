@@ -18,6 +18,7 @@ export async function findOrCreateUserByPhone(
   adminClient: SupabaseClient,
   phone: string,
   fullName: string,
+  email?: string,
 ): Promise<FindOrCreateResult> {
   const { data: existing } = await adminClient
     .from("profiles")
@@ -26,6 +27,9 @@ export async function findOrCreateUserByPhone(
     .maybeSingle();
 
   if (existing?.id) {
+    if (email?.trim()) {
+      await adminClient.from("profiles").update({ email: email.trim() }).eq("id", existing.id);
+    }
     return { userId: existing.id, created: false };
   }
 
@@ -43,15 +47,23 @@ export async function findOrCreateUserByPhone(
       .eq("phone", phone)
       .maybeSingle();
     if (raced?.id) {
+      if (email?.trim()) {
+        await adminClient.from("profiles").update({ email: email.trim() }).eq("id", raced.id);
+      }
       return { userId: raced.id, created: false };
     }
     throw new Error(createError?.message ?? "Failed to create user");
   }
 
-  // Set the profile name for the freshly created user only.
+  // Set the profile name and optional email for the freshly created user.
+  const profileUpdates: Record<string, unknown> = { full_name: fullName, phone };
+  if (email?.trim()) {
+    profileUpdates.email = email.trim();
+  }
+
   await adminClient
     .from("profiles")
-    .update({ full_name: fullName, phone })
+    .update(profileUpdates)
     .eq("id", userData.user.id);
 
   return { userId: userData.user.id, created: true };
