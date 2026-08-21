@@ -22,6 +22,7 @@ export default function ParentMore() {
   const feedbackEnabled = useFeature("feedback");
   const announcementsEnabled = useFeature("announcements");
   const disciplineEnabled = useFeature("discipline");
+  const ptmEnabled = useFeature("ptm");
   const router = useRouter();
   const { studentId: activeStudentId, activeYearId } = useActiveContext();
   const { section: sectionParam } = useLocalSearchParams<{ section?: string }>();
@@ -530,6 +531,9 @@ export default function ParentMore() {
           )}
           {disciplineEnabled && (
             <ListItem icon="warning-outline" title="Discipline Records" subtitle="Incidents & actions" onPress={() => navigate("discipline")} />
+          )}
+          {ptmEnabled && (
+            <ListItem icon="people-outline" title="Parent-Teacher Meetings" subtitle="Upcoming & past meetings" onPress={() => router.push("/(parent)/ptm")} />
           )}
           {feedbackEnabled && (
             <>

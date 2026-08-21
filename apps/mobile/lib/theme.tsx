@@ -51,7 +51,7 @@ export type FeatureKey =
   | "report_cards" | "syllabus" | "timetable"
   | "admissions" | "kyc_documents" | "leave" | "testing"
   | "fees" | "online_payments"
-  | "announcements" | "gallery" | "feedback" | "discipline"
+  | "announcements" | "gallery" | "feedback" | "discipline" | "ptm"
   | "insights";
 
 type FeaturesMap = Partial<Record<FeatureKey, boolean>>;

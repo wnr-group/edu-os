@@ -69,6 +69,7 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
         { label: "Announcements", href: "/admin/announcements", feature: "announcements" },
         { label: "Gallery", href: "/admin/gallery", feature: "gallery" },
         { label: "Feedback", href: "/admin/feedback", feature: "feedback" },
+        { label: "PTM", href: "/admin/ptm", feature: "ptm" },
       ],
       system: [{ label: "Settings", href: "/admin/settings" }],
     }),
@@ -87,7 +88,10 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
         { label: "Discipline", href: "/teacher/discipline", feature: "discipline" },
         { label: "Fees", href: "/teacher/fees", feature: "fees" },
       ],
-      communication: [{ label: "Feedback", href: "/teacher/feedback", feature: "feedback" }],
+      communication: [
+        { label: "Feedback", href: "/teacher/feedback", feature: "feedback" },
+        { label: "PTM", href: "/teacher/ptm", feature: "ptm" },
+      ],
     }),
   },
   teacher_no_feedback: {
@@ -121,7 +125,10 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
         { label: "Geo Review", href: "/principal/attendance/geo-review" },
         { label: "Reports", href: "/principal/reports" },
       ],
-      communication: [{ label: "Feedback", href: "/principal/feedback", feature: "feedback" }],
+      communication: [
+        { label: "Feedback", href: "/principal/feedback", feature: "feedback" },
+        { label: "PTM", href: "/principal/ptm", feature: "ptm" },
+      ],
     }),
   },
 };
