@@ -11,12 +11,19 @@ export default async function ClassesPage() {
   const academicYearId = await getAcademicYearId(schoolId);
 
   const [
+    { data: activeRoles },
     { data: classes },
     { data: sections },
     { data: teacherProfiles },
     { data: assignments },
     { data: enrollments },
   ] = await Promise.all([
+    supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("school_id", schoolId)
+      .eq("role", "teacher")
+      .eq("is_active", true),
     supabase
       .from("classes")
       .select("id, name, \"order\"")
@@ -45,10 +52,14 @@ export default async function ClassesPage() {
       .eq("is_active", true),
   ]);
 
-  const teacherOptions = (teacherProfiles ?? []).map((t) => {
-    const p = t.profile as unknown as { full_name: string } | null;
-    return { id: t.profile_id as string, name: p?.full_name ?? "" };
-  });
+  const activeUserIds = new Set((activeRoles ?? []).map((r) => r.user_id));
+
+  const teacherOptions = (teacherProfiles ?? [])
+    .filter((t) => activeUserIds.has(t.profile_id))
+    .map((t) => {
+      const p = t.profile as unknown as { full_name: string } | null;
+      return { id: t.profile_id as string, name: p?.full_name ?? "" };
+    });
 
   const teacherBySection = new Map(
     (assignments ?? []).map((a) => [a.section_id, a.class_teacher_id] as const)

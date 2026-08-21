@@ -21,6 +21,8 @@ export function DocumentTypeSettings({ schoolId, types }: { schoolId: string; ty
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [newRequired, setNewRequired] = useState(true);
+  const [newExpires, setNewExpires] = useState(false);
+  const [newMonths, setNewMonths] = useState(12);
   const [saving, setSaving] = useState(false);
 
   async function handleAdd() {
@@ -29,13 +31,15 @@ export function DocumentTypeSettings({ schoolId, types }: { schoolId: string; ty
     const supabase = createClient();
     const { error } = await supabase.rpc("save_document_type", {
       p_id: null, p_school_id: schoolId, p_name: newName.trim(), p_description: null,
-      p_is_required: newRequired, p_expires: false, p_default_validity_months: null,
+      p_is_required: newRequired, p_expires: newExpires, p_default_validity_months: newExpires ? newMonths : null,
     });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Document type added.");
     setAdding(false);
     setNewName("");
+    setNewExpires(false);
+    setNewMonths(12);
     router.refresh();
   }
 
@@ -46,6 +50,30 @@ export function DocumentTypeSettings({ schoolId, types }: { schoolId: string; ty
       p_is_required: !t.is_required, p_expires: t.expires, p_default_validity_months: t.default_validity_months,
     });
     if (error) { toast.error(error.message); return; }
+    router.refresh();
+  }
+
+  async function handleToggleExpires(t: DocType) {
+    const nextExpires = !t.expires;
+    const nextMonths = nextExpires ? (t.default_validity_months ?? 12) : null;
+    const supabase = createClient();
+    const { error } = await supabase.rpc("save_document_type", {
+      p_id: t.id, p_school_id: schoolId, p_name: t.name, p_description: t.description,
+      p_is_required: t.is_required, p_expires: nextExpires, p_default_validity_months: nextMonths,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Expiry rule updated to: ${nextExpires ? `${nextMonths} months` : "Never expires"}`);
+    router.refresh();
+  }
+
+  async function handleUpdateMonths(t: DocType, months: number) {
+    const supabase = createClient();
+    const { error } = await supabase.rpc("save_document_type", {
+      p_id: t.id, p_school_id: schoolId, p_name: t.name, p_description: t.description,
+      p_is_required: t.is_required, p_expires: true, p_default_validity_months: months,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Validity updated to ${months} months.`);
     router.refresh();
   }
 
@@ -76,7 +104,7 @@ export function DocumentTypeSettings({ schoolId, types }: { schoolId: string; ty
       </div>
 
       {adding && (
-        <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4">
+        <div className="flex flex-wrap items-end gap-4 rounded-lg border border-border bg-card p-4">
           <div>
             <Label>Name</Label>
             <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. House / Community Form" />
@@ -84,6 +112,25 @@ export function DocumentTypeSettings({ schoolId, types }: { schoolId: string; ty
           <label className="flex items-center gap-2 pb-2 text-sm">
             <input type="checkbox" checked={newRequired} onChange={(e) => setNewRequired(e.target.checked)} /> Required
           </label>
+          <label className="flex items-center gap-2 pb-2 text-sm">
+            <input type="checkbox" checked={newExpires} onChange={(e) => setNewExpires(e.target.checked)} /> Expires
+          </label>
+          {newExpires && (
+            <div>
+              <Label>Validity</Label>
+              <select
+                value={newMonths}
+                onChange={(e) => setNewMonths(Number(e.target.value))}
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value={1}>1 month</option>
+                <option value={3}>3 months</option>
+                <option value={6}>6 months</option>
+                <option value={12}>12 months</option>
+                <option value={24}>24 months</option>
+              </select>
+            </div>
+          )}
           <Button onClick={handleAdd} disabled={saving || !newName.trim()}>{saving ? "Saving…" : "Save"}</Button>
           <Button variant="outline" onClick={() => setAdding(false)}>Cancel</Button>
         </div>
@@ -111,7 +158,29 @@ export function DocumentTypeSettings({ schoolId, types }: { schoolId: string; ty
                   <button onClick={() => !t.is_required && handleToggleRequired(t)} className={`rounded px-2.5 py-1 text-xs font-semibold ${t.is_required ? "bg-red-100 text-red-700" : "text-muted-foreground"}`}>Required</button>
                   <button onClick={() => t.is_required && handleToggleRequired(t)} className={`rounded px-2.5 py-1 text-xs font-semibold ${!t.is_required ? "bg-card shadow-sm" : "text-muted-foreground"}`}>Optional</button>
                 </div>
-                <span className="text-xs text-muted-foreground">{t.expires ? `${t.default_validity_months ?? "?"} months` : "Never expires"}</span>
+                
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleToggleExpires(t)}
+                    className={`rounded px-2.5 py-1 text-xs font-semibold transition-colors ${t.expires ? "bg-amber-100 text-amber-700 hover:bg-amber-200" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                  >
+                    {t.expires ? "Expires" : "Never expires"}
+                  </button>
+                  {t.expires && (
+                    <select
+                      value={t.default_validity_months ?? 12}
+                      onChange={(e) => handleUpdateMonths(t, Number(e.target.value))}
+                      className="rounded border border-input bg-background px-2 py-1 text-xs font-medium text-foreground"
+                    >
+                      <option value={1}>1 month</option>
+                      <option value={3}>3 months</option>
+                      <option value={6}>6 months</option>
+                      <option value={12}>12 months</option>
+                      <option value={24}>24 months</option>
+                    </select>
+                  )}
+                </div>
+
                 <Switch checked={t.is_active} onCheckedChange={() => handleToggleActive(t)} />
               </div>
             </div>

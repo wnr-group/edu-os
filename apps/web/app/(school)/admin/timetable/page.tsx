@@ -21,12 +21,19 @@ export default async function TimetablePage() {
   }
 
   const [
+    { data: activeRoles },
     { data: teacherProfiles },
     { data: classes },
     { data: sections },
     { data: subjects },
     { data: slots },
   ] = await Promise.all([
+    supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("school_id", schoolId)
+      .eq("role", "teacher")
+      .eq("is_active", true),
     supabase
       .from("teacher_profiles")
       .select("profile_id, profile:profiles(full_name)")
@@ -54,10 +61,14 @@ export default async function TimetablePage() {
       .eq("academic_year_id", academicYearId),
   ]);
 
-  const teachers = (teacherProfiles ?? []).map((t) => {
-    const p = t.profile as unknown as { full_name: string } | null;
-    return { id: t.profile_id, name: p?.full_name ?? "" };
-  });
+  const activeUserIds = new Set((activeRoles ?? []).map((r) => r.user_id));
+
+  const teachers = (teacherProfiles ?? [])
+    .filter((t) => activeUserIds.has(t.profile_id))
+    .map((t) => {
+      const p = t.profile as unknown as { full_name: string } | null;
+      return { id: t.profile_id, name: p?.full_name ?? "" };
+    });
 
   return (
     <div className="space-y-6">

@@ -37,8 +37,9 @@ export default async function HomeworkPage() {
       .eq("teacher_id", user!.id)
       .eq("academic_year_id", yearId ?? ""),
   ]);
-  const taughtSectionIds = Array.from(
+    const taughtSectionIds = Array.from(
     new Set([
+      sectionId,
       ...(homeroomRows ?? []).map((r) => r.section_id as string),
       ...(timetableRows ?? []).map((r) => r.section_id as string),
     ])
