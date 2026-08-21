@@ -15,7 +15,6 @@ import Link from "next/link";
 function getLastNSchoolDays(n: number): Date[] {
   const days: Date[] = [];
   let d = new Date();
-  d.setDate(d.getDate() - 1);
   while (days.length < n) {
     const dow = d.getDay();
     if (dow !== 0 && dow !== 6) days.push(new Date(d));

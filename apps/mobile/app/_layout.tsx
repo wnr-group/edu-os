@@ -98,7 +98,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider schoolId={SCHOOL_ID}>
+      <ThemeProvider schoolId={SCHOOL_ID} session={session}>
         <StatusBar style="dark" />
         <ActiveContextProvider userId={session?.user.id ?? null}>
           <Gate session={session} initialized={initialized}>

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "./supabase";
+import type { Session } from "@supabase/supabase-js";
 
 export interface Theme {
   primary: string;
@@ -61,27 +62,48 @@ const FeaturesContext = createContext<FeaturesMap>({});
 export function ThemeProvider({
   children,
   schoolId,
+  session,
 }: {
   children: ReactNode;
   schoolId?: string;
+  session?: Session | null;
 }) {
   const [theme, setTheme] = useState<Theme>(buildTheme(DEFAULT_PRIMARY));
   const [features, setFeatures] = useState<FeaturesMap>({});
 
   useEffect(() => {
-    if (!schoolId) return;
-    supabase
-      .from("schools")
-      .select("primary_color, name, features_enabled")
-      .eq("id", schoolId)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          setTheme(buildTheme(data.primary_color ?? DEFAULT_PRIMARY, data.name ?? ""));
-          setFeatures((data.features_enabled ?? {}) as FeaturesMap);
-        }
-      });
-  }, [schoolId]);
+    if (!schoolId || !session) return;
+    let cancelled = false;
+
+    // A single failed attempt (cold-start auth/session timing, a transient
+    // network blip) must not permanently strand every useFeature() call at
+    // its fail-closed default for the rest of the app session — this effect
+    // never re-fires on its own since schoolId is a static build-time value.
+    // Bounded retry so a real, persistent failure still gives up rather than
+    // looping forever.
+    async function loadSchool(attempt: number) {
+      const { data, error } = await supabase
+        .from("schools")
+        .select("primary_color, name, features_enabled")
+        .eq("id", schoolId)
+        .single();
+
+      if (cancelled) return;
+
+      if (data) {
+        setTheme(buildTheme(data.primary_color ?? DEFAULT_PRIMARY, data.name ?? ""));
+        setFeatures((data.features_enabled ?? {}) as FeaturesMap);
+        return;
+      }
+
+      if (error && attempt < 3) {
+        setTimeout(() => { if (!cancelled) loadSchool(attempt + 1); }, 1000 * (attempt + 1));
+      }
+    }
+
+    loadSchool(0);
+    return () => { cancelled = true; };
+  }, [schoolId, session]);
 
   return (
     <ThemeContext.Provider value={theme}>

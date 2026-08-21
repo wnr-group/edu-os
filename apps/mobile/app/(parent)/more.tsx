@@ -22,6 +22,8 @@ export default function ParentMore() {
   const feedbackEnabled = useFeature("feedback");
   const announcementsEnabled = useFeature("announcements");
   const disciplineEnabled = useFeature("discipline");
+  const admissionsEnabled = useFeature("admissions");
+  const kycEnabled = useFeature("kyc_documents");
   const router = useRouter();
   const { studentId: activeStudentId, activeYearId } = useActiveContext();
   const { section: sectionParam } = useLocalSearchParams<{ section?: string }>();
@@ -530,6 +532,12 @@ export default function ParentMore() {
           )}
           {disciplineEnabled && (
             <ListItem icon="warning-outline" title="Discipline Records" subtitle="Incidents & actions" onPress={() => navigate("discipline")} />
+          )}
+          {admissionsEnabled && (
+            <ListItem icon="school-outline" title="Admission Enquiry" subtitle="Enquire about a new admission" onPress={() => router.push("/(parent)/admission-enquiry")} />
+          )}
+          {kycEnabled && (
+            <ListItem icon="document-text-outline" title="KYC Documents" subtitle="View document status" onPress={() => router.push("/(parent)/kyc-documents")} />
           )}
           {feedbackEnabled && (
             <>

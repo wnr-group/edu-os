@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { Check, ChevronDown, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
   loadRoster, loadAttachments, getSignedUrl, reviewStudent, notifyReviewed,
+  getHomeworkSubmissionSignedUrl,
   RosterRow, AttachmentRow, HomeworkRating,
 } from "@/lib/homework";
 
@@ -20,7 +23,7 @@ export function RosterReview({ homeworkId, sectionId }: { homeworkId: string; se
   const [roster, setRoster] = useState<RosterRow[]>([]);
   const [attachments, setAttachments] = useState<AttachmentRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [rating, setRating] = useState<HomeworkRating>("good");
   const [comment, setComment] = useState("");
   const [saving, setSaving] = useState(false);
@@ -38,8 +41,8 @@ export function RosterReview({ homeworkId, sectionId }: { homeworkId: string; se
   const notStarted = roster.filter((r) => r.state === "not_started");
 
   function openReview(row: RosterRow) {
-    if (openId === row.studentId) { setOpenId(null); return; }
-    setOpenId(row.studentId);
+    if (expandedId === row.studentId) { setExpandedId(null); return; }
+    setExpandedId(row.studentId);
     setRating(row.rating ?? "good");
     setComment(row.teacherComment ?? "");
   }
@@ -50,7 +53,7 @@ export function RosterReview({ homeworkId, sectionId }: { homeworkId: string; se
     setSaving(false);
     if (error) { toast.error(error); return; }
     notifyReviewed(homeworkId, row.studentId);
-    setOpenId(null);
+    setExpandedId(null);
     load();
   }
 
@@ -59,7 +62,18 @@ export function RosterReview({ homeworkId, sectionId }: { homeworkId: string; se
     if (url) window.open(url, "_blank"); else toast.error("Could not open attachment");
   }
 
+  async function openSubmission(submissionId: string) {
+    const { url, error } = await getHomeworkSubmissionSignedUrl(submissionId);
+    if (error || !url) {
+      toast.error(error || "Could not open submission");
+      return;
+    }
+    window.open(url, "_blank");
+  }
+
   if (loading) return <p className="text-sm text-muted-foreground">Loading roster…</p>;
+
+
 
   return (
     <div className="space-y-6">
@@ -94,12 +108,22 @@ export function RosterReview({ homeworkId, sectionId }: { homeworkId: string; se
                 <span className="text-sm font-semibold text-emerald-600">{ratingLabel(r.rating)}</span>
               ) : (
                 <Button variant="outline" size="sm" onClick={() => openReview(r)}>
-                  {openId === r.studentId ? "Close" : "Review"}
+                  {expandedId === r.studentId ? "Close" : "Review"}
                 </Button>
               )}
             </div>
-            {openId === r.studentId && !r.reviewedAt && (
-              <div className="mt-3 space-y-2">
+              {expandedId === r.studentId && !r.reviewedAt && (
+              <div className="mt-3 space-y-3">
+                {r.submission && (
+                  <button
+                    type="button"
+                    onClick={() => openSubmission(r.submission!.id)}
+                    className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary hover:underline"
+                  >
+                    <Paperclip className="h-4 w-4" />
+                    Submitted: {r.submission.fileName}
+                  </button>
+                )}
                 <div className="flex gap-2">
                   {RATINGS.map((opt) => (
                     <button

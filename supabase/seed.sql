@@ -766,3 +766,35 @@ VALUES
    'aaaaaaaa-0000-0000-0000-000000000030', 'school_admin', NULL,
    'Fee receipt not received', 'I paid the March fees via UPI but haven''t received the receipt yet.',
    'open', now() - INTERVAL '2 days');
+-- Opens admissions for the local demo school so the Parent Mobile Admission
+-- Enquiry flow (apps/mobile/app/(parent)/admission-enquiry.tsx) is
+-- end-to-end testable. admission_settings had zero rows for this school —
+-- admission-submit's `if (!settings?.is_open) return { reason: "closed" }`
+-- (supabase/functions/admission-submit/index.ts:41-42) therefore always
+-- fired, regardless of the `admissions` feature flag being on.
+--
+-- This mirrors exactly the INSERT the production save_admission_settings
+-- RPC performs (supabase/migrations/20260803170629_admission_rpcs.sql:91-108
+-- — the same RPC apps/web/app/(school)/admin/admissions/admission-settings-panel.tsx
+-- calls when a school_admin/principal toggles admissions open in the UI) —
+-- same columns, same ON CONFLICT target, no new mechanism introduced.
+-- No application fee is configured (application_fee = 0), so the free-path
+-- branch of admission-submit is exercised; the paid/Razorpay branch remains
+-- untested locally, which is out of scope here.
+--
+-- Scoped to exactly one school id; safe to re-run (ON CONFLICT DO UPDATE).
+
+INSERT INTO public.admission_settings (school_id, is_open, application_fee, admission_academic_year_id)
+VALUES ('aaaaaaaa-0000-0000-0000-000000000001', true, 0, 'aaaaaaaa-0000-0000-0000-000000000002')
+ON CONFLICT (school_id) DO UPDATE
+  SET is_open = true, admission_academic_year_id = 'aaaaaaaa-0000-0000-0000-000000000002';
+
+-- ---------------------------------------------------------------
+-- KYC DOCUMENT TYPES
+-- ---------------------------------------------------------------
+-- Demo School has no document_types rows after a fresh db reset, so
+-- get_student_kyc_checklist() returns zero rows and the Parent Mobile
+-- KYC screen shows "No KYC documents are configured for your school yet."
+-- seed_document_types() inserts the seven standard Indian-school types;
+-- it is idempotent (returns immediately if rows already exist).
+SELECT public.seed_document_types('aaaaaaaa-0000-0000-0000-000000000001');

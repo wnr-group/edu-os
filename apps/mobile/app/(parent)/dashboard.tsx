@@ -73,6 +73,7 @@ export default function ParentDashboard() {
         homeworkDue: 0,
         announcements: [],
         gallery: [],
+        datesheet: null,
       });
       setLoading(false);
       return;
@@ -84,6 +85,7 @@ export default function ParentDashboard() {
         .from("student_profiles")
         .select("id, full_name, admission_number, photo_url, student_enrollments(roll_number, section_id, sections(id, name, classes(name)))")
         .eq("id", activeStudentId)
+        .eq("student_enrollments.is_active", true)
         .maybeSingle(),
     ]);
 

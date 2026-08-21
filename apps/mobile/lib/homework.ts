@@ -1,5 +1,5 @@
 import { File } from "expo-file-system";
-import { supabase, supabaseUrl } from "./supabase";
+import { supabase, supabaseUrl, fixStorageUrl } from "./supabase";
 
 export type HomeworkRating = "good" | "satisfactory" | "needs_improvement";
 export type RosterState = "not_started" | "viewed" | "done";
@@ -20,6 +20,7 @@ export interface RosterRow {
   rating: HomeworkRating | null;
   teacherComment: string | null;
   reviewedAt: string | null;
+  submission: { id: string; fileName: string; fileType: string } | null;
 }
 
 export interface AttachmentRow {
@@ -74,12 +75,23 @@ export async function loadTeacherHomework(
   }));
 }
 
-// Build the roster: all enrolled students LEFT JOINed with their status.
-export async function loadRoster(homeworkId: string, sectionId: string): Promise<RosterRow[]> {
+// Build the roster: all enrolled students LEFT JOINed with their status and submission.
+export async function loadRoster(homeworkId: string, sectionId?: string): Promise<RosterRow[]> {
+  let secId = sectionId;
+  if (!secId) {
+    const { data: hw } = await supabase
+      .from("homework")
+      .select("section_id")
+      .eq("id", homeworkId)
+      .maybeSingle();
+    secId = hw?.section_id;
+  }
+  if (!secId) return [];
+
   const { data: enrollments } = await supabase
     .from("student_enrollments")
     .select("student_profiles(id, full_name)")
-    .eq("section_id", sectionId)
+    .eq("section_id", secId)
     .eq("is_active", true);
 
   const { data: statuses } = await supabase
@@ -87,21 +99,32 @@ export async function loadRoster(homeworkId: string, sectionId: string): Promise
     .select("student_id, state, rating, teacher_comment, reviewed_at")
     .eq("homework_id", homeworkId);
 
+  const { data: subs } = await supabase
+    .from("homework_submissions")
+    .select("id, student_id, file_name, file_type")
+    .eq("homework_id", homeworkId);
+
   const byStudent: Record<string, any> = {};
   for (const s of statuses ?? []) byStudent[(s as any).student_id] = s;
+
+  const subsByStudent: Record<string, any> = {};
+  for (const s of subs ?? []) subsByStudent[(s as any).student_id] = s;
 
   return (enrollments ?? [])
     .map((e: any) => e.student_profiles)
     .filter(Boolean)
     .map((sp: any): RosterRow => {
       const s = byStudent[sp.id];
+      const sub = subsByStudent[sp.id];
+      const isDone = s?.state === "done" || Boolean(sub);
       return {
         studentId: sp.id,
         fullName: sp.full_name,
-        state: (s?.state as RosterState) ?? "not_started",
+        state: isDone ? "done" : ((s?.state as RosterState) ?? "not_started"),
         rating: s?.rating ?? null,
         teacherComment: s?.teacher_comment ?? null,
         reviewedAt: s?.reviewed_at ?? null,
+        submission: sub ? { id: sub.id, fileName: sub.file_name, fileType: sub.file_type } : null,
       };
     })
     .sort((a, b) => a.fullName.localeCompare(b.fullName));
@@ -121,7 +144,7 @@ export async function getSignedUrl(path: string): Promise<string | null> {
   const { data } = await supabase.storage
     .from("homework-attachments")
     .createSignedUrl(path, 60);
-  return data?.signedUrl ?? null;
+  return data?.signedUrl ? fixStorageUrl(data.signedUrl) : null;
 }
 
 // Teacher review via the column-aware RPC.
@@ -316,4 +339,124 @@ export async function markDone(homeworkId: string, studentId: string): Promise<{
 export async function unmarkDone(homeworkId: string, studentId: string): Promise<{ error: string | null }> {
   const { error } = await supabase.rpc("unmark_homework_done", { p_homework_id: homeworkId, p_student_id: studentId });
   return { error: error?.message ?? null };
+}
+
+const SUBMISSION_ALLOWED_MIME_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+const SUBMISSION_MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+export interface PickedFile {
+  uri: string;
+  name: string;
+  mimeType: string;
+  size: number;
+}
+
+export interface HomeworkSubmission {
+  id: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  submittedAt: string;
+}
+
+// The parent's own child's submission for one homework item, if any.
+export async function loadSubmission(
+  homeworkId: string, studentId: string,
+): Promise<HomeworkSubmission | null> {
+  const { data } = await supabase
+    .from("homework_submissions")
+    .select("id, file_name, file_type, file_size, submitted_at")
+    .eq("homework_id", homeworkId)
+    .eq("student_id", studentId)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    id: (data as any).id,
+    fileName: (data as any).file_name,
+    fileType: (data as any).file_type,
+    fileSize: (data as any).file_size,
+    submittedAt: (data as any).submitted_at,
+  };
+}
+
+/**
+ * Upload one staged file as the homework submission for (homeworkId,
+ * studentId), then call submit_homework to persist it and auto-mark the
+ * homework done. On success, best-effort delete the previous submission's
+ * storage object (returned by the RPC) — never blocks or reverses the
+ * successful submission if the delete fails. On storage-upload success but
+ * RPC failure, the orphaned storage object is left in place, matching the
+ * existing KYC/homework-attachments precedent (uploadKycDocument in
+ * lib/kyc.ts, uploadAttachment above) — this codebase has no cleanup
+ * mechanism for that case anywhere, and this feature does not introduce one.
+ */
+export async function submitHomework(
+  schoolId: string, homeworkId: string, studentId: string, file: PickedFile,
+): Promise<{ error: string | null }> {
+  if (file.size > SUBMISSION_MAX_FILE_SIZE) return { error: "File exceeds 5MB." };
+  if (!SUBMISSION_ALLOWED_MIME_TYPES.includes(file.mimeType)) {
+    return { error: "Unsupported file type. Use PDF, JPG, or PNG." };
+  }
+
+  const ext = file.name.split(".").pop() || "bin";
+  const path = `homework-submissions/${schoolId}/${homeworkId}/${studentId}/${Date.now()}.${ext}`;
+  const bytes = await new File(file.uri).bytes();
+
+  const up = await supabase.storage
+    .from("homework-submissions")
+    .upload(path, bytes, { contentType: file.mimeType, upsert: false });
+  if (up.error) return { error: up.error.message };
+
+  const { data, error: rpcErr } = await supabase.rpc("submit_homework", {
+    p_homework_id: homeworkId,
+    p_student_id: studentId,
+    p_file_path: path,
+    p_file_name: file.name,
+    p_file_type: file.mimeType,
+    p_file_size: file.size,
+  });
+  if (rpcErr) return { error: mapSubmitError(rpcErr.message) };
+
+  const oldPath = (Array.isArray(data) ? data[0]?.old_file_path : (data as any)?.old_file_path) as string | null;
+  if (oldPath) {
+    // Best-effort cleanup of the superseded object. A failure here must
+    // never surface as a submission failure — the new row is already
+    // persisted and authoritative.
+    await supabase.storage.from("homework-submissions").remove([oldPath]);
+  }
+
+  return { error: null };
+}
+
+function mapSubmitError(message: string): string {
+  if (message.includes("deadline_passed")) return "The due date has passed. This homework can no longer be submitted.";
+  if (message.includes("not_authorized")) return "You are not authorized to submit this homework.";
+  if (message.includes("module_disabled")) return "Homework is not enabled for your school.";
+  if (message.includes("invalid_file_type")) return "Unsupported file type. Use PDF, JPG, or PNG.";
+  if (message.includes("invalid_file_size")) return "File exceeds 5MB.";
+  return "Could not submit homework. Please try again.";
+}
+
+/** Signed URL for a homework submission, via the homework-submission-signed-url Edge Function. */
+export async function getHomeworkSubmissionSignedUrl(
+  submissionId: string,
+): Promise<{ url: string | null; error: string | null }> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return { url: null, error: "Not authenticated" };
+
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/homework-submission-signed-url`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ submissionId }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { url: null, error: data.error ?? "Could not open submission" };
+    return { url: data.url ? fixStorageUrl(data.url as string) : null, error: null };
+  } catch {
+    return { url: null, error: "Network error" };
+  }
 }
