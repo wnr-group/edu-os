@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "../../../lib/supabase";
 import { phoneSchema, otpSchema } from "@erp/shared";
@@ -23,13 +24,23 @@ export function LoginForm({
   const [noAccess, setNoAccess] = useState(false);
   const initialized = useRef(false);
 
+  const router = useRouter();
+
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
     const params = new URLSearchParams(window.location.search);
     const reason = params.get("reason");
-    if (reason === "no_access") setNoAccess(true);
+    const isNoAccess = reason === "no_access";
+    if (isNoAccess) setNoAccess(true);
     const supabase = createClient();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" && !isNoAccess) {
+        router.push(`/?t=${Date.now()}`);
+      }
+    });
+
     // Validate against the auth server (getUser), not just the local cookie
     // (getSession). A stale cookie — e.g. after a DB reset or expired refresh
     // token — otherwise makes the login page redirect to "/" while middleware
@@ -37,13 +48,17 @@ export function LoginForm({
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) {
         supabase.auth.signOut();
-      } else if (reason === "no_access") {
+      } else if (isNoAccess) {
         supabase.auth.signOut();
-      } else if (!reason) {
-        window.location.href = "/";
+      } else {
+        router.push(`/?t=${Date.now()}`);
       }
     });
-  }, []);
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [router]);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -110,7 +125,7 @@ export function LoginForm({
       setError("Invalid or expired OTP. Please try again.");
       return;
     }
-    window.location.href = "/";
+    // DO NOT hard navigate here; onAuthStateChange will handle it once cookies are synced.
   }
 
   async function handleResend() {

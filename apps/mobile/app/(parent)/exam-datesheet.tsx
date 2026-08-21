@@ -33,6 +33,7 @@ export default function ExamDatesheetScreen() {
       .from("student_profiles")
       .select("id, student_enrollments(class_id)")
       .eq("id", activeStudentId)
+      .eq("student_enrollments.is_active", true)
       .maybeSingle();
     const classId = (sp as any)?.student_enrollments?.[0]?.class_id
       ?? (sp as any)?.student_enrollments?.class_id;

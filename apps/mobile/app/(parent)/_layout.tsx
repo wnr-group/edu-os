@@ -41,6 +41,11 @@ function ParentTabs() {
       <Tabs.Screen name="fees" options={{ title: "Fees", tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? "wallet" : "wallet-outline"} size={22} color={color} /> }} />
       <Tabs.Screen name="more" options={{ title: "More", tabBarBadge: totalBadge > 0 ? totalBadge : undefined, tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? "grid" : "grid-outline"} size={22} color={color} /> }} />
       <Tabs.Screen name="homework" options={{ href: null }} />
+      <Tabs.Screen name="apply-leave" options={{ href: null }} />
+      <Tabs.Screen name="leave-status" options={{ href: null }} />
+      <Tabs.Screen name="exam-datesheet" options={{ href: null }} />
+      <Tabs.Screen name="admission-enquiry" options={{ href: null }} />
+      <Tabs.Screen name="kyc-documents" options={{ href: null }} />
     </Tabs>
   );
 }

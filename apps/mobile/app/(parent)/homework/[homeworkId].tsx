@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert, Linking } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Alert, Linking, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
 import { useTheme } from "../../../lib/theme";
 import { useActiveContext } from "../../../lib/active-context";
 import { PrimaryButton } from "../../../components/PrimaryButton";
@@ -11,7 +13,9 @@ import { SkeletonCard } from "../../../components/Skeleton";
 import {
   loadStudentStatus, loadAttachments, getSignedUrl, markViewed, markDone, unmarkDone,
   AttachmentRow, ParentHomeworkState, HomeworkRating,
+  loadSubmission, submitHomework, PickedFile, HomeworkSubmission,
 } from "../../../lib/homework";
+import { SCHOOL_ID } from "../../../lib/supabase";
 
 const RATING_LABEL: Record<HomeworkRating, string> = {
   good: "Good", satisfactory: "Satisfactory", needs_improvement: "Needs Improvement",
@@ -29,6 +33,10 @@ export default function ParentHomeworkDetail() {
 
   const [data, setData] = useState<Awaited<ReturnType<typeof loadStudentStatus>>>(null);
   const [attachments, setAttachments] = useState<AttachmentRow[]>([]);
+  const [submission, setSubmission] = useState<HomeworkSubmission | null>(null);
+  const [selectedFile, setSelectedFile] = useState<PickedFile | null>(null);
+  const [uploadState, setUploadState] = useState<"idle" | "uploading" | "success" | "error">("idle");
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
@@ -37,12 +45,14 @@ export default function ParentHomeworkDetail() {
     setLoading(true);
     // Auto-mark viewed on open (idempotent; never downgrades 'done').
     await markViewed(homeworkId, studentId);
-    const [d, a] = await Promise.all([
+    const [d, a, sub] = await Promise.all([
       loadStudentStatus(homeworkId, studentId),
       loadAttachments(homeworkId),
+      loadSubmission(homeworkId, studentId),
     ]);
     setData(d);
     setAttachments(a);
+    setSubmission(sub);
     setLoading(false);
   }, [homeworkId, studentId]);
 
@@ -55,6 +65,47 @@ export default function ParentHomeworkDetail() {
     setBusy(false);
     if (error) { Alert.alert("Error", error); return; }
     load();
+  }
+
+  async function pickSubmissionDocument() {
+    const res = await DocumentPicker.getDocumentAsync({ type: ["application/pdf"], copyToCacheDirectory: true });
+    if (res.canceled || !res.assets?.[0]) return;
+    const a = res.assets[0];
+    if ((a.size ?? 0) > 5 * 1024 * 1024) { Alert.alert("Too large", "Files must be under 5MB."); return; }
+    setSelectedFile({ uri: a.uri, name: a.name, mimeType: a.mimeType ?? "application/pdf", size: a.size ?? 0 });
+    setUploadState("idle");
+    setUploadError(null);
+  }
+
+  async function pickSubmissionImage() {
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 });
+    if (res.canceled || !res.assets?.[0]) return;
+    const a = res.assets[0];
+    if ((a.fileSize ?? 0) > 5 * 1024 * 1024) { Alert.alert("Too large", "Files must be under 5MB."); return; }
+    const name = a.fileName ?? `photo-${Date.now()}.jpg`;
+    setSelectedFile({ uri: a.uri, name, mimeType: a.mimeType ?? "image/jpeg", size: a.fileSize ?? 0 });
+    setUploadState("idle");
+    setUploadError(null);
+  }
+
+  async function handleUpload() {
+    if (!selectedFile || !studentId) return;
+    setUploadState("uploading");
+    setUploadError(null);
+    const { error } = await submitHomework(SCHOOL_ID, homeworkId, studentId, selectedFile);
+    if (error) {
+      setUploadState("error");
+      setUploadError(error);
+      return;
+    }
+    setUploadState("success");
+    setSelectedFile(null);
+    const [sub, d] = await Promise.all([
+      loadSubmission(homeworkId, studentId),
+      loadStudentStatus(homeworkId, studentId),
+    ]);
+    setSubmission(sub);
+    setData(d);
   }
 
   async function onUndo() {
@@ -129,13 +180,85 @@ export default function ParentHomeworkDetail() {
               </View>
             )}
 
-            {/* Action: Mark done / Undo. Locked once reviewed. */}
-            {data.state === "reviewed" ? null : data.state === "done" ? (
+            {/* Action: Mark done / Undo. Hidden if reviewed or if homework file is submitted. */}
+            {data.state === "reviewed" || submission ? null : data.state === "done" ? (
               <TouchableOpacity onPress={onUndo} disabled={busy} style={{ alignItems: "center", paddingVertical: 12 }}>
                 <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.textMuted }}>Undo "Done"</Text>
               </TouchableOpacity>
             ) : (
               <PrimaryButton label="Mark as Done" onPress={onMarkDone} loading={busy} />
+            )}
+
+            {studentId && (
+              <View style={{ backgroundColor: theme.surface, borderRadius: 16, padding: 16, gap: 10, marginTop: 12 }}>
+                <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.textPrimary }}>
+                  Submission
+                </Text>
+
+                {submission && (
+                  <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary }}>
+                    Submitted: {submission.fileName}
+                  </Text>
+                )}
+
+                {new Date().toISOString().slice(0, 10) > data.dueDate ? (
+                  <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: theme.danger }}>
+                    The due date has passed. This homework can no longer be submitted.
+                  </Text>
+                ) : (
+                  <>
+                    {selectedFile && (
+                      <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary }}>
+                        Selected: {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
+                      </Text>
+                    )}
+
+                    {uploadState === "error" && uploadError && (
+                      <View style={{ backgroundColor: theme.danger + "12", borderRadius: 8, padding: 10 }}>
+                        <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: theme.danger }}>{uploadError}</Text>
+                      </View>
+                    )}
+
+                    <View style={{ flexDirection: "row", gap: 8 }}>
+                      <TouchableOpacity
+                        onPress={pickSubmissionDocument}
+                        disabled={uploadState === "uploading"}
+                        style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 10, backgroundColor: theme.surfaceRaised, borderWidth: 1, borderColor: theme.border }}
+                      >
+                        <Ionicons name="document-outline" size={16} color={theme.primary} />
+                        <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: theme.textSecondary }}>Choose PDF</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={pickSubmissionImage}
+                        disabled={uploadState === "uploading"}
+                        style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 10, backgroundColor: theme.surfaceRaised, borderWidth: 1, borderColor: theme.border }}
+                      >
+                        <Ionicons name="image-outline" size={16} color={theme.primary} />
+                        <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: theme.textSecondary }}>Choose Photo</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {selectedFile && (
+                      <TouchableOpacity
+                        onPress={handleUpload}
+                        disabled={uploadState === "uploading"}
+                        style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 10, backgroundColor: theme.primary, opacity: uploadState === "uploading" ? 0.6 : 1 }}
+                      >
+                        {uploadState === "uploading" ? (
+                          <>
+                            <ActivityIndicator size="small" color="#fff" />
+                            <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#fff" }}>Uploading…</Text>
+                          </>
+                        ) : (
+                          <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#fff" }}>
+                            {uploadState === "error" ? "Retry Upload" : "Upload"}
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    )}
+                  </>
+                )}
+              </View>
             )}
           </>
         )}
