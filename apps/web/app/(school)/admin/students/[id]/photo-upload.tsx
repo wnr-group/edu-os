@@ -64,16 +64,12 @@ export function PhotoUpload({ studentId, studentName, photoUrl }: Props) {
 
     const publicUrl = urlData.publicUrl;
 
-    // avatar_url lives on profiles; look up profile_id first
-    const { data: sp } = await supabase
+    // Students are data records, not auth users (no profiles row) — their
+    // photo lives directly on student_profiles.photo_url.
+    const { error: dbError } = await supabase
       .from("student_profiles")
-      .select("profile_id")
-      .eq("id", studentId)
-      .single();
-
-    const { error: dbError } = sp?.profile_id
-      ? await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", sp.profile_id)
-      : { error: new Error("Profile not found") };
+      .update({ photo_url: publicUrl })
+      .eq("id", studentId);
 
     if (dbError) {
       toast.error(dbError.message);

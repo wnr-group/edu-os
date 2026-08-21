@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { School, GripVertical, ChevronDown, Trash2, Plus, X, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { School, GripVertical, ChevronDown, Trash2, Plus, X, Sparkles, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -633,14 +634,15 @@ export function ClassesBoard({ schoolId, academicYearId, classes, sections, teac
 
                 {isExpanded && (
                   <div className="border-t border-border/60 py-2 pl-[70px] pr-[18px]">
-                    <div className="grid grid-cols-[80px_1fr_240px_36px] items-center gap-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    <div className="grid grid-cols-[80px_1fr_240px_36px_36px] items-center gap-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                       <div>Section</div>
                       <div>Students</div>
                       <div>Class teacher</div>
                       <div />
+                      <div />
                     </div>
                     {classSections.map((sec) => (
-                      <div key={sec.id} className="grid grid-cols-[80px_1fr_240px_36px] items-center gap-3 border-t border-border/40 py-2">
+                      <div key={sec.id} className="grid grid-cols-[80px_1fr_240px_36px_36px] items-center gap-3 border-t border-border/40 py-2">
                         {renamingSectionId === sec.id ? (
                           <input
                             autoFocus
@@ -669,6 +671,13 @@ export function ClassesBoard({ schoolId, academicYearId, classes, sections, teac
                           disabled={busy}
                           onChange={(e) => handleTeacherChange(sec.id, e.target.value === UNASSIGNED ? "" : e.target.value)}
                         />
+                        <Link
+                          href={`/admin/timetable?classId=${cls.id}&sectionId=${sec.id}`}
+                          title="View timetable"
+                          className="flex justify-center rounded p-1 text-muted-foreground/40 hover:text-primary"
+                        >
+                          <CalendarDays className="h-4 w-4" />
+                        </Link>
                         <button
                           type="button"
                           onClick={() => deleteSection(sec, cls.name)}

@@ -35,7 +35,7 @@ export default async function TeacherStudentDetailPage({
   const [{ data: student }, { data: classes }] = await Promise.all([
     supabase
       .from("student_profiles")
-      .select("id, full_name, email, admission_number, date_of_birth, gender, profile:profiles!profile_id(full_name, email, avatar_url), parent:profiles!parent_profile_id(full_name, phone)")
+      .select("id, full_name, email, photo_url, admission_number, date_of_birth, gender, profile:profiles!profile_id(full_name, email), parent:profiles!parent_profile_id(full_name, phone)")
       .eq("id", id)
       .single(),
     supabase
@@ -55,7 +55,7 @@ export default async function TeacherStudentDetailPage({
     .eq("academic_year_id", academicYearId ?? "")
     .maybeSingle();
 
-  const profile = student.profile as unknown as { full_name: string; email: string; avatar_url: string | null } | null;
+  const profile = student.profile as unknown as { full_name: string; email: string } | null;
   const parent = student.parent as unknown as { full_name: string | null; phone: string | null } | null;
   const displayName = profile?.full_name ?? (student as unknown as { full_name: string | null }).full_name ?? "Student";
   const displayEmail = profile?.email ?? (student as unknown as { email: string | null }).email ?? "";
@@ -102,7 +102,7 @@ export default async function TeacherStudentDetailPage({
               <PhotoUpload
                 studentId={student.id}
                 studentName={displayName}
-                photoUrl={profile?.avatar_url ?? null}
+                photoUrl={(student as unknown as { photo_url: string | null }).photo_url}
               />
               <div className="min-w-0 flex-1">
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Profile</h2>
