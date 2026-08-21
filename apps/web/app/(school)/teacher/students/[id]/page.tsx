@@ -11,8 +11,9 @@ import { StudentEditForm } from "@/app/(school)/admin/students/[id]/student-edit
 import { StudentAttendanceTab } from "@/app/(school)/admin/students/[id]/student-attendance-tab";
 import { StudentAcademicsTab } from "@/app/(school)/admin/students/[id]/student-academics-tab";
 import { StudentFeesTab } from "@/app/(school)/admin/students/[id]/student-fees-tab";
+import { StudentHealthTab } from "@/app/(school)/admin/students/[id]/student-health-tab";
 
-type Tab = "attendance" | "academics" | "fees";
+type Tab = "attendance" | "academics" | "fees" | "health";
 
 export default async function TeacherStudentDetailPage({
   params,
@@ -140,6 +141,7 @@ export default async function TeacherStudentDetailPage({
         { key: "attendance", label: "Attendance", content: attendanceContent },
         { key: "academics", label: "Academics", content: <StudentAcademicsTab studentId={id} /> },
         { key: "fees", label: "Fees", content: <StudentFeesTab studentId={id} studentName={displayName} /> },
+        { key: "health", label: "Health", content: <StudentHealthTab studentId={id} schoolId={schoolId} readOnly /> },
       ]}
     />
   );
