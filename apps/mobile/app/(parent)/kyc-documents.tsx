@@ -3,8 +3,7 @@ import { useCallback, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, Linking, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useFocusEffect } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import { useTheme } from "../../lib/theme";
@@ -117,24 +116,27 @@ export default function KycDocumentsScreen() {
       return;
     }
     setUploading(true);
-    type R = { documentTypeId: string; name: string; success: boolean };
-    const results: R[] = [];
-    for (const [documentTypeId, file] of pendingFiles.entries()) {
-      const name = items.find((i) => i.documentTypeId === documentTypeId)?.documentTypeName ?? documentTypeId;
-      const { error } = await uploadKycDocument(SCHOOL_ID, studentId, documentTypeId, file);
-      results.push({ documentTypeId, name, success: !error });
-    }
-    const succeeded = results.filter((r) => r.success);
-    const failed = results.filter((r) => !r.success);
-    setPendingFiles((prev) => { const next = new Map(prev); succeeded.forEach((r) => next.delete(r.documentTypeId)); return next; });
-    await load(studentId);
-    setUploading(false);
-    if (failed.length === 0) {
-      Alert.alert("Success", "All documents uploaded successfully.");
-    } else if (succeeded.length > 0) {
-      Alert.alert("Partial failure", `${succeeded.length} uploaded, ${failed.length} failed:\n${failed.map((r) => r.name).join(", ")}`);
-    } else {
-      Alert.alert("Upload failed", `No documents were uploaded:\n${failed.map((r) => r.name).join(", ")}`);
+    try {
+      type R = { documentTypeId: string; name: string; success: boolean };
+      const results: R[] = [];
+      for (const [documentTypeId, file] of pendingFiles.entries()) {
+        const name = items.find((i) => i.documentTypeId === documentTypeId)?.documentTypeName ?? documentTypeId;
+        const { error } = await uploadKycDocument(SCHOOL_ID, studentId, documentTypeId, file);
+        results.push({ documentTypeId, name, success: !error });
+      }
+      const succeeded = results.filter((r) => r.success);
+      const failed = results.filter((r) => !r.success);
+      setPendingFiles((prev) => { const next = new Map(prev); succeeded.forEach((r) => next.delete(r.documentTypeId)); return next; });
+      await load(studentId);
+      if (failed.length === 0) {
+        Alert.alert("Success", "All documents uploaded successfully.");
+      } else if (succeeded.length > 0) {
+        Alert.alert("Partial failure", `${succeeded.length} uploaded, ${failed.length} failed:\n${failed.map((r) => r.name).join(", ")}`);
+      } else {
+        Alert.alert("Upload failed", `No documents were uploaded:\n${failed.map((r) => r.name).join(", ")}`);
+      }
+    } finally {
+      setUploading(false);
     }
   }
 
