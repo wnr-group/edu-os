@@ -47,6 +47,7 @@ interface Slot {
   period: number;
   subject_id: string;
   teacher_id: string;
+  is_elective: boolean;
 }
 
 interface TimetableGridProps {
@@ -57,6 +58,8 @@ interface TimetableGridProps {
   subjects: SubjectOption[];
   teachers: TeacherOption[];
   slots: Slot[];
+  initialClassId?: string;
+  initialSectionId?: string;
 }
 
 interface PopupState {
@@ -64,6 +67,7 @@ interface PopupState {
   period: number;
   subjectId: string;
   teacherId: string;
+  isElective: boolean;
   existingId: string | null;
 }
 
@@ -111,12 +115,23 @@ export function TimetableGrid({
   subjects,
   teachers,
   slots,
+  initialClassId,
+  initialSectionId,
 }: TimetableGridProps) {
   const router = useRouter();
   const [view, setView] = useState<"class" | "teacher">("class");
-  const [selClassId, setSelClassId] = useState(classes[0]?.id ?? "");
+  // "View Timetable" from Classes deep-links here with a class+section; fall
+  // back to the original default-to-first-class behavior otherwise (or if
+  // the section doesn't actually belong to that class).
+  const resolvedInitialSection =
+    initialClassId && initialSectionId
+      ? sections.find((s) => s.id === initialSectionId && s.class_id === initialClassId)
+      : undefined;
+  const [selClassId, setSelClassId] = useState(
+    resolvedInitialSection ? initialClassId! : classes[0]?.id ?? ""
+  );
   const [selSectionId, setSelSectionId] = useState(
-    sections.find((s) => s.class_id === classes[0]?.id)?.id ?? ""
+    resolvedInitialSection ? resolvedInitialSection.id : sections.find((s) => s.class_id === classes[0]?.id)?.id ?? ""
   );
   const [selTeacherId, setSelTeacherId] = useState(teachers[0]?.id ?? "");
   const [popup, setPopup] = useState<PopupState | null>(null);
@@ -169,6 +184,7 @@ export function TimetableGrid({
       period,
       subjectId: existing?.subject_id ?? "",
       teacherId: existing?.teacher_id ?? "",
+      isElective: existing?.is_elective ?? false,
       existingId: existing?.id ?? null,
     });
   }
@@ -190,7 +206,7 @@ export function TimetableGrid({
     const { error } = popup.existingId
       ? await supabase
           .from("timetable")
-          .update({ subject_id: popup.subjectId, teacher_id: popup.teacherId })
+          .update({ subject_id: popup.subjectId, teacher_id: popup.teacherId, is_elective: popup.isElective })
           .eq("id", popup.existingId)
       : await supabase.from("timetable").insert({
           school_id: schoolId,
@@ -200,6 +216,7 @@ export function TimetableGrid({
           period: popup.period,
           subject_id: popup.subjectId,
           teacher_id: popup.teacherId,
+          is_elective: popup.isElective,
         });
     setSaving(false);
 
@@ -303,6 +320,7 @@ export function TimetableGrid({
           return `<td style="border:1px solid ${isConflict ? "#ef4444" : "#e5e7eb"}; padding:8px; background:${color.bg}; color:${color.fg};">
             <div style="font-weight:700; font-size:12px;">${subj?.name ?? ""}</div>
             <div style="font-size:11px; opacity:.85;">${teacher?.name ?? ""}</div>
+            ${slot.is_elective ? `<div style="margin-top:3px; font-size:10px; font-weight:700; color:#4338ca;">ELECTIVE</div>` : ""}
           </td>`;
         }
         const at = slotsForTeacherAt(selTeacherId, day.value, period);
@@ -315,6 +333,7 @@ export function TimetableGrid({
         return `<td style="border:1px solid ${conflict ? "#ef4444" : "#e5e7eb"}; padding:8px; background:${color.bg}; color:${color.fg};">
           <div style="font-weight:700; font-size:12px;">${at.map((s) => sectionLabel(s.section_id)).join(" + ")}</div>
           <div style="font-size:11px; opacity:.85;">${firstSubj?.name ?? ""}</div>
+          ${at[0].is_elective ? `<div style="margin-top:3px; font-size:10px; font-weight:700; color:#4338ca;">ELECTIVE</div>` : ""}
         </td>`;
       }).join("");
       return `<tr><td style="border:1px solid #e5e7eb; padding:8px; font-weight:600; white-space:nowrap; font-size:12px;">${day.label}</td>${cellsHtml}</tr>`;
@@ -500,12 +519,19 @@ export function TimetableGrid({
                         >
                           <div className="text-[13.5px] font-bold leading-tight">{subj?.name ?? ""}</div>
                           <div className="mt-0.5 text-[11.5px] leading-tight opacity-85">{teacher?.name ?? ""}</div>
-                          {isConflict && (
-                            <div className="mt-1.5 inline-flex w-fit items-center gap-1 rounded-full border border-red-200 bg-white px-1.5 py-0.5 text-[10.5px] font-bold text-red-700">
-                              <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                              Double-booked
-                            </div>
-                          )}
+                          <div className="mt-1.5 flex flex-wrap gap-1">
+                            {slot.is_elective && (
+                              <span className="inline-flex w-fit items-center gap-1 rounded-full border border-indigo-200 bg-white px-1.5 py-0.5 text-[10.5px] font-bold text-indigo-700">
+                                Elective
+                              </span>
+                            )}
+                            {isConflict && (
+                              <span className="inline-flex w-fit items-center gap-1 rounded-full border border-red-200 bg-white px-1.5 py-0.5 text-[10.5px] font-bold text-red-700">
+                                <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                                Double-booked
+                              </span>
+                            )}
+                          </div>
                         </button>
                       );
                     }
@@ -543,12 +569,19 @@ export function TimetableGrid({
                           {at.map((s) => sectionLabel(s.section_id)).join("  +  ")}
                         </div>
                         <div className="mt-0.5 text-[11.5px] leading-tight opacity-85">{firstSubj?.name ?? ""}</div>
-                        {conflict && (
-                          <div className="mt-1.5 inline-flex w-fit items-center gap-1 rounded-full border border-red-200 bg-white px-1.5 py-0.5 text-[10.5px] font-bold text-red-700">
-                            <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                            Same time, 2 classes
-                          </div>
-                        )}
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {at[0].is_elective && (
+                            <span className="inline-flex w-fit items-center gap-1 rounded-full border border-indigo-200 bg-white px-1.5 py-0.5 text-[10.5px] font-bold text-indigo-700">
+                              Elective
+                            </span>
+                          )}
+                          {conflict && (
+                            <span className="inline-flex w-fit items-center gap-1 rounded-full border border-red-200 bg-white px-1.5 py-0.5 text-[10.5px] font-bold text-red-700">
+                              <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                              Same time, 2 classes
+                            </span>
+                          )}
+                        </div>
                       </div>
                     );
                   }
@@ -596,6 +629,31 @@ export function TimetableGrid({
                 onChange={(e) => setPopup((p) => (p ? { ...p, teacherId: e.target.value } : p))}
                 placeholder="Select teacher…"
               />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground">Period type</label>
+              <div className="inline-flex gap-1 rounded-xl bg-muted p-1">
+                <button
+                  type="button"
+                  onClick={() => setPopup((p) => (p ? { ...p, isElective: false } : p))}
+                  className={cn(
+                    "rounded-lg px-4 py-1.5 text-sm font-semibold transition-colors",
+                    !popup?.isElective ? "bg-card text-primary shadow-sm" : "text-muted-foreground"
+                  )}
+                >
+                  Regular
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPopup((p) => (p ? { ...p, isElective: true } : p))}
+                  className={cn(
+                    "rounded-lg px-4 py-1.5 text-sm font-semibold transition-colors",
+                    popup?.isElective ? "bg-card text-primary shadow-sm" : "text-muted-foreground"
+                  )}
+                >
+                  Elective
+                </button>
+              </div>
             </div>
             {warning && (
               <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">

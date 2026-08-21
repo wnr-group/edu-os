@@ -11,9 +11,10 @@ import { StudentAttendanceTab } from "@/app/(school)/admin/students/[id]/student
 import { StudentAcademicsTab } from "@/app/(school)/admin/students/[id]/student-academics-tab";
 import { StudentFeesTab } from "@/app/(school)/admin/students/[id]/student-fees-tab";
 import { StudentDocumentsTab } from "@/app/(school)/admin/students/[id]/student-documents-tab";
+import { StudentIdCardTab } from "@/app/(school)/admin/students/[id]/student-id-card-tab";
 import { avatarColor, initialsOf } from "@/lib/student-avatar";
 
-type Tab = "attendance" | "academics" | "fees" | "documents";
+type Tab = "attendance" | "academics" | "fees" | "documents" | "id-card";
 
 export default async function PrincipalStudentDetailPage({
   params,
@@ -36,7 +37,7 @@ export default async function PrincipalStudentDetailPage({
  const [{ data: student }, { data: kycCompleteness }] = await Promise.all([
     supabase
       .from("student_profiles")
-      .select("id, full_name, email, admission_number, date_of_birth, gender, profile:profiles!profile_id(full_name, email, avatar_url), parent:profiles!parent_profile_id(full_name, phone)")
+      .select("id, full_name, email, photo_url, admission_number, date_of_birth, gender, profile:profiles!profile_id(full_name, email), parent:profiles!parent_profile_id(full_name, phone)")
       .eq("id", id)
       .eq("school_id", schoolId)
       .single(),
@@ -57,10 +58,11 @@ export default async function PrincipalStudentDetailPage({
     .eq("academic_year_id", academicYearId ?? "")
     .maybeSingle();
 
-  const profile = student.profile as unknown as { full_name: string; email: string; avatar_url: string | null } | null;
+  const profile = student.profile as unknown as { full_name: string; email: string } | null;
   const parent = student.parent as unknown as { full_name: string | null; phone: string | null } | null;
   const displayName = profile?.full_name ?? (student as unknown as { full_name: string | null }).full_name ?? "Student";
   const displayEmail = profile?.email ?? (student as unknown as { email: string | null }).email ?? "";
+  const photoUrl = (student as unknown as { photo_url: string | null }).photo_url;
   const cls = enrollment?.class as unknown as { name: string } | null;
   const sec = enrollment?.section as unknown as { name: string } | null;
 
@@ -102,9 +104,9 @@ export default async function PrincipalStudentDetailPage({
       header={
         <div className="rounded-lg border bg-white p-6 shadow-sm">
           <div className="flex items-start gap-5">
-            {profile?.avatar_url ? (
+            {photoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile.avatar_url} alt={displayName} className="h-20 w-20 shrink-0 rounded-full object-cover" />
+              <img src={photoUrl} alt={displayName} className="h-20 w-20 shrink-0 rounded-full object-cover" />
             ) : (
               <span
                 className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full text-2xl font-bold"
@@ -156,6 +158,7 @@ export default async function PrincipalStudentDetailPage({
           label: kycCompleteness ? `Documents (${kycCompleteness.verified_count}/${kycCompleteness.required_total})` : "Documents",
           content: <StudentDocumentsTab studentId={id} schoolId={schoolId} />,
         },
+        { key: "id-card", label: "ID Card", content: <StudentIdCardTab studentId={id} schoolId={schoolId} /> },
       ]}
     />
   );

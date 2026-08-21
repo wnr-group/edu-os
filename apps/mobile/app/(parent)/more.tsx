@@ -521,6 +521,12 @@ export default function ParentMore() {
             subtitle={unreadNotifications > 0 ? `${unreadNotifications} unread` : "Alerts & updates"}
             onPress={() => navigate("notifications")}
           />
+          <ListItem
+            icon="card-outline"
+            title="Student ID Card"
+            subtitle="View your child's digital ID"
+            onPress={() => router.push("/(parent)/id-card")}
+          />
           {announcementsEnabled && (
             <ListItem
               icon="megaphone-outline"
