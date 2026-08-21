@@ -20,11 +20,10 @@ export default async function HomeworkPage() {
   const { data: { user } } = await supabase.auth.getUser();
   const yearId = await getAcademicYearId(schoolId);
 
-  // A teacher may only assign homework to sections they actually teach
-  // (homeroom via section_assignments, or subject via timetable, in the active
-  // year) — this mirrors the mobile app and the send-homework-notification
-  // authorization, so the create form can't offer a section the notification
-  // would then reject.
+  // A teacher's own taught sections (homeroom via section_assignments, or
+  // subject via timetable, in the active year) — the base candidate list for
+  // the class/section/subject pickers; also mirrors the mobile app and the
+  // send-homework-notification authorization.
   const [{ data: homeroomRows }, { data: timetableRows }] = await Promise.all([
     supabase
       .from("section_assignments")
@@ -42,6 +41,7 @@ export default async function HomeworkPage() {
       sectionId,
       ...(homeroomRows ?? []).map((r) => r.section_id as string),
       ...(timetableRows ?? []).map((r) => r.section_id as string),
+      sectionId,
     ])
   );
 

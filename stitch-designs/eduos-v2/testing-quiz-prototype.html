@@ -1,0 +1,958 @@
+<title>EduOS Testing</title>
+<style>
+  :root{
+    --accent:#4F46E5; --accent-2:#1D4ED8; --accent-weak:#EEF1FE; --accent-ink:#4338CA;
+    --ground-a:#EAECF9; --ground-b:#F6F5FC; --card:#FFFFFF;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A0B4; --line:#EBECF4;
+    --good:#10B981; --good-weak:#E7F7F0; --warn:#F59E0B; --warn-weak:#FDF3E2;
+    --crit:#EF4444; --crit-weak:#FCECEC; --info:#3B82F6; --info-weak:#E9F1FE;
+    --shadow:0 4px 20px rgba(29,78,216,.07); --shadow-lg:0 12px 40px rgba(29,78,216,.13);
+    --r:16px; --r-md:12px; --r-sm:10px; --r-pill:999px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --shell-bg:linear-gradient(180deg,var(--ground-a),var(--ground-b) 42%);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{min-height:100vh;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;line-height:1.45;background:var(--shell-bg)}
+  button{font-family:inherit}
+  :focus-visible{outline:2px solid var(--accent-ink);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+
+  .i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .i.sm{width:14px;height:14px}.i.lg{width:20px;height:20px}
+
+  /* ── shell chrome ─────────────────────────────────────────────────── */
+  .shellhead{max-width:1180px;margin:0 auto;padding:30px 22px 6px}
+  .shellhead .crumb{font-size:12.5px;color:var(--accent-ink);font-weight:700;letter-spacing:.03em;display:flex;align-items:center;gap:8px}
+  .shellhead .crumb .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .shellhead h1{margin:7px 0 0;font-size:26px;letter-spacing:-.6px;font-weight:770}
+  .shellhead p{margin:6px 0 0;color:var(--ink-2);font-size:14px;max-width:680px}
+
+  .shellnav{max-width:1180px;margin:20px auto 0;padding:0 22px;display:flex;flex-direction:column;gap:10px}
+  .navgroup{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .navgroup .lbl{font-size:10.5px;font-weight:800;letter-spacing:.07em;color:var(--ink-3);text-transform:uppercase;width:150px;flex:none}
+  .navchips{display:flex;gap:7px;flex-wrap:wrap}
+  .navchip{border:1px solid var(--line);background:var(--card);color:var(--ink-2);font-size:12.5px;font-weight:650;
+    padding:8px 13px;border-radius:var(--r-pill);cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;transition:background .12s,color .12s,border-color .12s}
+  .navchip .n{width:16px;height:16px;border-radius:5px;background:var(--ground-a);color:var(--ink-3);display:grid;place-items:center;font-size:9.5px;font-weight:800;flex:none}
+  .navchip:hover{border-color:var(--accent);color:var(--accent-ink)}
+  .navchip.on{background:var(--accent);color:#fff;border-color:transparent;box-shadow:var(--shadow)}
+  .navchip.on .n{background:rgba(255,255,255,.22);color:#fff}
+
+  .stage{max-width:1180px;margin:26px auto 60px;padding:0 22px}
+  .stagebar{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .stepbtn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink-2);display:grid;place-items:center;cursor:pointer;flex:none;box-shadow:var(--shadow)}
+  .stepbtn:hover{color:var(--accent-ink);border-color:var(--accent)}
+  .stagebar .meta{flex:1;min-width:0}
+  .stagebar .meta b{font-size:15px;font-weight:720}
+  .stagebar .meta span{display:block;font-size:12px;color:var(--ink-3);margin-top:1px}
+  .platform-pill{font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:5px 11px;border-radius:var(--r-pill);flex:none}
+  .pf-web{background:var(--info-weak);color:#1D4ED8}
+  .pf-mob{background:#FCE7F0;color:#B83280}
+
+  .canvas-scroll{overflow-x:auto;padding-bottom:6px}
+  .canvas{display:flex;justify-content:center;min-width:min-content}
+
+  /* ── browser device frame (web screens) ──────────────────────────── */
+  .browser{width:1080px;background:var(--card);border-radius:18px;box-shadow:0 30px 70px rgba(29,78,216,.14),0 4px 14px rgba(15,23,42,.08);border:1px solid #E4E5F2;overflow:hidden}
+  .chrome{display:flex;align-items:center;gap:10px;padding:11px 16px;background:var(--ground-b);border-bottom:1px solid var(--line)}
+  .chrome .dots{display:flex;gap:6px}
+  .chrome .dots i{width:10px;height:10px;border-radius:50%;background:#DCE0F0;display:block}
+  .chrome .urlbar{flex:1;height:26px;border-radius:8px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;padding:0 12px;font-size:11.5px;color:var(--ink-3);gap:7px}
+  .appwrap{max-height:720px;overflow-y:auto}
+
+  /* ── phone device frame (mobile screens) ─────────────────────────── */
+  .phone{width:360px;height:736px;background:var(--card);border-radius:42px;padding:11px;
+    box-shadow:0 30px 70px rgba(29,78,216,.16),0 4px 14px rgba(15,23,42,.08);border:1px solid #E4E5F2;position:relative;flex:none}
+  .screen{position:relative;width:100%;height:100%;border-radius:32px;overflow:hidden;background:linear-gradient(180deg,#F4F5FC,#EEEFF8);display:flex;flex-direction:column}
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:26px;background:var(--card);border-radius:0 0 16px 16px;z-index:30}
+  .sbar{height:38px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 22px 5px;font-size:12px;font-weight:650;color:var(--ink);z-index:20;flex:none}
+  .sbar .rt{display:flex;gap:5px;align-items:center}
+  .dnav{background:var(--card);padding:11px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:11px;z-index:10;flex:none}
+  .back{width:34px;height:34px;border-radius:10px;background:var(--ground-b);display:grid;place-items:center;color:var(--ink-2);flex:none}
+  .dnav b{font-size:16px;font-weight:720;letter-spacing:-.2px}
+  .dnav .sub{font-size:11px;color:var(--ink-3)}
+  .dnav .who{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-3);flex:none}
+  .dnav .ava{width:30px;height:30px;border-radius:9px;background:#FCE7F0;color:#B83280;display:grid;place-items:center;font-weight:700;font-size:11px;flex:none}
+  .mscroll{flex:1;overflow-y:auto;position:relative;padding:15px 16px 0}
+  .fade{position:absolute;left:0;right:0;bottom:0;height:80px;background:linear-gradient(180deg,transparent,#EEEFF8 70%);pointer-events:none;z-index:14}
+  .mnav{position:absolute;left:0;right:0;bottom:0;height:64px;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:center;padding-bottom:8px;z-index:16}
+  .mnav a{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:var(--ink-3);text-decoration:none}
+  .mnav a.on{color:var(--accent-ink)}.mnav a.on .ni{background:var(--accent-weak)}
+  .mnav .ni{width:34px;height:26px;border-radius:9px;display:grid;place-items:center}
+
+  /* ── generic web app chrome inside the browser frame ─────────────── */
+  .topnav{display:flex;align-items:center;gap:20px;height:60px;padding:0 22px;background:var(--card);border-bottom:1px solid var(--line)}
+  .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:#fff;flex:none}
+  .mainnav{display:flex;align-items:center;gap:4px}
+  .mainnav a{position:relative;padding:8px 12px;border-radius:9px;color:var(--ink-2);text-decoration:none;font-size:13.5px;font-weight:500}
+  .mainnav a.on{color:var(--accent-ink);font-weight:650;background:var(--accent-weak)}
+  .selsec{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink-3);font-size:12.5px}
+  .grow{flex:1}
+  .avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}
+  .app{max-width:1080px;margin:0 auto;padding:20px 24px 40px;display:flex;flex-direction:column;gap:15px}
+  .crumb2{font-size:12px;color:var(--ink-3);font-weight:500}
+  .head{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-top:-4px}
+  .head h2{margin:0;font-size:24px;letter-spacing:-.6px;font-weight:760}
+  .head p{margin:4px 0 0;color:var(--ink-3);font-size:13px}
+  .head .r{margin-left:auto;display:flex;gap:9px;align-items:center}
+
+  .btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:9px;border:1px solid transparent;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;background:none}
+  .btn.primary{background:var(--accent);color:#fff;box-shadow:var(--shadow)}
+  .btn.ghost{background:var(--card);border-color:var(--line);color:var(--ink-2)}
+  .btn.warn{background:var(--warn);color:#fff}
+  .btn.crit{background:var(--crit);color:#fff}
+  .btn.sm{height:32px;padding:0 12px;font-size:12.5px;border-radius:8px}
+  .btn.block{width:100%;justify-content:center}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+  .ph{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--line)}
+  .ph h3{margin:0;font-size:14.5px;font-weight:660}
+  .ph .sub{font-size:11.5px;color:var(--ink-3)}
+
+  table{width:100%;border-collapse:collapse}
+  thead th{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);text-align:left;padding:9px 18px;border-bottom:1px solid var(--line)}
+  tbody td{padding:11px 18px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr.clickable{cursor:pointer}
+  tbody tr.clickable:hover{background:var(--ground-b)}
+
+  .statepill{font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:5px 11px;border-radius:var(--r-pill);white-space:nowrap}
+  .st-draft{color:#9A6408;background:var(--warn-weak)}
+  .st-sched{color:#1D4ED8;background:var(--info-weak)}
+  .st-live{color:#0B7A55;background:var(--good-weak)}
+  .st-closed{color:var(--ink-2);background:var(--ground-a)}
+  .st-notstart{color:var(--ink-3);background:var(--ground-a)}
+  .st-progress{color:#9A6408;background:var(--warn-weak)}
+  .st-submitted{color:#1D4ED8;background:var(--info-weak)}
+  .st-graded{color:#0B7A55;background:var(--good-weak)}
+
+  .fld{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+  .fld label{font-size:10.5px;font-weight:800;letter-spacing:.05em;color:var(--ink-3);text-transform:uppercase}
+  .fld .hint{font-size:11px;color:var(--ink-3);font-weight:500;text-transform:none;letter-spacing:0}
+  .inp,.txt{height:38px;border:1px solid var(--line);border-radius:9px;padding:0 11px;display:flex;align-items:center;font-size:13.5px;font-weight:600;background:var(--card);color:var(--ink);gap:8px}
+  .inp .chev{margin-left:auto;color:var(--ink-3)}
+  textarea.txt{height:auto;min-height:70px;padding:10px 11px;align-items:flex-start;font-family:inherit;font-weight:500;resize:vertical}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+  .seg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:4px;gap:2px;box-shadow:var(--shadow)}
+  .seg button{border:0;background:none;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--ink-3);padding:8px 13px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .seg button.on{background:var(--accent-weak);color:var(--accent-ink)}
+
+  .btabs{display:flex;gap:4px;border-bottom:1px solid var(--line);padding:0 18px}
+  .btabs button{border:0;background:none;font-family:inherit;font-size:13px;font-weight:650;color:var(--ink-3);padding:13px 4px;cursor:pointer;position:relative;display:flex;align-items:center;gap:7px}
+  .btabs button.on{color:var(--accent-ink)}
+  .btabs button.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2.5px;background:var(--accent);border-radius:2px}
+  .btabs .num{width:17px;height:17px;border-radius:50%;background:var(--ground-a);color:var(--ink-3);font-size:9.5px;font-weight:800;display:grid;place-items:center}
+  .btabs button.on .num{background:var(--accent);color:#fff}
+
+  .split{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:14px;align-items:start}
+  .qrow{display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid var(--line);cursor:pointer}
+  .qrow:last-child{border-bottom:0}
+  .qrow:hover{background:var(--ground-b)}
+  .qrow .gh{color:var(--ink-3);cursor:grab;flex:none}
+  .qrow .qn{width:24px;height:24px;border-radius:7px;background:var(--ground-a);color:var(--ink-2);font-size:11px;font-weight:750;display:grid;place-items:center;flex:none}
+  .qrow .qb{flex:1;min-width:0}
+  .qrow .qb b{font-size:13px;font-weight:640;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .qrow .qb span{font-size:11px;color:var(--ink-3)}
+  .typetag{font-size:9.5px;font-weight:800;letter-spacing:.03em;padding:3px 8px;border-radius:var(--r-pill);flex:none}
+  .tt-mcq{background:var(--info-weak);color:#1D4ED8}
+  .tt-tf{background:#FCEFD6;color:#B4740B}
+  .tt-short{background:#FCE7F0;color:#B83280}
+  .qrow .pts{font-size:11.5px;color:var(--ink-3);font-weight:700;flex:none;width:44px;text-align:right}
+
+  .opt{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:8px;font-size:13px;font-weight:600}
+  .opt .rb{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);flex:none;display:grid;place-items:center}
+  .opt.correct{border-color:var(--good);background:var(--good-weak)}
+  .opt.correct .rb{border-color:var(--good);background:var(--good)}
+  .opt.correct .rb::after{content:"";width:7px;height:7px;border-radius:50%;background:#fff}
+  .opt input.otext{border:0;background:none;font:inherit;flex:1;outline:0;color:var(--ink)}
+
+  .addroom{font-size:11.5px;color:var(--accent-ink);font-weight:650;display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+
+  .note{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--ink-2);background:var(--ground-b);border:1px dashed var(--line);border-radius:12px;padding:11px 13px}
+  .note svg{color:var(--ink-3);flex:none;margin-top:1px}
+  .note b{color:var(--ink)}
+  .note.security{background:var(--accent-weak);border-color:#D7DAFA}
+  .note.security svg{color:var(--accent-ink)}
+
+  .kpirow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:14px 16px;box-shadow:var(--shadow)}
+  .kpi .lbl{font-size:10.5px;font-weight:750;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em}
+  .kpi .val{font-size:22px;font-weight:770;margin-top:4px;letter-spacing:-.4px}
+  .kpi .sub{font-size:11px;color:var(--ink-3);margin-top:2px}
+
+  .audchip{display:inline-flex;align-items:center;gap:8px;background:var(--accent-weak);color:var(--accent-ink);font-size:12.5px;font-weight:700;padding:8px 13px;border-radius:var(--r-pill)}
+  .clsopt{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:7px}
+  .clsopt input{width:16px;height:16px;accent-color:var(--accent)}
+  .clsopt b{font-size:13px;font-weight:650}
+  .clsopt span{font-size:11.5px;color:var(--ink-3);margin-left:auto}
+
+  .qanswer{border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:10px}
+  .qanswer .qtop{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+  .qanswer .qtop .icn{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;flex:none}
+  .qanswer.right .icn{background:var(--good-weak);color:var(--good)}
+  .qanswer.wrong .icn{background:var(--crit-weak);color:var(--crit)}
+  .qanswer.pending .icn{background:var(--warn-weak);color:var(--warn)}
+  .qanswer .qtop b{font-size:13px;font-weight:650;flex:1}
+  .qanswer .qtop .pt{font-size:11.5px;font-weight:750;color:var(--ink-3)}
+  .qanswer .ans{font-size:12.5px;color:var(--ink-2);padding-left:31px}
+  .qanswer .ans .ya{color:var(--crit);font-weight:650}
+  .qanswer .ans .ca{color:var(--good);font-weight:650}
+  .gradebox{display:flex;align-items:center;gap:8px;margin-top:9px;margin-left:31px}
+  .gradebox input{width:56px;height:30px;border:1px solid var(--line);border-radius:7px;padding:0 8px;font:inherit;font-weight:700;font-size:12.5px}
+
+  /* ── mobile-specific components ──────────────────────────────────── */
+  .segm{display:flex;background:var(--ground-a);border-radius:11px;padding:3px;gap:2px;margin-bottom:14px}
+  .segm button{flex:1;border:0;background:none;font-family:inherit;font-size:12px;font-weight:700;color:var(--ink-3);padding:8px 4px;border-radius:8px;cursor:pointer}
+  .segm button.on{background:var(--card);color:var(--accent-ink);box-shadow:0 1px 4px rgba(29,78,216,.12)}
+
+  .statechips{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .statechip{font-size:10px;font-weight:750;padding:5px 9px;border-radius:var(--r-pill);border:1px solid var(--line);background:var(--card);color:var(--ink-3);cursor:pointer}
+  .statechip.on{background:var(--accent);color:#fff;border-color:transparent}
+
+  .qzcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:11px;box-shadow:var(--shadow);cursor:pointer}
+  .qzcard .top{display:flex;align-items:center;gap:10px}
+  .qzcard .qi{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex:none}
+  .qzcard .ttl{font-weight:720;font-size:13.5px}
+  .qzcard .meta{font-size:11px;color:var(--ink-3);margin-top:1px}
+  .qzcard .st{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.03em;padding:4px 9px;border-radius:var(--r-pill);flex:none}
+  .qzcard .foot{font-size:11.5px;color:var(--ink-2);margin-top:10px;padding-top:10px;border-top:1px solid var(--line);display:flex;gap:7px;align-items:center}
+  .qzcard .foot svg{color:var(--ink-3)}
+  .qzcard .foot b{color:var(--accent-ink)}
+
+  .skel{background:linear-gradient(90deg,#EEEFF8 25%,#F7F7FD 37%,#EEEFF8 63%);background-size:400% 100%;animation:sk 1.4s ease infinite;border-radius:10px}
+  @keyframes sk{0%{background-position:100% 50%}100%{background-position:0 50%}}
+  .skelcard{height:78px;margin-bottom:11px}
+  @media (prefers-reduced-motion:reduce){.skel{animation:none;background:#EEEFF8}}
+
+  .emptystate{display:flex;flex-direction:column;align-items:center;text-align:center;padding:50px 20px;gap:12px}
+  .emptystate .ic{width:56px;height:56px;border-radius:16px;background:var(--ground-a);color:var(--ink-3);display:grid;place-items:center}
+  .emptystate b{font-size:14px;font-weight:700}
+  .emptystate p{font-size:12px;color:var(--ink-3);margin:0;max-width:220px}
+
+  .childcard{display:flex;align-items:center;gap:12px;background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:14px;margin-bottom:11px;box-shadow:var(--shadow);cursor:pointer}
+  .childcard.on{border-color:var(--accent);background:var(--accent-weak)}
+  .childcard .av{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:750;font-size:15px;flex:none}
+  .childcard b{font-size:14.5px;font-weight:720;display:block}
+  .childcard span{font-size:11.5px;color:var(--ink-3)}
+  .childcard .chk{margin-left:auto;width:22px;height:22px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;flex:none}
+  .childcard.on .chk{background:var(--accent);border-color:var(--accent);color:#fff}
+
+  .instrow{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:var(--ink-2);padding:9px 0;border-bottom:1px solid var(--line)}
+  .instrow:last-child{border-bottom:0}
+  .instrow .n{width:19px;height:19px;border-radius:6px;background:var(--accent-weak);color:var(--accent-ink);font-size:10px;font-weight:800;display:grid;place-items:center;flex:none;margin-top:1px}
+
+  .timerchip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:750;padding:6px 11px;border-radius:var(--r-pill);background:var(--warn-weak);color:#9A6408}
+  .timerchip.crit{background:var(--crit-weak);color:var(--crit)}
+  .qprog{font-size:11.5px;color:var(--ink-3);font-weight:650}
+  .qtopbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .qprompt{font-size:15px;font-weight:700;line-height:1.4;margin-bottom:16px}
+  .manswer{display:flex;align-items:center;gap:11px;border:1.5px solid var(--line);border-radius:13px;padding:12px 13px;margin-bottom:10px;font-size:13.5px;font-weight:650}
+  .manswer .rb{width:19px;height:19px;border-radius:50%;border:2px solid var(--line);flex:none}
+  .manswer.sel{border-color:var(--accent);background:var(--accent-weak)}
+  .manswer.sel .rb{border-color:var(--accent);background:var(--accent);position:relative}
+  .manswer.sel .rb::after{content:"";position:absolute;inset:4px;border-radius:50%;background:#fff}
+  .letter{width:22px;height:22px;border-radius:7px;background:var(--ground-a);color:var(--ink-2);font-size:11px;font-weight:800;display:grid;place-items:center;flex:none}
+  .manswer.sel .letter{background:var(--accent);color:#fff}
+  .qnav{display:flex;gap:9px;margin-top:16px}
+  .qnav .btn{flex:1}
+  .palette{display:flex;gap:6px;flex-wrap:wrap;padding:12px 0 4px}
+  .pdot{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:10px;font-weight:750;background:var(--ground-a);color:var(--ink-3);flex:none}
+  .pdot.answered{background:var(--good-weak);color:var(--good)}
+  .pdot.current{background:var(--accent);color:#fff}
+
+  .sheet-overlay{position:absolute;inset:0;background:rgba(15,23,42,.4);z-index:40;display:flex;align-items:flex-end;border-radius:32px;overflow:hidden}
+  .sheet{background:var(--card);border-radius:20px 20px 0 0;padding:20px 18px 22px;width:100%;box-shadow:0 -10px 40px rgba(15,23,42,.2)}
+  .sheet .sheetbar{width:36px;height:4px;background:var(--line);border-radius:3px;margin:0 auto 14px}
+  .sheet h4{margin:0 0 6px;font-size:16px;font-weight:750}
+  .sheet p{margin:0 0 14px;font-size:12.5px;color:var(--ink-2);line-height:1.5}
+  .sheet .warnline{display:flex;gap:8px;align-items:flex-start;background:var(--warn-weak);border-radius:11px;padding:10px 11px;font-size:12px;color:#9A6408;margin-bottom:14px}
+  .sheet .warnline svg{color:var(--warn);flex:none;margin-top:1px}
+  .sheet .row{display:flex;gap:9px}
+  .sheet .row .btn{flex:1}
+
+  .scorewrap{display:flex;flex-direction:column;align-items:center;text-align:center;padding:22px 10px 6px}
+  .ring{width:120px;height:120px;border-radius:50%;position:relative;display:grid;place-items:center;margin-bottom:14px}
+  .ring .inner{width:96px;height:96px;border-radius:50%;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .inner b{font-size:24px;font-weight:800;letter-spacing:-.5px}
+  .ring .inner span{font-size:10px;color:var(--ink-3);font-weight:700;text-transform:uppercase}
+  .passpill{font-size:11px;font-weight:800;letter-spacing:.03em;padding:5px 13px;border-radius:var(--r-pill);background:var(--good-weak);color:var(--good);margin-bottom:4px}
+  .scorewrap h3{margin:6px 0 3px;font-size:16px;font-weight:750}
+  .scorewrap p{margin:0;font-size:12px;color:var(--ink-3)}
+  .scorestat{display:flex;gap:22px;margin:18px 0 4px}
+  .scorestat div{text-align:center}
+  .scorestat b{display:block;font-size:16px;font-weight:750}
+  .scorestat span{font-size:10.5px;color:var(--ink-3);font-weight:650;text-transform:uppercase;letter-spacing:.03em}
+
+  @media (max-width:720px){.split{grid-template-columns:1fr}.kpirow{grid-template-columns:1fr 1fr}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-back" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></symbol>
+  <symbol id="ic-chevl" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></symbol>
+  <symbol id="ic-chevr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+  <symbol id="ic-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="ic-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="ic-list" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></symbol>
+  <symbol id="ic-dots" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="ic-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="ic-bar" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></symbol>
+  <symbol id="ic-award" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></symbol>
+  <symbol id="ic-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="ic-inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+  <symbol id="ic-slash" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></symbol>
+  <symbol id="ic-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="ic-home" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+  <symbol id="ic-wallet" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></symbol>
+  <symbol id="ic-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></symbol>
+</defs></svg>
+
+<div class="shellhead">
+  <div class="crumb"><span class="dot"></span>TESTING MODULE &middot; CLICKABLE PROTOTYPE</div>
+  <h1>EduOS Testing</h1>
+  <p>Live &amp; async quizzes with auto-grading &mdash; the teacher builds and marks on web, the parent picks a child and takes the quiz on mobile. Nothing here is wired up; every screen is static sample data for review.</p>
+</div>
+
+<div class="shellnav">
+  <div class="navgroup">
+    <div class="lbl">Teacher &middot; web</div>
+    <div class="navchips">
+      <button class="navchip on" data-screen="t-list"><span class="n">1</span>Quiz list</button>
+      <button class="navchip" data-screen="t-builder"><span class="n">2</span>Quiz builder</button>
+      <button class="navchip" data-screen="t-submissions"><span class="n">3</span>Submissions &amp; results</button>
+      <button class="navchip" data-screen="t-detail"><span class="n">4</span>Student result</button>
+    </div>
+  </div>
+  <div class="navgroup">
+    <div class="lbl">Parent &middot; mobile</div>
+    <div class="navchips">
+      <button class="navchip" data-screen="p-child"><span class="n">5</span>Select child</button>
+      <button class="navchip" data-screen="p-list"><span class="n">6</span>Quiz list</button>
+      <button class="navchip" data-screen="p-details"><span class="n">7</span>Instructions</button>
+      <button class="navchip" data-screen="p-take"><span class="n">8</span>Take quiz</button>
+      <button class="navchip" data-screen="p-submit"><span class="n">9</span>Submit</button>
+      <button class="navchip" data-screen="p-result"><span class="n">10</span>Result</button>
+    </div>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="stagebar">
+    <button class="stepbtn" id="prevBtn" aria-label="Previous screen"><svg class="i sm"><use href="#ic-chevl"/></svg></button>
+    <div class="meta"><b id="stageTitle"></b><span id="stageSub"></span></div>
+    <span class="platform-pill" id="stagePlatform"></span>
+    <button class="stepbtn" id="nextBtn" aria-label="Next screen"><svg class="i sm"><use href="#ic-chevr"/></svg></button>
+  </div>
+
+  <div class="canvas-scroll"><div class="canvas">
+
+    <!-- ================= 1. TEACHER — QUIZ LIST ================= -->
+    <div class="frame" data-frame="t-list">
+      <div class="browser"><div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="urlbar"><svg class="i sm"><use href="#ic-lock"/></svg>springfieldpublic.eduos.app/teacher/testing</div></div>
+        <div class="appwrap">
+          <header class="topnav">
+            <div class="logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg></div>
+            <nav class="mainnav"><a href="#">Dashboard</a><a href="#">Classes</a><a href="#">Homework</a><a href="#" class="on">Testing</a><a href="#">Results</a></nav>
+            <div class="selsec">Class 8 &ndash; B &#9662;</div>
+            <div class="grow"></div>
+            <div class="avatar">SR</div>
+          </header>
+          <div class="app">
+            <div>
+              <div class="crumb2">Testing</div>
+              <div class="head"><div><h2>Quizzes</h2><p>Create, schedule and grade quizzes for your sections.</p></div>
+                <div class="r"><button class="btn primary" onclick="go('t-builder')"><svg class="i sm"><use href="#ic-plus"/></svg> Create quiz</button></div>
+              </div>
+            </div>
+            <div class="seg">
+              <button class="on">All &middot; 4</button><button>Draft &middot; 1</button><button>Scheduled &middot; 1</button><button>Live &middot; 1</button><button>Closed &middot; 1</button>
+            </div>
+            <div class="panel">
+              <table>
+                <thead><tr><th>Quiz</th><th>Subject &middot; class</th><th>Mode</th><th>Status</th><th>Submissions</th><th>Window</th><th></th></tr></thead>
+                <tbody>
+                  <tr class="clickable" onclick="go('t-submissions')">
+                    <td><b>Photosynthesis &mdash; Chapter 4 Check</b></td>
+                    <td>Science &middot; 8&ndash;B</td>
+                    <td>Async</td>
+                    <td><span class="statepill st-live">LIVE</span></td>
+                    <td>42 / 48 submitted</td>
+                    <td>Today, 9:00 AM &ndash; 4:00 PM</td>
+                    <td><svg class="i sm" style="color:var(--ink-3)"><use href="#ic-dots"/></svg></td>
+                  </tr>
+                  <tr class="clickable" onclick="go('t-builder')">
+                    <td><b>The Solar System</b></td>
+                    <td>Science &middot; 8&ndash;B</td>
+                    <td>Async</td>
+                    <td><span class="statepill st-draft">DRAFT</span></td>
+                    <td>&mdash;</td>
+                    <td class="unset" style="color:var(--ink-3);font-style:italic">Not scheduled</td>
+                    <td><svg class="i sm" style="color:var(--ink-3)"><use href="#ic-dots"/></svg></td>
+                  </tr>
+                  <tr class="clickable">
+                    <td><b>Fractions Practice</b></td>
+                    <td>Mathematics &middot; 5&ndash;A</td>
+                    <td>Live (timed)</td>
+                    <td><span class="statepill st-sched">SCHEDULED</span></td>
+                    <td>0 / 31 submitted</td>
+                    <td>Fri, 10 Oct &middot; 11:00 AM (20 min)</td>
+                    <td><svg class="i sm" style="color:var(--ink-3)"><use href="#ic-dots"/></svg></td>
+                  </tr>
+                  <tr class="clickable" onclick="go('t-submissions')">
+                    <td><b>Mid&ndash;Term Prep: Grammar Basics</b></td>
+                    <td>English &middot; 8&ndash;B</td>
+                    <td>Async</td>
+                    <td><span class="statepill st-closed">CLOSED</span></td>
+                    <td>48 / 48 &middot; graded</td>
+                    <td>Closed 3 days ago</td>
+                    <td><svg class="i sm" style="color:var(--ink-3)"><use href="#ic-dots"/></svg></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 2. TEACHER — QUIZ BUILDER ================= -->
+    <div class="frame" data-frame="t-builder" style="display:none">
+      <div class="browser"><div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="urlbar"><svg class="i sm"><use href="#ic-lock"/></svg>springfieldpublic.eduos.app/teacher/testing/solar-system/edit</div></div>
+        <div class="appwrap">
+          <header class="topnav">
+            <div class="logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg></div>
+            <nav class="mainnav"><a href="#">Dashboard</a><a href="#">Classes</a><a href="#">Homework</a><a href="#" class="on">Testing</a><a href="#">Results</a></nav>
+            <div class="selsec">Class 8 &ndash; B &#9662;</div>
+            <div class="grow"></div>
+            <div class="avatar">SR</div>
+          </header>
+          <div class="app">
+            <div>
+              <div class="crumb2"><a href="#" onclick="go('t-list');return false" style="color:inherit;text-decoration:none">Testing</a> &rsaquo; Edit</div>
+              <div class="head"><div><h2>The Solar System</h2><p>Science &middot; Class 8&ndash;B &middot; last saved 2 minutes ago</p></div>
+                <div class="r"><span class="statepill st-draft">DRAFT</span><button class="btn ghost">Save draft</button></div>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="btabs">
+                <button class="on" data-btab="details"><span class="num">1</span>Details</button>
+                <button data-btab="questions"><span class="num">2</span>Questions <span style="color:var(--ink-3);font-weight:600">&middot; 8</span></button>
+                <button data-btab="avail"><span class="num">3</span>Availability &amp; scoring</button>
+                <button data-btab="assign"><span class="num">4</span>Assign</button>
+                <button data-btab="preview"><svg class="i sm"><use href="#ic-eye"/></svg>Preview &amp; publish</button>
+              </div>
+
+              <!-- Details -->
+              <div data-bpanel="details" style="padding:18px">
+                <div class="two">
+                  <div class="fld"><label>Title</label><div class="inp">The Solar System</div></div>
+                  <div class="fld"><label>Subject</label><div class="inp">Science <svg class="i sm chev"><use href="#ic-chev"/></svg></div></div>
+                </div>
+                <div class="two">
+                  <div class="fld"><label>Class &amp; section</label><div class="inp">Class 8 &middot; Section B <svg class="i sm chev"><use href="#ic-chev"/></svg></div></div>
+                  <div class="fld"><label>Mode</label>
+                    <div class="seg" style="box-shadow:none">
+                      <button class="on">Async &middot; open window</button><button>Live &middot; single sitting</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="fld"><label>Instructions for students</label>
+                  <textarea class="txt">Answer all questions about the planets and their order from the Sun. You have one attempt &mdash; read each question carefully before selecting an answer.</textarea>
+                </div>
+                <div class="note"><svg class="i sm"><use href="#ic-shield"/></svg><div><b>Formative by default.</b> This quiz stays standalone practice unless you choose &ldquo;Push to gradebook&rdquo; from Preview &amp; publish &mdash; that&rsquo;s the only way a quiz score reaches Exams &amp; Results.</div></div>
+              </div>
+
+              <!-- Questions -->
+              <div data-bpanel="questions" style="display:none">
+                <div class="split" style="padding:16px 18px">
+                  <div class="panel" style="box-shadow:none">
+                    <div class="ph"><h3>Questions</h3><span class="sub">8 questions &middot; 40 marks total</span></div>
+                    <div class="qrow"><svg class="i sm gh"><use href="#ic-dots"/></svg><span class="qn">1</span><div class="qb"><b>Which planet is known as the Red Planet?</b><span>Multiple choice</span></div><span class="typetag tt-mcq">MCQ</span><span class="pts">5 pts</span></div>
+                    <div class="qrow"><svg class="i sm gh"><use href="#ic-dots"/></svg><span class="qn">2</span><div class="qb"><b>Earth is the closest planet to the Sun.</b><span>True / False</span></div><span class="typetag tt-tf">T/F</span><span class="pts">5 pts</span></div>
+                    <div class="qrow"><svg class="i sm gh"><use href="#ic-dots"/></svg><span class="qn">3</span><div class="qb"><b>How many planets are in our solar system?</b><span>Multiple choice</span></div><span class="typetag tt-mcq">MCQ</span><span class="pts">5 pts</span></div>
+                    <div class="qrow"><svg class="i sm gh"><use href="#ic-dots"/></svg><span class="qn">4</span><div class="qb"><b>Name the largest planet in the solar system.</b><span>Multiple choice</span></div><span class="typetag tt-mcq">MCQ</span><span class="pts">5 pts</span></div>
+                    <div class="qrow"><svg class="i sm gh"><use href="#ic-dots"/></svg><span class="qn">5</span><div class="qb"><b>In your own words, explain why Pluto is no longer classified as a planet.</b><span>Short answer &middot; graded manually</span></div><span class="typetag tt-short">SHORT</span><span class="pts">10 pts</span></div>
+                    <div class="qrow"><svg class="i sm gh"><use href="#ic-dots"/></svg><span class="qn">6</span><div class="qb"><b>Saturn&rsquo;s rings are made mainly of ice and rock.</b><span>True / False</span></div><span class="typetag tt-tf">T/F</span><span class="pts">5 pts</span></div>
+                    <div class="qrow"><svg class="i sm gh"><use href="#ic-dots"/></svg><span class="qn">7</span><div class="qb"><b>Which planet has the shortest day?</b><span>Multiple choice</span></div><span class="typetag tt-mcq">MCQ</span><span class="pts">5 pts</span></div>
+                    <div class="qrow"><svg class="i sm gh"><use href="#ic-dots"/></svg><span class="qn">8</span><div class="qb"><b>What is the name of Earth&rsquo;s only natural satellite?</b><span>Multiple choice</span></div><span class="typetag tt-mcq">MCQ</span><span class="pts">5 pts</span></div>
+                  </div>
+                  <div class="panel" style="box-shadow:none">
+                    <div class="ph" style="justify-content:space-between"><h3>Add question</h3><span class="typetag tt-mcq">MCQ</span></div>
+                    <div style="padding:15px 16px">
+                      <div class="fld"><label>Question type</label><div class="seg" style="box-shadow:none;width:100%"><button class="on" style="flex:1;justify-content:center">MCQ</button><button style="flex:1;justify-content:center">T/F</button><button style="flex:1;justify-content:center">Short</button></div></div>
+                      <div class="fld"><label>Prompt</label><textarea class="txt" style="min-height:52px">Which of these is a dwarf planet?</textarea></div>
+                      <div class="fld"><label>Options &middot; mark the correct one</label>
+                        <div class="opt correct"><span class="rb"></span><input class="otext" value="Pluto"></div>
+                        <div class="opt"><span class="rb"></span><input class="otext" value="Mars"></div>
+                        <div class="opt"><span class="rb"></span><input class="otext" value="Venus"></div>
+                        <div class="opt"><span class="rb"></span><input class="otext" value="Mercury"></div>
+                        <span class="addroom"><svg class="i sm"><use href="#ic-plus"/></svg> Add option</span>
+                      </div>
+                      <div class="fld"><label>Points</label><div class="inp" style="width:90px">5</div></div>
+                      <button class="btn primary block"><svg class="i sm"><use href="#ic-plus"/></svg> Add question</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Availability -->
+              <div data-bpanel="avail" style="display:none;padding:18px">
+                <div class="two">
+                  <div class="fld"><label>Opens</label><div class="inp"><svg class="i sm"><use href="#ic-cal"/></svg> Mon, 13 Oct &middot; 9:00 AM</div></div>
+                  <div class="fld"><label>Closes</label><div class="inp"><svg class="i sm"><use href="#ic-cal"/></svg> Fri, 17 Oct &middot; 4:00 PM</div></div>
+                </div>
+                <div class="two">
+                  <div class="fld"><label>Duration per attempt</label><div class="inp">20 minutes <span class="hint" style="margin-left:auto">auto-submits at limit</span></div></div>
+                  <div class="fld"><label>Attempts allowed</label><div class="inp">1 attempt <svg class="i sm chev"><use href="#ic-chev"/></svg></div></div>
+                </div>
+                <div class="two">
+                  <div class="fld"><label>Shuffle questions per student</label>
+                    <div class="seg" style="box-shadow:none"><button class="on">On</button><button>Off</button></div>
+                  </div>
+                  <div class="fld"><label>Pass mark</label><div class="inp">60 %</div></div>
+                </div>
+                <div class="note"><svg class="i sm"><use href="#ic-clock"/></svg><div><b>Total: 40 marks across 8 questions.</b> A student who opens the quiz at 3:50 PM still gets their full 20 minutes, capped at the 4:00 PM close &mdash; whichever ends first.</div></div>
+              </div>
+
+              <!-- Assign -->
+              <div data-bpanel="assign" style="display:none;padding:18px">
+                <div class="fld"><label>Audience</label>
+                  <div class="seg" style="box-shadow:none"><button class="on">Entire section</button><button>Specific students</button></div>
+                </div>
+                <div class="clsopt"><input type="checkbox" checked><b>Class 8 &middot; Section B</b><span>48 students</span></div>
+                <div class="audchip" style="margin-top:6px"><svg class="i sm"><use href="#ic-users"/></svg>48 students will see this quiz</div>
+                <div class="note" style="margin-top:14px"><svg class="i sm"><use href="#ic-target"/></svg><div>Assignment is section-based today &mdash; a future release will let you target a custom student list for retakes or make-up quizzes.</div></div>
+              </div>
+
+              <!-- Preview & publish -->
+              <div data-bpanel="preview" style="display:none;padding:18px">
+                <div class="note security" style="margin-bottom:14px"><svg class="i sm"><use href="#ic-shield"/></svg><div><b>This is exactly what a student sees.</b> Correct answers are never sent to a student&rsquo;s device before they submit &mdash; this preview renders server-side data only visible to you as the quiz owner.</div></div>
+                <div class="panel" style="box-shadow:none;max-width:480px">
+                  <div class="ph"><h3>Question 1 of 8</h3><span class="sub">5 points</span></div>
+                  <div style="padding:16px">
+                    <div class="qprompt" style="margin-bottom:14px">Which planet is known as the Red Planet?</div>
+                    <div class="manswer"><span class="letter">A</span>Venus</div>
+                    <div class="manswer"><span class="letter">B</span>Mars</div>
+                    <div class="manswer"><span class="letter">C</span>Jupiter</div>
+                    <div class="manswer"><span class="letter">D</span>Saturn</div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)">
+                  <span class="statepill st-draft">DRAFT &middot; not visible to students</span>
+                  <div class="grow"></div>
+                  <button class="btn ghost">Save &amp; close</button>
+                  <button class="btn primary"><svg class="i sm"><use href="#ic-send"/></svg> Publish quiz</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 3. TEACHER — SUBMISSIONS & RESULTS ================= -->
+    <div class="frame" data-frame="t-submissions" style="display:none">
+      <div class="browser"><div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="urlbar"><svg class="i sm"><use href="#ic-lock"/></svg>springfieldpublic.eduos.app/teacher/testing/photosynthesis/results</div></div>
+        <div class="appwrap">
+          <header class="topnav">
+            <div class="logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg></div>
+            <nav class="mainnav"><a href="#">Dashboard</a><a href="#">Classes</a><a href="#">Homework</a><a href="#" class="on">Testing</a><a href="#">Results</a></nav>
+            <div class="selsec">Class 8 &ndash; B &#9662;</div>
+            <div class="grow"></div>
+            <div class="avatar">SR</div>
+          </header>
+          <div class="app">
+            <div>
+              <div class="crumb2"><a href="#" onclick="go('t-list');return false" style="color:inherit;text-decoration:none">Testing</a> &rsaquo; Submissions</div>
+              <div class="head"><div><h2>Photosynthesis &mdash; Chapter 4 Check</h2><p>Async &middot; closes today 4:00 PM &middot; auto-graded (MCQ &amp; True/False)</p></div>
+                <div class="r"><span class="statepill st-live">LIVE</span><button class="btn ghost"><svg class="i sm"><use href="#ic-bar"/></svg> Export CSV</button></div>
+              </div>
+            </div>
+            <div class="kpirow">
+              <div class="kpi"><div class="lbl">Submitted</div><div class="val">42 / 48</div><div class="sub">6 not started</div></div>
+              <div class="kpi"><div class="lbl">Average score</div><div class="val">76%</div><div class="sub">30.4 / 40 marks</div></div>
+              <div class="kpi"><div class="lbl">Average time</div><div class="val">14m</div><div class="sub">of 20m allowed</div></div>
+              <div class="kpi"><div class="lbl">Needs manual grading</div><div class="val">42</div><div class="sub">1 short&#8209;answer question</div></div>
+            </div>
+            <div class="panel">
+              <table>
+                <thead><tr><th>Student</th><th>Status</th><th>Score</th><th>Time taken</th><th>Submitted</th><th></th></tr></thead>
+                <tbody>
+                  <tr class="clickable" onclick="go('t-detail')">
+                    <td><b>Aarav Sharma</b></td>
+                    <td><span class="statepill st-graded">GRADED</span></td>
+                    <td>24 / 30 auto &middot; pending 1 short</td>
+                    <td>16m 40s</td>
+                    <td>Today, 10:22 AM</td>
+                    <td><svg class="i sm" style="color:var(--ink-3)"><use href="#ic-dots"/></svg></td>
+                  </tr>
+                  <tr class="clickable">
+                    <td><b>Diya Menon</b></td>
+                    <td><span class="statepill st-submitted">SUBMITTED</span></td>
+                    <td>Awaiting grading</td>
+                    <td>12m 05s</td>
+                    <td>Today, 10:31 AM</td>
+                    <td><svg class="i sm" style="color:var(--ink-3)"><use href="#ic-dots"/></svg></td>
+                  </tr>
+                  <tr class="clickable">
+                    <td><b>Rohan Verma</b></td>
+                    <td><span class="statepill st-progress">IN PROGRESS</span></td>
+                    <td>&mdash;</td>
+                    <td>8m elapsed</td>
+                    <td>&mdash;</td>
+                    <td><svg class="i sm" style="color:var(--ink-3)"><use href="#ic-dots"/></svg></td>
+                  </tr>
+                  <tr class="clickable">
+                    <td><b>Kavya Nair</b></td>
+                    <td><span class="statepill st-notstart">NOT STARTED</span></td>
+                    <td>&mdash;</td>
+                    <td>&mdash;</td>
+                    <td>&mdash;</td>
+                    <td><svg class="i sm" style="color:var(--ink-3)"><use href="#ic-dots"/></svg></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 4. TEACHER — STUDENT RESULT DETAIL ================= -->
+    <div class="frame" data-frame="t-detail" style="display:none">
+      <div class="browser"><div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="urlbar"><svg class="i sm"><use href="#ic-lock"/></svg>springfieldpublic.eduos.app/teacher/testing/photosynthesis/results/aarav-sharma</div></div>
+        <div class="appwrap">
+          <header class="topnav">
+            <div class="logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg></div>
+            <nav class="mainnav"><a href="#">Dashboard</a><a href="#">Classes</a><a href="#">Homework</a><a href="#" class="on">Testing</a><a href="#">Results</a></nav>
+            <div class="selsec">Class 8 &ndash; B &#9662;</div>
+            <div class="grow"></div>
+            <div class="avatar">SR</div>
+          </header>
+          <div class="app">
+            <div>
+              <div class="crumb2"><a href="#" onclick="go('t-submissions');return false" style="color:inherit;text-decoration:none">Photosynthesis &mdash; Chapter 4 Check</a> &rsaquo; Aarav Sharma</div>
+              <div class="head"><div><h2>Aarav Sharma</h2><p>Roll 14 &middot; Class 8&ndash;B &middot; submitted today, 10:22 AM &middot; took 16m 40s</p></div>
+                <div class="r"><span class="statepill st-submitted">1 QUESTION PENDING</span></div>
+              </div>
+            </div>
+            <div class="kpirow" style="grid-template-columns:repeat(3,1fr)">
+              <div class="kpi"><div class="lbl">Auto-graded score</div><div class="val">24 / 30</div><div class="sub">7 of 7 objective questions</div></div>
+              <div class="kpi"><div class="lbl">Manual grading</div><div class="val">1 pending</div><div class="sub">short&#8209;answer, up to 10 pts</div></div>
+              <div class="kpi"><div class="lbl">Provisional total</div><div class="val">24&ndash;34 / 40</div><div class="sub">final once graded</div></div>
+            </div>
+            <div class="panel" style="box-shadow:none;border:none;background:none">
+              <div class="qanswer right">
+                <div class="qtop"><span class="icn"><svg class="i sm"><use href="#ic-check"/></svg></span><b>1. Which planet is known as the Red Planet?</b><span class="pt">5 / 5</span></div>
+                <div class="ans">Answered <span class="ca">Mars</span> &mdash; correct.</div>
+              </div>
+              <div class="qanswer wrong">
+                <div class="qtop"><span class="icn"><svg class="i sm"><use href="#ic-x"/></svg></span><b>2. Earth is the closest planet to the Sun.</b><span class="pt">0 / 5</span></div>
+                <div class="ans">Answered <span class="ya">True</span> &middot; correct answer was <span class="ca">False</span>.</div>
+              </div>
+              <div class="qanswer right">
+                <div class="qtop"><span class="icn"><svg class="i sm"><use href="#ic-check"/></svg></span><b>3. How many planets are in our solar system?</b><span class="pt">5 / 5</span></div>
+                <div class="ans">Answered <span class="ca">8</span> &mdash; correct.</div>
+              </div>
+              <div class="qanswer pending">
+                <div class="qtop"><span class="icn"><svg class="i sm"><use href="#ic-clock"/></svg></span><b>5. In your own words, explain why Pluto is no longer classified as a planet.</b><span class="pt">&mdash; / 10</span></div>
+                <div class="ans">&ldquo;Pluto is smaller than the other planets and it hasn&rsquo;t cleared other objects out of the way in its orbit, so scientists now call it a dwarf planet instead.&rdquo;</div>
+                <div class="gradebox"><label style="font-size:11px;color:var(--ink-3);font-weight:700">Award points</label><input type="text" value="8"><span style="font-size:11.5px;color:var(--ink-3)">/ 10</span><button class="btn primary sm">Save</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 5. PARENT — SELECT CHILD ================= -->
+    <div class="frame" data-frame="p-child" style="display:none">
+      <div class="phone"><div class="screen"><div class="notch"></div>
+        <div class="sbar"><span>9:14</span><div class="rt"><span>5G</span><span>&#9646;&#9646;&#9646;&#9646;</span></div></div>
+        <div class="dnav"><div><b>Testing</b><div class="sub">Choose a child</div></div><div class="who"><div class="ava">SA</div></div></div>
+        <div class="mscroll">
+          <p style="font-size:12.5px;color:var(--ink-2);margin:2px 0 16px">You have two children at Springfield Public. Quizzes are shown separately for each.</p>
+          <div class="childcard on">
+            <div class="av" style="background:var(--accent-weak);color:var(--accent-ink)">AS</div>
+            <div><b>Aarav Sharma</b><span>Class 8&ndash;B &middot; 1 quiz available</span></div>
+            <div class="chk"><svg class="i sm"><use href="#ic-check"/></svg></div>
+          </div>
+          <div class="childcard">
+            <div class="av" style="background:var(--good-weak);color:#0B7A55">DS</div>
+            <div><b>Diya Sharma</b><span>Class 5&ndash;A &middot; nothing due yet</span></div>
+            <div class="chk"></div>
+          </div>
+          <div class="note" style="margin-top:8px"><svg class="i sm"><use href="#ic-shield"/></svg><div>Each child only ever sees quizzes assigned to <b>their own</b> class and section &mdash; switching here changes whose quizzes you&rsquo;re viewing.</div></div>
+        </div>
+        <div class="fade"></div>
+        <div style="position:absolute;left:16px;right:16px;bottom:20px;z-index:15"><button class="btn primary block" onclick="go('p-list')">Continue with Aarav</button></div>
+      </div></div>
+    </div>
+
+    <!-- ================= 6. PARENT — QUIZ LIST (+ states) ================= -->
+    <div class="frame" data-frame="p-list" style="display:none">
+      <div class="phone"><div class="screen"><div class="notch"></div>
+        <div class="sbar"><span>9:15</span><div class="rt"><span>5G</span><span>&#9646;&#9646;&#9646;&#9646;</span></div></div>
+        <div class="dnav"><div class="back"><svg class="i sm"><use href="#ic-back"/></svg></div><div><b>Testing</b><div class="sub">For Aarav &middot; Class 8&ndash;B</div></div><div class="who"><div class="ava">SA</div></div></div>
+        <div class="mscroll">
+          <div class="statechips">
+            <button class="statechip on" data-pstate="normal">Normal</button>
+            <button class="statechip" data-pstate="loading">Loading</button>
+            <button class="statechip" data-pstate="empty">Empty</button>
+            <button class="statechip" data-pstate="unavailable">Unavailable</button>
+          </div>
+
+          <div data-pbody="normal">
+            <div class="segm">
+              <button class="on">Available &middot; 1</button><button>Upcoming &middot; 1</button><button>Completed &middot; 1</button>
+            </div>
+            <div class="qzcard">
+              <div class="top">
+                <div class="qi" style="background:var(--good-weak);color:var(--good)"><svg class="i sm"><use href="#ic-play"/></svg></div>
+                <div><div class="ttl">Photosynthesis &mdash; Chapter 4 Check</div><div class="meta">Science &middot; 15 questions &middot; 30 marks</div></div>
+                <span class="st" style="background:var(--good-weak);color:var(--good)">OPEN</span>
+              </div>
+              <div class="foot"><svg class="i sm"><use href="#ic-clock"/></svg> Closes in <b>2h 14m</b> &middot; 20 min once started</div>
+            </div>
+            <div class="note" style="margin-top:2px"><svg class="i sm"><use href="#ic-shield"/></svg><div>Once Aarav starts, the 20&#8209;minute timer runs even if he closes the app &mdash; same as a real exam.</div></div>
+          </div>
+
+          <div data-pbody="loading" style="display:none">
+            <div class="skel skelcard"></div>
+            <div class="skel skelcard"></div>
+            <div class="skel skelcard"></div>
+          </div>
+
+          <div data-pbody="empty" style="display:none">
+            <div class="emptystate">
+              <div class="ic"><svg class="i lg"><use href="#ic-inbox"/></svg></div>
+              <b>No quizzes right now</b>
+              <p>When Aarav&rsquo;s teachers assign a quiz to Class 8&ndash;B, it&rsquo;ll show up here.</p>
+            </div>
+          </div>
+
+          <div data-pbody="unavailable" style="display:none">
+            <div class="emptystate">
+              <div class="ic" style="background:var(--ground-a)"><svg class="i lg"><use href="#ic-slash"/></svg></div>
+              <b>Testing isn&rsquo;t turned on yet</b>
+              <p>Springfield Public hasn&rsquo;t enabled the Testing module. Contact the school office if you think this is a mistake.</p>
+            </div>
+          </div>
+        </div>
+        <div class="fade"></div>
+        <div class="mnav">
+          <a><span class="ni"><svg class="i"><use href="#ic-home"/></svg></span>Home</a>
+          <a><span class="ni"><svg class="i"><use href="#ic-check"/></svg></span>Attendance</a>
+          <a class="on"><span class="ni"><svg class="i"><use href="#ic-book"/></svg></span>Academics</a>
+          <a><span class="ni"><svg class="i"><use href="#ic-wallet"/></svg></span>Fees</a>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- ================= 7. PARENT — QUIZ DETAILS / INSTRUCTIONS ================= -->
+    <div class="frame" data-frame="p-details" style="display:none">
+      <div class="phone"><div class="screen"><div class="notch"></div>
+        <div class="sbar"><span>9:16</span><div class="rt"><span>5G</span><span>&#9646;&#9646;&#9646;&#9646;</span></div></div>
+        <div class="dnav"><div class="back" onclick="go('p-list')"><svg class="i sm"><use href="#ic-back"/></svg></div><div><b>Quiz details</b><div class="sub">For Aarav &middot; Class 8&ndash;B</div></div><div class="who"><div class="ava">SA</div></div></div>
+        <div class="mscroll">
+          <div style="display:flex;align-items:center;gap:11px;margin-bottom:14px">
+            <div class="qi" style="width:46px;height:46px;background:var(--good-weak);color:var(--good);border-radius:13px;display:grid;place-items:center"><svg class="i"><use href="#ic-play"/></svg></div>
+            <div><div style="font-size:16px;font-weight:750">Photosynthesis &mdash; Chapter 4 Check</div><div style="font-size:12px;color:var(--ink-3)">Science &middot; Ms. Rao</div></div>
+          </div>
+          <div class="three" style="margin-bottom:16px">
+            <div class="inp" style="flex-direction:column;align-items:flex-start;height:auto;padding:10px"><span style="font-size:9.5px;color:var(--ink-3);font-weight:800;text-transform:uppercase">Questions</span><b style="font-size:15px">15</b></div>
+            <div class="inp" style="flex-direction:column;align-items:flex-start;height:auto;padding:10px"><span style="font-size:9.5px;color:var(--ink-3);font-weight:800;text-transform:uppercase">Marks</span><b style="font-size:15px">30</b></div>
+            <div class="inp" style="flex-direction:column;align-items:flex-start;height:auto;padding:10px"><span style="font-size:9.5px;color:var(--ink-3);font-weight:800;text-transform:uppercase">Duration</span><b style="font-size:15px">20 min</b></div>
+          </div>
+          <div class="fld"><label>Available window</label><div class="inp"><svg class="i sm"><use href="#ic-cal"/></svg> Today, 9:00 AM &ndash; 4:00 PM</div></div>
+          <div class="fld"><label>Instructions</label>
+            <div class="instrow"><span class="n">1</span>One attempt only &mdash; there&rsquo;s no retry once submitted.</div>
+            <div class="instrow"><span class="n">2</span>The 20&#8209;minute timer starts the moment Aarav taps Start, and auto&#8209;submits whatever is answered when it hits zero.</div>
+            <div class="instrow"><span class="n">3</span>He can move between questions freely before submitting.</div>
+            <div class="instrow"><span class="n">4</span>Multiple&#8209;choice and true/false questions are graded instantly; the short&#8209;answer question is graded by Ms. Rao afterwards.</div>
+          </div>
+          <div class="note" style="margin-top:4px"><svg class="i sm"><use href="#ic-shield"/></svg><div>No negative marking &mdash; an unanswered or wrong question simply scores 0.</div></div>
+        </div>
+        <div class="fade"></div>
+        <div style="position:absolute;left:16px;right:16px;bottom:20px;z-index:15"><button class="btn primary block" onclick="go('p-take')"><svg class="i sm"><use href="#ic-play"/></svg> Start quiz</button></div>
+      </div></div>
+    </div>
+
+    <!-- ================= 8. PARENT — TAKE QUIZ ================= -->
+    <div class="frame" data-frame="p-take" style="display:none">
+      <div class="phone"><div class="screen"><div class="notch"></div>
+        <div class="sbar"><span>9:24</span><div class="rt"><span>5G</span><span>&#9646;&#9646;&#9646;&#9646;</span></div></div>
+        <div class="dnav"><div><b>Photosynthesis Check</b><div class="sub">Question 6 of 15</div></div><div class="who"><span class="timerchip"><svg class="i sm"><use href="#ic-clock"/></svg>13:42</span></div></div>
+        <div class="mscroll">
+          <div class="qtopbar"><span class="qprog">6 of 15 answered so far: 5</span></div>
+          <div class="qprompt">Which gas do plants absorb from the atmosphere during photosynthesis?</div>
+          <div class="manswer"><span class="letter">A</span>Oxygen</div>
+          <div class="manswer sel"><span class="letter">B</span>Carbon dioxide</div>
+          <div class="manswer"><span class="letter">C</span>Nitrogen</div>
+          <div class="manswer"><span class="letter">D</span>Hydrogen</div>
+          <div class="qnav"><button class="btn ghost">Previous</button><button class="btn primary">Next</button></div>
+          <div style="margin-top:10px">
+            <div style="font-size:10px;font-weight:800;letter-spacing:.05em;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Jump to question</div>
+            <div class="palette">
+              <div class="pdot answered">1</div><div class="pdot answered">2</div><div class="pdot answered">3</div><div class="pdot answered">4</div><div class="pdot answered">5</div>
+              <div class="pdot current">6</div><div class="pdot">7</div><div class="pdot">8</div><div class="pdot">9</div><div class="pdot">10</div>
+              <div class="pdot">11</div><div class="pdot">12</div><div class="pdot">13</div><div class="pdot">14</div><div class="pdot">15</div>
+            </div>
+          </div>
+        </div>
+        <div class="fade"></div>
+        <div style="position:absolute;left:16px;right:16px;bottom:20px;z-index:15"><button class="btn ghost block" style="background:var(--card);box-shadow:var(--shadow)" onclick="go('p-submit')">Review &amp; submit</button></div>
+      </div></div>
+    </div>
+
+    <!-- ================= 9. PARENT — SUBMIT CONFIRMATION ================= -->
+    <div class="frame" data-frame="p-submit" style="display:none">
+      <div class="phone"><div class="screen"><div class="notch"></div>
+        <div class="sbar"><span>9:38</span><div class="rt"><span>5G</span><span>&#9646;&#9646;&#9646;&#9646;</span></div></div>
+        <div class="dnav"><div><b>Photosynthesis Check</b><div class="sub">Question 15 of 15</div></div><div class="who"><span class="timerchip crit"><svg class="i sm"><use href="#ic-clock"/></svg>00:47</span></div></div>
+        <div class="mscroll">
+          <div class="qtopbar"><span class="qprog">14 of 15 answered</span></div>
+          <div class="qprompt">What is the byproduct of photosynthesis that&rsquo;s released into the air?</div>
+          <div class="manswer sel"><span class="letter">A</span>Oxygen</div>
+          <div class="manswer"><span class="letter">B</span>Carbon dioxide</div>
+          <div class="manswer"><span class="letter">C</span>Water vapour</div>
+          <div class="manswer"><span class="letter">D</span>Nitrogen</div>
+          <div class="palette" style="margin-top:14px">
+            <div class="pdot answered">1</div><div class="pdot answered">2</div><div class="pdot answered">3</div><div class="pdot answered">4</div><div class="pdot answered">5</div>
+            <div class="pdot answered">6</div><div class="pdot answered">7</div><div class="pdot answered">8</div><div class="pdot">9</div><div class="pdot answered">10</div>
+            <div class="pdot answered">11</div><div class="pdot answered">12</div><div class="pdot answered">13</div><div class="pdot answered">14</div><div class="pdot current">15</div>
+          </div>
+        </div>
+
+        <div class="sheet-overlay">
+          <div class="sheet">
+            <div class="sheetbar"></div>
+            <h4>Submit quiz?</h4>
+            <p>Aarav has answered <b>14 of 15</b> questions. Once submitted, answers can&rsquo;t be changed.</p>
+            <div class="warnline"><svg class="i sm"><use href="#ic-alert"/></svg><div><b>Question 9</b> is unanswered &mdash; it will be scored as 0.</div></div>
+            <div class="row">
+              <button class="btn ghost block">Go back &amp; review</button>
+              <button class="btn primary block" onclick="go('p-result')"><svg class="i sm"><use href="#ic-check"/></svg> Submit now</button>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- ================= 10. PARENT — RESULT ================= -->
+    <div class="frame" data-frame="p-result" style="display:none">
+      <div class="phone"><div class="screen"><div class="notch"></div>
+        <div class="sbar"><span>9:41</span><div class="rt"><span>5G</span><span>&#9646;&#9646;&#9646;&#9646;</span></div></div>
+        <div class="dnav"><div class="back" onclick="go('p-list')"><svg class="i sm"><use href="#ic-back"/></svg></div><div><b>Result</b><div class="sub">Mid&ndash;Term Prep: Grammar Basics</div></div><div class="who"><div class="ava">SA</div></div></div>
+        <div class="mscroll">
+          <div class="scorewrap">
+            <div class="ring" style="background:conic-gradient(var(--good) 0 80%, var(--ground-a) 80% 100%)"><div class="inner"><b>8/10</b><span>SCORE</span></div></div>
+            <span class="passpill">PASSED</span>
+            <h3>Nice work, Aarav!</h3>
+            <p>80% &middot; above the 60% pass mark</p>
+            <div class="scorestat">
+              <div><b>8m 12s</b><span>Time taken</span></div>
+              <div><b>10 / 10</b><span>Answered</span></div>
+              <div><b>8</b><span>Correct</span></div>
+            </div>
+          </div>
+          <div style="font-size:10px;font-weight:800;letter-spacing:.05em;color:var(--ink-3);text-transform:uppercase;margin:8px 0 8px">Answer review</div>
+          <div class="qanswer right">
+            <div class="qtop"><span class="icn"><svg class="i sm"><use href="#ic-check"/></svg></span><b>1. Choose the correctly punctuated sentence.</b><span class="pt">1 / 1</span></div>
+            <div class="ans">Aarav answered <span class="ca">&ldquo;It&rsquo;s a sunny day.&rdquo;</span> &mdash; correct.</div>
+          </div>
+          <div class="qanswer wrong">
+            <div class="qtop"><span class="icn"><svg class="i sm"><use href="#ic-x"/></svg></span><b>2. Identify the verb in this sentence.</b><span class="pt">0 / 1</span></div>
+            <div class="ans">Aarav answered <span class="ya">&ldquo;quickly&rdquo;</span> &middot; correct answer was <span class="ca">&ldquo;ran&rdquo;</span>.</div>
+          </div>
+          <div class="note" style="margin-top:2px;margin-bottom:16px"><svg class="i sm"><use href="#ic-award"/></svg><div>Ms. Rao has turned on answer review for this quiz &mdash; that&rsquo;s a per&#8209;quiz teacher choice, so some results only show the score.</div></div>
+        </div>
+        <div class="fade"></div>
+        <div class="mnav">
+          <a><span class="ni"><svg class="i"><use href="#ic-home"/></svg></span>Home</a>
+          <a><span class="ni"><svg class="i"><use href="#ic-check"/></svg></span>Attendance</a>
+          <a class="on"><span class="ni"><svg class="i"><use href="#ic-book"/></svg></span>Academics</a>
+          <a><span class="ni"><svg class="i"><use href="#ic-wallet"/></svg></span>Fees</a>
+        </div>
+      </div></div>
+    </div>
+
+  </div></div>
+</div>
+
+<script>
+  var ORDER = ["t-list","t-builder","t-submissions","t-detail","p-child","p-list","p-details","p-take","p-submit","p-result"];
+  var META = {
+    "t-list":        {t:"1 &middot; Quiz list",             s:"Teacher sees every quiz across statuses",            p:"web"},
+    "t-builder":     {t:"2 &middot; Quiz builder",          s:"Details, questions, availability, assign, preview",  p:"web"},
+    "t-submissions": {t:"3 &middot; Submissions &amp; results", s:"Live progress across the whole section",         p:"web"},
+    "t-detail":      {t:"4 &middot; Student result",        s:"Per-question breakdown, manual grading for short answer", p:"web"},
+    "p-child":       {t:"5 &middot; Select child",          s:"Only shown when a parent has more than one child",   p:"mobile"},
+    "p-list":        {t:"6 &middot; Quiz list",             s:"Available &middot; upcoming &middot; completed, plus loading/empty/unavailable states", p:"mobile"},
+    "p-details":     {t:"7 &middot; Instructions",          s:"Rules &amp; window before starting",                  p:"mobile"},
+    "p-take":        {t:"8 &middot; Take quiz",             s:"Timer, question navigation, palette",                 p:"mobile"},
+    "p-submit":      {t:"9 &middot; Submit confirmation",   s:"Warns about unanswered questions before locking in",  p:"mobile"},
+    "p-result":      {t:"10 &middot; Result",               s:"Score, pass/fail, optional answer review",            p:"mobile"}
+  };
+
+  function go(id){
+    document.querySelectorAll(".frame").forEach(function(f){ f.style.display = (f.dataset.frame === id) ? "" : "none"; });
+    document.querySelectorAll(".navchip").forEach(function(c){ c.classList.toggle("on", c.dataset.screen === id); });
+    var m = META[id];
+    document.getElementById("stageTitle").innerHTML = m.t;
+    document.getElementById("stageSub").innerHTML = m.s;
+    var pf = document.getElementById("stagePlatform");
+    pf.textContent = m.p === "web" ? "TEACHER · WEB" : "PARENT · MOBILE";
+    pf.className = "platform-pill " + (m.p === "web" ? "pf-web" : "pf-mob");
+    window.scrollTo({top:0, behavior:"instant"});
+  }
+
+  document.querySelectorAll(".navchip").forEach(function(c){
+    c.addEventListener("click", function(){ go(c.dataset.screen); });
+  });
+
+  document.getElementById("prevBtn").addEventListener("click", function(){
+    var cur = document.querySelector(".frame:not([style*='display: none'])").dataset.frame;
+    var i = ORDER.indexOf(cur);
+    go(ORDER[(i - 1 + ORDER.length) % ORDER.length]);
+  });
+  document.getElementById("nextBtn").addEventListener("click", function(){
+    var cur = document.querySelector(".frame:not([style*='display: none'])").dataset.frame;
+    var i = ORDER.indexOf(cur);
+    go(ORDER[(i + 1) % ORDER.length]);
+  });
+
+  // builder sub-tabs
+  document.querySelectorAll("[data-btab]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var scope = btn.closest(".panel");
+      scope.querySelectorAll("[data-btab]").forEach(function(b){ b.classList.toggle("on", b === btn); });
+      scope.querySelectorAll("[data-bpanel]").forEach(function(p){ p.style.display = (p.dataset.bpanel === btn.dataset.btab) ? "" : "none"; });
+    });
+  });
+
+  // parent quiz-list state switcher
+  document.querySelectorAll("[data-pstate]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var scope = btn.closest(".mscroll");
+      scope.querySelectorAll("[data-pstate]").forEach(function(b){ b.classList.toggle("on", b === btn); });
+      scope.querySelectorAll("[data-pbody]").forEach(function(p){ p.style.display = (p.dataset.pbody === btn.dataset.pstate) ? "" : "none"; });
+    });
+  });
+
+  go("t-list");
+</script>
