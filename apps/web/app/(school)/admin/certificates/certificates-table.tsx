@@ -31,12 +31,14 @@ export function CertificatesTable({
   history,
   classOptions,
   baseHref,
+  studentDetailHrefPrefix = "/admin/students",
   stats,
 }: {
   students: StudentRow[];
   history: HistoryRow[];
   classOptions: Option[];
   baseHref: string;
+  studentDetailHrefPrefix?: string;
   stats?: React.ReactNode;
 }) {
   const [tab, setTab] = useState<"students" | "history">("students");
@@ -65,7 +67,7 @@ export function CertificatesTable({
           data={students}
           columns={[
             { header: "Name", accessor: (row) => (
-              <Link href={`/admin/students/${row.id}`} className="font-medium text-indigo-600 hover:underline">
+              <Link href={`${studentDetailHrefPrefix}/${row.id}${studentDetailHrefPrefix.startsWith("/principal") ? "?from=certificates" : ""}`} className="font-medium text-indigo-600 hover:underline">
                 {row.name}
               </Link>
             ) },

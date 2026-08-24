@@ -1,12 +1,14 @@
 "use client";
 
 import { CalendarClock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { ListPageTemplate } from "@/components/list-page-template";
 import { EmptyState } from "@/components/empty-state";
 
 export interface ExamScheduleRow {
   id: string;
   name: string;
+  isQuiz?: boolean;
   academic_year: string;
   start_date: string;
   end_date: string;
@@ -18,7 +20,15 @@ export function ExamScheduleTable({ rows }: { rows: ExamScheduleRow[] }) {
       title="Exam Schedule"
       data={rows}
       columns={[
-        { header: "Exam Name", accessor: "name" },
+        {
+          header: "Exam Name",
+          accessor: (row) => (
+            <span className="inline-flex items-center gap-2">
+              {row.name}
+              <Badge variant={row.isQuiz ? "outline" : "secondary"}>{row.isQuiz ? "Quiz" : "Exam"}</Badge>
+            </span>
+          ),
+        },
         { header: "Academic Year", accessor: "academic_year" },
         { header: "Start Date", accessor: "start_date" },
         { header: "End Date", accessor: "end_date" },

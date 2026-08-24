@@ -29,24 +29,39 @@ export default async function ResultsPage() {
       .eq("school_id", schoolId)
       .order("start_date", { ascending: false }),
     // exams created by push_quiz_to_gradebook are stamped on quizzes.exam_id —
-    // used purely to badge which rows below came from a quiz, not a manually
-    // created exam.
-    supabase.from("quizzes").select("exam_id").eq("school_id", schoolId).not("exam_id", "is", null),
+    // scoped by section_id so quizzes pushed for other sections do not clutter
+    // the current section's results list.
+    supabase
+      .from("quizzes")
+      .select("exam_id, section_id")
+      .eq("school_id", schoolId)
+      .not("exam_id", "is", null),
   ]);
 
-  const quizExamIds = new Set((quizLinks ?? []).map((q) => q.exam_id));
+  const sectionQuizExamIds = new Set(
+    (quizLinks ?? [])
+      .filter((q) => q.section_id === sectionId)
+      .map((q) => q.exam_id)
+  );
+  const otherSectionQuizExamIds = new Set(
+    (quizLinks ?? [])
+      .filter((q) => q.section_id !== sectionId)
+      .map((q) => q.exam_id)
+  );
 
-  const rows = (exams ?? []).map((e) => {
-    const ay = e.academic_year as unknown as { name: string } | null;
-    return {
-      id: e.id,
-      name: e.name ?? "—",
-      isQuiz: quizExamIds.has(e.id),
-      academic_year: ay?.name ?? "—",
-      start_date: e.start_date ?? "—",
-      end_date: e.end_date ?? "—",
-    };
-  });
+  const rows = (exams ?? [])
+    .filter((e) => !otherSectionQuizExamIds.has(e.id) || sectionQuizExamIds.has(e.id))
+    .map((e) => {
+      const ay = e.academic_year as unknown as { name: string } | null;
+      return {
+        id: e.id,
+        name: e.name ?? "—",
+        isQuiz: sectionQuizExamIds.has(e.id),
+        academic_year: ay?.name ?? "—",
+        start_date: e.start_date ?? "—",
+        end_date: e.end_date ?? "—",
+      };
+    });
 
   return (
     <div>
