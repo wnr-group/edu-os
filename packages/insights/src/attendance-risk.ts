@@ -1,4 +1,4 @@
-import type { AttendanceRiskInput, Insight, InsightFactor, Band } from './types';
+import type { AttendanceRiskInput, Insight, InsightFactor, Band } from './types.ts';
 
 /**
  * ATTN_RISK_V1: Compute attendance risk score based on 30-day window

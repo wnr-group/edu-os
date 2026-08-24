@@ -2,12 +2,10 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
   computeAttendanceRisk,
   computePerformanceForecast,
-} from "../../../packages/insights/src/index.ts";
-import type {
-  AttendanceRecord,
-  AttendanceRiskInput,
-  PerformanceInput,
-} from "../../../packages/insights/src/types.ts";
+  type AttendanceRecord,
+  type AttendanceRiskInput,
+  type PerformanceInput,
+} from "./algorithms.ts";
 
 interface RequestBody {
   school_id: string;
@@ -47,52 +45,35 @@ Deno.serve(async (req: Request) => {
   );
 
   try {
-    // Acquire advisory lock to prevent concurrent processing of same school
-    // The lock is automatically released at transaction end
-    const { error: lockError } = await admin.rpc("pg_advisory_xact_lock", {
+    const workerId = crypto.randomUUID();
+
+    // Claim chunk atomically using durable expiring lease
+    const { data: runId, error: claimError } = await admin.rpc("claim_insight_run_chunk", {
       p_school_id: school_id,
+      p_run_date: run_date,
+      p_chunk_offset: offset,
+      p_chunk_limit: limit,
+      p_worker_id: workerId,
+      p_lease_seconds: 300,
     });
 
-    if (lockError) {
-      console.error("Failed to acquire advisory lock:", lockError);
-      return json({ error: "lock_failed", details: lockError.message }, 500);
+    if (claimError) {
+      console.error("Failed to claim insight run chunk:", claimError);
+      return json({ error: "claim_failed", details: claimError.message }, 500);
     }
 
-    // Create/update insight_runs row (idempotent upsert)
-    const { data: runData, error: runError } = await admin
-      .from("insight_runs")
-      .upsert(
-        {
-          school_id,
-          run_date,
-          chunk_offset: offset,
-          chunk_limit: limit,
-          status: "running",
-          students_total: 0,
-          students_processed: 0,
-          students_failed: 0,
-          params_hash: "INSIGHTS_PARAMS_V1",
-          trigger: "cron",
-          started_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "school_id,run_date,chunk_offset",
-        }
-      )
-      .select("id")
-      .single();
-
-    if (runError || !runData) {
-      console.error("Failed to create insight_runs row:", runError);
-      return json({ error: "run_creation_failed", details: runError?.message }, 500);
+    if (!runId) {
+      // Chunk is already completed or currently held by another active worker lease
+      return json({
+        result: "skipped",
+        message: "Chunk already completed or actively leased by another worker",
+      }, 200);
     }
 
-    const runId = runData.id;
-
-    // Query active students for this chunk
-    const { data: students, error: studentsError } = await admin
+    // Query active student enrollments for this chunk with class_id
+    const { data: enrollments, error: studentsError } = await admin
       .from("student_enrollments")
-      .select("student_profile_id, student_profiles!inner(id)")
+      .select("student_profile_id, section_id, sections!inner(class_id)")
       .eq("school_id", school_id)
       .eq("is_active", true)
       .not("academic_year_id", "is", null)
@@ -108,11 +89,20 @@ Deno.serve(async (req: Request) => {
       return json({ error: "query_failed", details: studentsError.message }, 500);
     }
 
-    const studentIds = [
-      ...new Set(
-        (students || []).map((s: any) => s.student_profile_id).filter(Boolean)
-      ),
-    ];
+    // Map student to classId
+    const studentClassMap = new Map<string, string>();
+    const uniqueClassIds = new Set<string>();
+
+    for (const e of enrollments || []) {
+      const studentId = e.student_profile_id;
+      const classId = (e.sections as any)?.class_id;
+      if (studentId && classId) {
+        studentClassMap.set(studentId, classId);
+        uniqueClassIds.add(classId);
+      }
+    }
+
+    const studentIds = Array.from(studentClassMap.keys());
 
     // Update students_total
     await admin
@@ -120,39 +110,65 @@ Deno.serve(async (req: Request) => {
       .update({ students_total: studentIds.length })
       .eq("id", runId);
 
-    // Process each student with failure isolation
-    for (const studentId of studentIds) {
-      try {
-        // Process attendance risk
-        await processAttendanceRisk(admin, studentId, school_id, run_date, runId);
+    // Pre-fetch subjects for all relevant classes in one query
+    const classSubjectsMap = new Map<string, string[]>();
+    if (uniqueClassIds.size > 0) {
+      const { data: subjectsData, error: subjectsError } = await admin
+        .from("subjects")
+        .select("id, class_id")
+        .in("class_id", Array.from(uniqueClassIds));
 
-        // Process academic risk (per subject)
-        await processAcademicRisk(admin, studentId, school_id, run_date, runId);
-
-        // Increment students_processed counter
-        await admin.rpc("increment_insight_run_counter", {
-          p_run_id: runId,
-          p_counter: "students_processed",
-        });
-      } catch (error) {
-        // Log overall student failure
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        await admin.from("insight_run_failures").insert({
-          run_id: runId,
-          student_id: studentId,
-          kind: null,
-          subject_id: null,
-          error_message: errorMsg.substring(0, 500),
-        });
-
-        // Increment students_failed counter
-        await admin.rpc("increment_insight_run_counter", {
-          p_run_id: runId,
-          p_counter: "students_failed",
-        });
-
-        console.error(`Failed to process student ${studentId}:`, errorMsg);
+      if (!subjectsError && subjectsData) {
+        for (const sub of subjectsData) {
+          const list = classSubjectsMap.get(sub.class_id) || [];
+          list.push(sub.id);
+          classSubjectsMap.set(sub.class_id, list);
+        }
       }
+    }
+
+    // Process students sequentially or with controlled concurrency
+    const CONCURRENCY = 5;
+    for (let i = 0; i < studentIds.length; i += CONCURRENCY) {
+      const batch = studentIds.slice(i, i + CONCURRENCY);
+      await Promise.all(
+        batch.map(async (studentId) => {
+          try {
+            const classId = studentClassMap.get(studentId)!;
+            const subjectIds = classSubjectsMap.get(classId) || [];
+
+            // Process attendance risk
+            await processAttendanceRisk(admin, studentId, school_id, run_date, runId);
+
+            // Process academic risk
+            await processAcademicRisk(admin, studentId, school_id, run_date, runId, subjectIds);
+
+            // Increment students_processed counter
+            await admin.rpc("increment_insight_run_counter", {
+              p_run_id: runId,
+              p_counter: "students_processed",
+            });
+          } catch (error) {
+            // Log overall student failure
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            await admin.from("insight_run_failures").insert({
+              run_id: runId,
+              student_id: studentId,
+              kind: null,
+              subject_id: null,
+              error_message: errorMsg.substring(0, 500),
+            });
+
+            // Increment students_failed counter
+            await admin.rpc("increment_insight_run_counter", {
+              p_run_id: runId,
+              p_counter: "students_failed",
+            });
+
+            console.error(`Failed to process student ${studentId}:`, errorMsg);
+          }
+        })
+      );
     }
 
     // Mark run as completed
@@ -203,10 +219,6 @@ async function processAttendanceRisk(
   }
 
   // Transform records to match AttendanceRecord type
-  // Map database status values to what the pure function expects:
-  // - present, late, half_day -> 'present' (student was there in some form)
-  // - absent -> 'absent'
-  // Note: 'excused' is not in our database, mapping absent to 'absent'
   const attendanceRecords: AttendanceRecord[] = (records || []).map(
     (r: any) => {
       const status =
@@ -218,92 +230,104 @@ async function processAttendanceRisk(
     }
   );
 
-  // Call pure function from @eduos/insights
+  // Call pure function
   const input: AttendanceRiskInput = {
     records: attendanceRecords,
     window: 30,
   };
   const insight = computeAttendanceRisk(input);
 
-  // Upsert snapshot (idempotent - unique constraint handles conflicts)
-  const { error: upsertError } = await admin
+  // Upsert snapshot
+  const { data: snapshotData, error: upsertError } = await admin
     .from("student_risk_snapshots")
-    .upsert({
-      school_id: schoolId,
-      student_id: studentId,
-      kind: "attendance",
-      computed_for: runDate,
-      score: insight.score,
-      band: insight.band,
-      factors: insight.factors,
-      recommended_action: insight.recommended_action,
-      subject_id: null,
-      params_hash: "INSIGHTS_PARAMS_V1",
-    });
+    .upsert(
+      {
+        school_id: schoolId,
+        student_id: studentId,
+        kind: "attendance",
+        computed_for: runDate,
+        score: insight.score,
+        band: insight.band,
+        factors: insight.factors,
+        recommended_action: insight.recommended_action,
+        subject_id: null,
+        params_hash: "INSIGHTS_PARAMS_V1",
+      },
+      {
+        onConflict: "school_id,student_id,kind,computed_for,subject_id",
+      }
+    )
+    .select("id")
+    .single();
 
   if (upsertError) {
     throw new Error(
       `Failed to upsert attendance snapshot: ${upsertError.message}`
     );
   }
+
+  if (insight.band !== "LOW" && snapshotData?.id) {
+    const { error: interventionError } = await admin.rpc(
+      "create_intervention_if_qualifying",
+      { p_snapshot_id: snapshotData.id }
+    );
+    if (interventionError) {
+      console.error(
+        `Failed to create attendance intervention for student ${studentId}:`,
+        interventionError
+      );
+    }
+  }
 }
 
 /**
- * Process academic risk for one student (per subject with failure isolation)
+ * Process academic risk for one student across their subjects
  */
 async function processAcademicRisk(
   admin: any,
   studentId: string,
   schoolId: string,
   runDate: string,
-  runId: string
+  runId: string,
+  subjectIds: string[]
 ) {
-  // Get student's active section
-  const { data: enrollment, error: enrollmentError } = await admin
-    .from("student_enrollments")
-    .select("section_id")
-    .eq("student_profile_id", studentId)
-    .eq("school_id", schoolId)
-    .eq("is_active", true)
-    .maybeSingle();
-
-  if (enrollmentError || !enrollment?.section_id) {
-    throw new Error(
-      `Failed to get student section: ${enrollmentError?.message || "No active enrollment"}`
-    );
+  if (!subjectIds || subjectIds.length === 0) {
+    return;
   }
 
-  const sectionId = enrollment.section_id;
+  // Fetch all exam results for this student in one query
+  const { data: allExamResults, error: examError } = await admin
+    .from("exam_results")
+    .select("subject_id, marks_obtained, max_marks, exams(start_date)")
+    .eq("student_id", studentId)
+    .in("subject_id", subjectIds);
 
-  // Get subjects for this section
-  const { data: sectionSubjects, error: subjectsError } = await admin
-    .from("section_subjects")
-    .select("subject_id")
-    .eq("section_id", sectionId);
-
-  if (subjectsError) {
-    throw new Error(`Failed to get section subjects: ${subjectsError.message}`);
+  if (examError) {
+    throw new Error(`Failed to fetch exam results: ${examError.message}`);
   }
 
-  // Process each subject with per-subject failure isolation
-  for (const { subject_id } of sectionSubjects || []) {
+  // Group exam results by subject_id
+  const resultsBySubject = new Map<string, any[]>();
+  for (const r of allExamResults || []) {
+    const list = resultsBySubject.get(r.subject_id) || [];
+    list.push(r);
+    resultsBySubject.set(r.subject_id, list);
+  }
+
+  // Process each subject with failure isolation
+  for (const subject_id of subjectIds) {
     try {
-      // Fetch exam scores for this subject ordered chronologically by exam date
-      // Join with exams to get start_date (when the exam series began)
-      // This ensures performance forecast algorithm receives exams in chronological order
-      const { data: examResults, error: examError } = await admin
-        .from("exam_results")
-        .select("marks_obtained, max_marks, exams!inner(start_date)")
-        .eq("student_id", studentId)
-        .eq("subject_id", subject_id)
-        .order("exams(start_date)");
+      const examResults = resultsBySubject.get(subject_id) || [];
 
-      if (examError) {
-        throw new Error(`Failed to fetch exam results: ${examError.message}`);
-      }
+      // Sort chronologically by exam start_date
+      const sortedResults = examResults.sort((a: any, b: any) => {
+        const dateA = a.exams?.start_date ? new Date(a.exams.start_date).getTime() : 0;
+        const dateB = b.exams?.start_date ? new Date(b.exams.start_date).getTime() : 0;
+        return dateA - dateB;
+      });
 
       // Convert to percentage scores
-      const scores = (examResults || []).map((r: any) => {
+      const scores = sortedResults.map((r: any) => {
         const percentage = (r.marks_obtained / r.max_marks) * 100;
         return percentage;
       });
@@ -316,29 +340,48 @@ async function processAcademicRisk(
       };
       const insight = computePerformanceForecast(input);
 
-      // Upsert snapshot (idempotent - unique constraint handles conflicts)
-      const { error: upsertError } = await admin
+      // Upsert snapshot
+      const { data: snapshotData, error: upsertError } = await admin
         .from("student_risk_snapshots")
-        .upsert({
-          school_id: schoolId,
-          student_id: studentId,
-          kind: "academic",
-          computed_for: runDate,
-          score: insight.score,
-          band: insight.band,
-          factors: insight.factors,
-          recommended_action: insight.recommended_action,
-          subject_id: subject_id,
-          params_hash: "INSIGHTS_PARAMS_V1",
-        });
+        .upsert(
+          {
+            school_id: schoolId,
+            student_id: studentId,
+            kind: "academic",
+            computed_for: runDate,
+            score: insight.score,
+            band: insight.band,
+            factors: insight.factors,
+            recommended_action: insight.recommended_action,
+            subject_id: subject_id,
+            params_hash: "INSIGHTS_PARAMS_V1",
+          },
+          {
+            onConflict: "school_id,student_id,kind,computed_for,subject_id",
+          }
+        )
+        .select("id")
+        .single();
 
       if (upsertError) {
         throw new Error(
           `Failed to upsert academic snapshot: ${upsertError.message}`
         );
       }
+
+      if (insight.band !== "LOW" && snapshotData?.id) {
+        const { error: interventionError } = await admin.rpc(
+          "create_intervention_if_qualifying",
+          { p_snapshot_id: snapshotData.id }
+        );
+        if (interventionError) {
+          console.error(
+            `Failed to create academic intervention for student ${studentId}, subject ${subject_id}:`,
+            interventionError
+          );
+        }
+      }
     } catch (error) {
-      // Log per-subject failure, continue to next subject
       const errorMsg = error instanceof Error ? error.message : String(error);
       await admin.from("insight_run_failures").insert({
         run_id: runId,
@@ -347,9 +390,6 @@ async function processAcademicRisk(
         subject_id: subject_id,
         error_message: errorMsg.substring(0, 500),
       });
-
-      // Note: we don't increment students_failed here because the student might
-      // succeed for other subjects. The outer try/catch handles overall student failure.
 
       console.error(
         `Failed to process subject ${subject_id} for student ${studentId}:`,

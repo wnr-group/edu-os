@@ -4,8 +4,8 @@
  * Pure functions for computing risk scores and performance forecasts
  */
 
-export { computeAttendanceRisk } from './attendance-risk';
-export { computePerformanceForecast } from './performance-forecast';
+export { computeAttendanceRisk } from './attendance-risk.ts';
+export { computePerformanceForecast } from './performance-forecast.ts';
 
 export type {
   Band,
@@ -14,4 +14,4 @@ export type {
   AttendanceRecord,
   AttendanceRiskInput,
   PerformanceInput,
-} from './types';
+} from './types.ts';

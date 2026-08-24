@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { computeAttendanceRisk } from '../src/attendance-risk';
-import type { AttendanceRecord, AttendanceRiskInput } from '../src/types';
+import { computeAttendanceRisk } from '../src/attendance-risk.ts';
+import type { AttendanceRecord, AttendanceRiskInput } from '../src/types.ts';
 
 describe('ATTN_RISK_V1: computeAttendanceRisk', () => {
   // Helper to create date

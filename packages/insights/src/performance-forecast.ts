@@ -1,4 +1,4 @@
-import type { PerformanceInput, Insight, InsightFactor, Band } from './types';
+import type { PerformanceInput, Insight, InsightFactor, Band } from './types.ts';
 
 /**
  * PERF_V1: Compute performance forecast based on exam score trend

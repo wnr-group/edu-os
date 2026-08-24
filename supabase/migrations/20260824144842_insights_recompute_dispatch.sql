@@ -16,7 +16,7 @@
 --     ↓ net.http_post for each chunk → insights-recompute Edge Function
 
 -- ============================================================================
--- Helper Function: pg_advisory_xact_lock (for Edge Function use)
+-- Helper Function: pg_advisory_xact_lock (for legacy / transaction use)
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.pg_advisory_xact_lock(
@@ -35,6 +35,113 @@ $$;
 
 COMMENT ON FUNCTION public.pg_advisory_xact_lock IS
   'Acquires a transaction-scoped advisory lock for a school_id to prevent concurrent processing';
+
+-- ============================================================================
+-- Helper Function: claim_insight_run_chunk (Durable Distributed Lease)
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.claim_insight_run_chunk(
+  p_school_id UUID,
+  p_run_date DATE,
+  p_chunk_offset INT,
+  p_chunk_limit INT,
+  p_worker_id UUID,
+  p_lease_seconds INT DEFAULT 300
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_run_id UUID;
+  v_now TIMESTAMPTZ := now();
+  v_expires TIMESTAMPTZ := v_now + (p_lease_seconds || ' seconds')::interval;
+BEGIN
+  -- 1. Try to claim an existing uncompleted or expired run
+  UPDATE public.insight_runs
+  SET worker_id = p_worker_id,
+      status = 'running',
+      heartbeat_at = v_now,
+      lease_expires_at = v_expires,
+      attempt = attempt + 1,
+      students_processed = 0,
+      students_failed = 0
+  WHERE school_id = p_school_id
+    AND run_date = p_run_date
+    AND chunk_offset = p_chunk_offset
+    AND (
+      status = 'failed'
+      OR (status = 'running' AND (lease_expires_at IS NULL OR lease_expires_at < v_now))
+    )
+  RETURNING id INTO v_run_id;
+
+  IF v_run_id IS NOT NULL THEN
+    RETURN v_run_id;
+  END IF;
+
+  -- 2. If already completed or currently held by another active worker, return NULL (skip)
+  IF EXISTS (
+    SELECT 1 FROM public.insight_runs
+    WHERE school_id = p_school_id
+      AND run_date = p_run_date
+      AND chunk_offset = p_chunk_offset
+      AND (status = 'completed' OR (status = 'running' AND lease_expires_at >= v_now))
+  ) THEN
+    RETURN NULL;
+  END IF;
+
+  -- 3. Otherwise, insert new running chunk record
+  INSERT INTO public.insight_runs (
+    school_id, run_date, chunk_offset, chunk_limit, status,
+    worker_id, lease_expires_at, heartbeat_at, attempt,
+    students_total, students_processed, students_failed,
+    params_hash, trigger, started_at
+  ) VALUES (
+    p_school_id, p_run_date, p_chunk_offset, p_chunk_limit, 'running',
+    p_worker_id, v_expires, v_now, 1,
+    0, 0, 0,
+    'INSIGHTS_PARAMS_V1', 'cron', v_now
+  )
+  ON CONFLICT (school_id, run_date, chunk_offset) DO NOTHING
+  RETURNING id INTO v_run_id;
+
+  RETURN v_run_id;
+END;
+$$;
+
+COMMENT ON FUNCTION public.claim_insight_run_chunk IS
+  'Atomically claims a chunk for execution with a durable expiring lease to prevent multi-worker collisions and enable crash recovery';
+
+-- ============================================================================
+-- Helper Function: heartbeat_insight_run
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.heartbeat_insight_run(
+  p_run_id UUID,
+  p_worker_id UUID,
+  p_lease_seconds INT DEFAULT 300
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_now TIMESTAMPTZ := now();
+  v_expires TIMESTAMPTZ := v_now + (p_lease_seconds || ' seconds')::interval;
+BEGIN
+  UPDATE public.insight_runs
+  SET heartbeat_at = v_now,
+      lease_expires_at = v_expires
+  WHERE id = p_run_id AND worker_id = p_worker_id AND status = 'running';
+
+  RETURN FOUND;
+END;
+$$;
+
+COMMENT ON FUNCTION public.heartbeat_insight_run IS
+  'Extends the active lease of a running insight run chunk';
 
 -- ============================================================================
 -- Helper Function: increment_insight_run_counter
@@ -73,7 +180,7 @@ COMMENT ON FUNCTION public.increment_insight_run_counter IS
 -- Dispatcher Function: insights_recompute_dispatch
 -- ============================================================================
 
-CREATE OR REPLACE FUNCTION cron.insights_recompute_dispatch()
+CREATE OR REPLACE FUNCTION public.insights_recompute_dispatch()
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -120,31 +227,35 @@ BEGIN
     v_school_id := rec.school_id;
     v_students_total := rec.students_total;
 
-    -- Calculate number of chunks (1000 students per chunk)
-    v_num_chunks := CEIL(v_students_total::numeric / 1000);
+    -- Calculate number of chunks (100 students per chunk to stay well within edge worker resource limits)
+    DECLARE
+      v_chunk_size INT := 100;
+    BEGIN
+      v_num_chunks := CEIL(v_students_total::numeric / v_chunk_size);
 
-    -- Dispatch each chunk as a separate Edge Function invocation
-    FOR v_chunk_offset IN 0..(v_num_chunks - 1) LOOP
-      PERFORM net.http_post(
-        url := v_functions_url || '/insights-recompute',
-        headers := jsonb_build_object(
-          'Content-Type', 'application/json',
-          'Authorization', 'Bearer ' || v_service_role_key,
-          'x-cron-secret', v_cron_secret
-        ),
-        body := jsonb_build_object(
-          'school_id', v_school_id,
-          'run_date', v_run_date,
-          'offset', v_chunk_offset * 1000,
-          'limit', 1000
-        )
-      );
-    END LOOP;
+      -- Dispatch each chunk as a separate Edge Function invocation
+      FOR v_chunk_offset IN 0..(v_num_chunks - 1) LOOP
+        PERFORM net.http_post(
+          url := v_functions_url || '/insights-recompute',
+          headers := jsonb_build_object(
+            'Content-Type', 'application/json',
+            'Authorization', 'Bearer ' || v_service_role_key,
+            'x-cron-secret', v_cron_secret
+          ),
+          body := jsonb_build_object(
+            'school_id', v_school_id,
+            'run_date', v_run_date,
+            'offset', v_chunk_offset * v_chunk_size,
+            'limit', v_chunk_size
+          )
+        );
+      END LOOP;
+    END;
   END LOOP;
 END;
 $$;
 
-COMMENT ON FUNCTION cron.insights_recompute_dispatch IS
+COMMENT ON FUNCTION public.insights_recompute_dispatch IS
   'Nightly dispatcher for insights risk computation. Queries eligible schools and fans out to insights-recompute Edge Function in 1000-student chunks.';
 
 -- ============================================================================
@@ -159,7 +270,7 @@ SELECT cron.schedule(
   'insights-recompute-nightly',
   '30 19 * * *',
   $$
-  SELECT cron.insights_recompute_dispatch()
+  SELECT public.insights_recompute_dispatch()
   WHERE public._vault_get('functions_url') IS NOT NULL
     AND public._vault_get('service_role_key') IS NOT NULL;
   $$
