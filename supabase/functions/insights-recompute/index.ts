@@ -288,13 +288,15 @@ async function processAcademicRisk(
   // Process each subject with per-subject failure isolation
   for (const { subject_id } of sectionSubjects || []) {
     try {
-      // Fetch exam scores for this subject (ordered by creation, approximates chronological)
+      // Fetch exam scores for this subject ordered chronologically by exam date
+      // Join with exams to get start_date (when the exam series began)
+      // This ensures performance forecast algorithm receives exams in chronological order
       const { data: examResults, error: examError } = await admin
         .from("exam_results")
-        .select("marks_obtained, max_marks")
+        .select("marks_obtained, max_marks, exams!inner(start_date)")
         .eq("student_id", studentId)
         .eq("subject_id", subject_id)
-        .order("created_at");
+        .order("exams(start_date)");
 
       if (examError) {
         throw new Error(`Failed to fetch exam results: ${examError.message}`);
