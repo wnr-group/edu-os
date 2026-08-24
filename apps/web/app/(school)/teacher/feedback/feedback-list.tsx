@@ -45,6 +45,20 @@ function statusVariant(
   return "secondary";
 }
 
+// Fire-and-forget, same shape as every other *-notify caller in this app —
+// the response is already saved by the time this runs, so a notify failure
+// never blocks or reverts the "Send Response" action itself.
+function resolveFeedbackNotification(feedbackId: string) {
+  const supabase = createClient();
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/notification-resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+      body: JSON.stringify({ entity_type: "feedback", entity_id: feedbackId }),
+    }).catch(() => {});
+  });
+}
+
 const PAGE_SIZE = 10;
 
 export function FeedbackList({ items, profileBasePath = "/admin/students" }: { items: FeedbackItem[]; profileBasePath?: string }) {
@@ -109,9 +123,10 @@ export function FeedbackList({ items, profileBasePath = "/admin/students" }: { i
     setSaving(id);
     setErrors((prev) => ({ ...prev, [id]: "" }));
     const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
       .from("feedback")
-      .update({ response: responses[id], status: "responded" as FeedbackStatus })
+      .update({ response: responses[id], status: "responded" as FeedbackStatus, responded_by: user?.id ?? null, responded_at: new Date().toISOString() })
       .eq("id", id);
     setSaving(null);
     if (error) {
@@ -120,6 +135,11 @@ export function FeedbackList({ items, profileBasePath = "/admin/students" }: { i
     }
     setStatuses((prev) => ({ ...prev, [id]: "responded" }));
     setOpenId(null);
+    // Resolves this feedback's notification(s) — including a sibling row's,
+    // for Contact Management's two-recipient submissions — so the other
+    // authorized staff member sees "Responded by X" instead of a stale
+    // pending item nobody will act on twice.
+    resolveFeedbackNotification(id);
   }
 
   if (items.length === 0) {

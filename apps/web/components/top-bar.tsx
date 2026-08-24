@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, ChevronDown, Settings, LogOut, GraduationCap } from "lucide-react";
 import { CommandSearch } from "@/components/command-search";
+import { NotificationBell } from "@/components/notification-bell";
 import { createClient } from "@/lib/supabase";
 import { formatSegment } from "@/lib/format-segment";
 import type { NavItem, NavSection } from "@/lib/nav-config";
@@ -34,6 +35,8 @@ interface TopBarProps {
   frequentItems?: NavItem[];
   moreSections?: NavSection[];
   settingsHref?: string;
+  /** Role-scoped route to the full notification center (proxy.ts enforces every role stays under its own prefix, so this can't be a single shared path). Omit to hide the bell entirely (e.g. platform-admin domains, which have no notifications). */
+  notificationsHref?: string;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -80,6 +83,7 @@ export function TopBar({
   frequentItems,
   moreSections,
   settingsHref,
+  notificationsHref,
 }: TopBarProps) {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
@@ -207,6 +211,8 @@ export function TopBar({
         {yearSwitcher && <div className="flex items-center">{yearSwitcher}</div>}
 
         {showSearch && <CommandSearch userRole={userRole} />}
+
+        {notificationsHref && <NotificationBell centerHref={notificationsHref} />}
 
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/50">

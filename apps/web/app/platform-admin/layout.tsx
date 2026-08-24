@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getActiveRoles, hasAnyRole } from "@/lib/auth/roles";
 import { TopBar } from "@/components/top-bar";
 import { MobileNav } from "@/components/mobile-nav";
+import { NotificationsProvider } from "@/lib/notifications-context";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -37,6 +38,7 @@ export default async function PlatformAdminLayout({
   const userName = profile?.full_name ?? user.email ?? "Admin";
 
   return (
+    <NotificationsProvider>
     <div className="flex h-screen flex-col overflow-hidden bg-app-shell">
       <TopBar
         title={PRODUCT_NAME}
@@ -45,9 +47,11 @@ export default async function PlatformAdminLayout({
         userRole="super_admin"
         showSearch={false}
         frequentItems={NAV}
+        notificationsHref="/platform-admin/notifications"
       />
       <MobileNav title={PRODUCT_NAME} items={NAV} userName={userName} userRole="super_admin" showSearch={false} />
       <main className="flex-1 overflow-y-auto p-4 pb-24 lg:p-8 lg:pb-8">{children}</main>
     </div>
+    </NotificationsProvider>
   );
 }
