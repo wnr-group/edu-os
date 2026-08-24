@@ -58,12 +58,15 @@ export default async function ExamSchedulePage({
 
   const activeUserIds = new Set((activeRoles ?? []).map((r) => r.user_id));
 
-  const teachers = (teacherProfiles ?? [])
-    .filter((t) => activeUserIds.has(t.profile_id))
-    .map((t) => {
+  const seenProfileIds = new Set<string>();
+  const teachers: { id: string; name: string }[] = [];
+  for (const t of teacherProfiles ?? []) {
+    if (activeUserIds.has(t.profile_id) && !seenProfileIds.has(t.profile_id)) {
+      seenProfileIds.add(t.profile_id);
       const p = t.profile as unknown as { full_name: string } | null;
-      return { id: t.profile_id, name: p?.full_name ?? "—" };
-    });
+      teachers.push({ id: t.profile_id, name: p?.full_name ?? "—" });
+    }
+  }
 
   const academicYear = exam.academic_year as unknown as { name: string } | null;
 

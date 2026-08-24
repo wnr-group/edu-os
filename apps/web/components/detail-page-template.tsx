@@ -87,7 +87,7 @@ export function DetailPageTemplate({
                 );
               }
               return (
-                <Link key={tab.key} href={`${basePath ?? ""}?tab=${tab.key}`} className={tabClassName}>
+                <Link key={tab.key} href={`${basePath ?? ""}?tab=${tab.key}`} scroll={false} className={tabClassName}>
                   {tab.label}
                 </Link>
               );

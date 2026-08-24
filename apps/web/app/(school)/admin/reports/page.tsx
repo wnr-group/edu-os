@@ -13,6 +13,7 @@ export default async function AdminReportsPage() {
     { count: studentCount },
     { count: disciplineCount },
     { count: attendanceCount },
+    { data: quizLinks },
   ] = await Promise.all([
     supabase
       .from("exams")
@@ -31,13 +32,17 @@ export default async function AdminReportsPage() {
       .from("attendance_records")
       .select("id", { count: "exact", head: true })
       .eq("school_id", schoolId),
+    supabase.from("quizzes").select("exam_id").eq("school_id", schoolId).not("exam_id", "is", null),
   ]);
+
+  const quizExamIds = new Set((quizLinks ?? []).map((q) => q.exam_id));
 
   const examRows = (exams ?? []).map((e) => {
     const ay = e.academic_year as unknown as { name: string } | null;
     return {
       id: e.id,
       name: e.name,
+      isQuiz: quizExamIds.has(e.id),
       academic_year: ay?.name ?? "—",
       start_date: e.start_date ? new Date(e.start_date).toLocaleDateString() : "—",
       end_date: e.end_date ? new Date(e.end_date).toLocaleDateString() : "—",

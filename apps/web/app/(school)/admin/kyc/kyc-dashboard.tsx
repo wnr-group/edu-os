@@ -147,15 +147,18 @@ const settingsHref = pathname.startsWith("/principal") ? "/principal/kyc/setting
         {tab === "incomplete" ? (
           <div className="divide-y divide-border">
             {incompleteStudents.length === 0 && <div className="px-5 py-10 text-center text-sm text-muted-foreground">No incomplete records.</div>}
-            {incompleteStudents.map((s) => (
-              <Link key={s.studentId} href={`/admin/students/${s.studentId}?tab=documents`} className="flex items-center justify-between gap-4 px-5 py-3 hover:bg-muted/40">
-                <div>
-                  <p className="font-medium text-foreground">{s.studentName}</p>
-                  <p className="text-xs text-muted-foreground">{s.className}</p>
-                </div>
-                <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">{s.missing} missing</span>
-              </Link>
-            ))}
+            {incompleteStudents.map((s) => {
+              const studentBasePath = pathname.startsWith("/principal") ? "/principal/students" : "/admin/students";
+              return (
+                <Link key={s.studentId} href={`${studentBasePath}/${s.studentId}?tab=documents&from=kyc`} className="flex items-center justify-between gap-4 px-5 py-3 hover:bg-muted/40">
+                  <div>
+                    <p className="font-medium text-foreground">{s.studentName}</p>
+                    <p className="text-xs text-muted-foreground">{s.className}</p>
+                  </div>
+                  <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">{s.missing} missing</span>
+                </Link>
+              );
+            })}
           </div>
         ) : (
           <>

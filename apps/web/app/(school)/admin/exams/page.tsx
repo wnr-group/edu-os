@@ -15,7 +15,7 @@ export default async function ExamsPage() {
     return <ModuleUnavailable module="Exams" />;
   }
 
-  const [{ data: academicYears }, { data: exams }] = await Promise.all([
+  const [{ data: academicYears }, { data: exams }, { data: quizLinks }] = await Promise.all([
     supabase
       .from("academic_years")
       .select("id, name")
@@ -26,8 +26,10 @@ export default async function ExamsPage() {
       .select("id, name, start_date, end_date, datesheet_published_at, academic_year:academic_years(name)")
       .eq("school_id", schoolId)
       .order("start_date", { ascending: false }),
+    supabase.from("quizzes").select("exam_id").eq("school_id", schoolId).not("exam_id", "is", null),
   ]);
 
+  const quizExamIds = new Set((quizLinks ?? []).map((q) => q.exam_id));
   const years = academicYears ?? [];
 
   const examRows = (exams ?? []).map((e) => {
@@ -35,6 +37,7 @@ export default async function ExamsPage() {
     return {
       id: e.id,
       name: e.name,
+      isQuiz: quizExamIds.has(e.id),
       academic_year: ay?.name ?? "—",
       start: e.start_date ?? "—",
       end: e.end_date ?? "—",

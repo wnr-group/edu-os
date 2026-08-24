@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase";
@@ -133,9 +133,12 @@ export function DocumentTypeSettings({ schoolId, types }: { schoolId: string; ty
   const requiredCount = types.filter((t) => t.is_active && t.is_required).length;
   const optionalCount = types.filter((t) => t.is_active && !t.is_required).length;
 
+  const pathname = usePathname();
+  const backHref = pathname.startsWith("/principal") ? "/principal/kyc" : "/admin/kyc";
+
   return (
     <div className="space-y-6">
-      <Link href="/admin/kyc" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+      <Link href={backHref} className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-3.5 w-3.5" /> Back to KYC documents
       </Link>
 
