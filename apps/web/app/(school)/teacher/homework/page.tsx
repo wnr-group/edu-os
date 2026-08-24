@@ -20,11 +20,10 @@ export default async function HomeworkPage() {
   const { data: { user } } = await supabase.auth.getUser();
   const yearId = await getAcademicYearId(schoolId);
 
-  // A teacher may only assign homework to sections they actually teach
-  // (homeroom via section_assignments, or subject via timetable, in the active
-  // year) — this mirrors the mobile app and the send-homework-notification
-  // authorization, so the create form can't offer a section the notification
-  // would then reject.
+  // A teacher's own taught sections (homeroom via section_assignments, or
+  // subject via timetable, in the active year) — the base candidate list for
+  // the class/section/subject pickers; also mirrors the mobile app and the
+  // send-homework-notification authorization.
   const [{ data: homeroomRows }, { data: timetableRows }] = await Promise.all([
     supabase
       .from("section_assignments")
@@ -37,10 +36,19 @@ export default async function HomeworkPage() {
       .eq("teacher_id", user!.id)
       .eq("academic_year_id", yearId ?? ""),
   ]);
+  // Union in the *active* section itself. A school_admin/principal viewing
+  // this teacher-portal page via the SectionSwitcher ((school)/layout.tsx)
+  // is not personally in section_assignments/timetable for it, so without
+  // this the one section they're actually looking at — and its class and
+  // subjects — would be missing from every dropdown below. Write
+  // authorization is unaffected: homework_write already permits
+  // school_admin regardless of a personal teaching assignment; this only
+  // fixes what the UI *offers* to pick.
   const taughtSectionIds = Array.from(
     new Set([
       ...(homeroomRows ?? []).map((r) => r.section_id as string),
       ...(timetableRows ?? []).map((r) => r.section_id as string),
+      sectionId,
     ])
   );
 

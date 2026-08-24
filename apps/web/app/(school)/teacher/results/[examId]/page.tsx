@@ -5,6 +5,7 @@ import { getSchoolId } from "@/lib/school";
 import { getActiveSection } from "@/lib/section-context";
 import { NoSectionPrompt } from "../../no-section-prompt";
 import { buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { MarksEntryForm } from "./marks-entry-form";
 import { getSchoolFeatures } from "@/lib/school-brand";
@@ -53,7 +54,7 @@ export default async function ExamMarksPage({
     ? `${sec.class?.name ?? ""} – Section ${sec.name}`
     : sectionId;
 
-  const [{ data: exam }, { data: subjects }, { data: students }, { data: existingResults }] =
+  const [{ data: exam }, { data: subjects }, { data: students }, { data: existingResults }, { data: quizLink }] =
     await Promise.all([
       supabase
         .from("exams")
@@ -88,6 +89,10 @@ export default async function ExamMarksPage({
         .from("exam_results")
         .select("student_id, subject_id, marks_obtained, max_marks")
         .eq("exam_id", examId),
+
+      // Exams created by push_quiz_to_gradebook are stamped on quizzes.exam_id —
+      // used purely to badge this as quiz-sourced vs a manually created exam.
+      supabase.from("quizzes").select("id").eq("exam_id", examId).maybeSingle(),
     ]);
 
   const studentRows = (students ?? []).map((s) => {
@@ -113,7 +118,10 @@ export default async function ExamMarksPage({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Enter Marks</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{exam?.name ?? examId}</p>
+          <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+            {exam?.name ?? examId}
+            <Badge variant={quizLink ? "outline" : "secondary"}>{quizLink ? "Quiz" : "Exam"}</Badge>
+          </p>
           <p className="mt-0.5 text-xs text-muted-foreground/80">{sectionLabel}</p>
         </div>
         <Link
