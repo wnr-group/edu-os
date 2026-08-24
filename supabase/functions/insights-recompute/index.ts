@@ -327,10 +327,9 @@ async function processAcademicRisk(
       });
 
       // Convert to percentage scores
-      const scores = sortedResults.map((r: any) => {
-        const percentage = (r.marks_obtained / r.max_marks) * 100;
-        return percentage;
-      });
+      const scores = sortedResults
+        .filter((r: any) => typeof r.max_marks === "number" && r.max_marks > 0 && typeof r.marks_obtained === "number")
+        .map((r: any) => (r.marks_obtained / r.max_marks) * 100);
 
       // Call pure function
       const input: PerformanceInput = {

@@ -122,7 +122,7 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
     ],
     sections: sections({
       academic: [
-        { label: "Interventions", href: "/admin/interventions", feature: "insights" },
+        { label: "Interventions", href: "/principal/interventions", feature: "insights" },
         { label: "Certificates", href: "/principal/certificates" },
       ],
       administration: [

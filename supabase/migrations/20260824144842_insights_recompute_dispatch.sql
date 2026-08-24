@@ -216,12 +216,7 @@ BEGIN
     FROM public.student_enrollments se
     JOIN public.academic_years ay ON ay.id = se.academic_year_id AND ay.status = 'active'
     WHERE se.is_active = true
-      AND EXISTS (
-        SELECT 1 FROM public.feature_flags ff
-        WHERE ff.school_id = se.school_id
-          AND ff.key = 'insights'
-          AND ff.is_enabled = true
-      )
+      AND public.feature_enabled(se.school_id, 'insights')
     GROUP BY se.school_id
   LOOP
     v_school_id := rec.school_id;

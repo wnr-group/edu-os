@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { InterventionsView, type InterventionRow, type StaffOption } from "@/components/interventions/interventions-view";
@@ -8,7 +9,11 @@ export default async function AdminInterventionsPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const schoolId = (await getSchoolId())!;
+  const schoolId = await getSchoolId();
+
+  if (!user || !schoolId) {
+    redirect("/login");
+  }
 
   // Fetch school-wide interventions
   const { data: records, error } = await supabase
@@ -146,7 +151,7 @@ export default async function AdminInterventionsPage() {
     <InterventionsView
       initialInterventions={rows}
       schoolId={schoolId}
-      currentUserId={user!.id}
+      currentUserId={user.id}
       currentUserRole="school_admin"
       isAdmin={true}
       staffList={staffList}

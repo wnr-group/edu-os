@@ -1,25 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertTriangle,
-  BookOpen,
   Calendar,
   CheckCircle2,
   Clock,
-  Filter,
   GraduationCap,
   Info,
-  MoreHorizontal,
   Send,
   UserCheck,
-  UserX,
-  XCircle,
   Search,
   ArrowRight,
   ShieldAlert,
   Bell,
-  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase";
@@ -54,7 +48,7 @@ export interface InterventionRow {
   completed_at?: string | null;
   dismissed_at?: string | null;
   created_at: string;
-  factors: Array<{ key?: string; label?: string; value?: any; contribution?: number }>;
+  factors: Array<{ key?: string; label?: string; value?: unknown; contribution?: number }>;
   recommended_action: string;
   subject_name?: string | null;
   evidence: AcademicEvidenceItem[];
@@ -69,18 +63,15 @@ export interface StaffOption {
 
 interface InterventionsViewProps {
   initialInterventions: InterventionRow[];
-  schoolId: string;
-  currentUserId: string;
-  currentUserRole: string;
+  schoolId?: string;
+  currentUserId?: string;
+  currentUserRole?: string;
   isAdmin?: boolean;
   staffList?: StaffOption[];
 }
 
 export function InterventionsView({
   initialInterventions,
-  schoolId,
-  currentUserId,
-  currentUserRole,
   isAdmin = false,
   staffList = [],
 }: InterventionsViewProps) {
@@ -103,6 +94,21 @@ export function InterventionsView({
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
 
   const supabase = createClient();
+
+  // Close modals on Escape key
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        if (showDismissModal) setShowDismissModal(false);
+        else if (showCompleteModal) setShowCompleteModal(false);
+        else if (showReassignModal) setShowReassignModal(false);
+        else if (showNotifyModal) setShowNotifyModal(false);
+        else if (selectedIntervention) setSelectedIntervention(null);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showDismissModal, showCompleteModal, showReassignModal, showNotifyModal, selectedIntervention]);
 
   // Filtered interventions
   const filteredInterventions = interventions.filter((item) => {
@@ -153,8 +159,9 @@ export function InterventionsView({
       if (selectedIntervention?.id === id) {
         setSelectedIntervention((prev) => (prev ? { ...prev, status: "in_progress" } : null));
       }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to start intervention");
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to start intervention";
+      toast.error(errorMsg);
     } finally {
       setActionLoading(false);
     }
@@ -183,8 +190,9 @@ export function InterventionsView({
       );
       setShowCompleteModal(false);
       setOutcomeNote("");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to complete intervention");
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to complete intervention";
+      toast.error(errorMsg);
     } finally {
       setActionLoading(false);
     }
@@ -217,8 +225,9 @@ export function InterventionsView({
       );
       setShowDismissModal(false);
       setDismissReason("");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to dismiss intervention");
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to dismiss intervention";
+      toast.error(errorMsg);
     } finally {
       setActionLoading(false);
     }
@@ -248,8 +257,9 @@ export function InterventionsView({
       );
       setShowReassignModal(false);
       setReassignTarget("");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to reassign intervention");
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to reassign intervention";
+      toast.error(errorMsg);
     } finally {
       setActionLoading(false);
     }
@@ -279,8 +289,9 @@ export function InterventionsView({
       );
       setSelectedIntervention((prev) => (prev ? { ...prev, last_notified_at: nowIso } : null));
       setShowNotifyModal(false);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to send notification to parent");
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to send notification to parent";
+      toast.error(errorMsg);
     } finally {
       setActionLoading(false);
     }
@@ -364,7 +375,7 @@ export function InterventionsView({
                 {tab.label}
                 {"count" in tab && tab.count > 0 && (
                   <span
-                    className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
                       statusTab === tab.id ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
                     }`}
                   >
@@ -379,7 +390,7 @@ export function InterventionsView({
           <div className="flex items-center gap-2">
             <select
               value={kindFilter}
-              onChange={(e) => setKindFilter(e.target.value as any)}
+              onChange={(e) => setKindFilter(e.target.value as "all" | "attendance" | "academic")}
               className="rounded-lg border border-input bg-background px-2.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             >
               <option value="all">All Domains</option>
@@ -389,7 +400,7 @@ export function InterventionsView({
 
             <select
               value={severityFilter}
-              onChange={(e) => setSeverityFilter(e.target.value as any)}
+              onChange={(e) => setSeverityFilter(e.target.value as "all" | "HIGH" | "MED")}
               className="rounded-lg border border-input bg-background px-2.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             >
               <option value="all">All Severities</option>
@@ -544,7 +555,11 @@ export function InterventionsView({
 
       {/* Intervention Detail Modal */}
       {selectedIntervention && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        >
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl">
             {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-border pb-4">
@@ -579,6 +594,7 @@ export function InterventionsView({
 
               <button
                 onClick={() => setSelectedIntervention(null)}
+                aria-label="Close dialog"
                 className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
               >
                 ✕
@@ -599,7 +615,7 @@ export function InterventionsView({
                     {selectedIntervention.factors.map((factor, idx) => (
                       <div key={idx} className="flex items-center justify-between rounded-lg bg-card p-2.5 text-xs border border-border/50">
                         <span className="font-medium text-foreground">{factor.label || factor.key}</span>
-                        {factor.contribution !== undefined && (
+                        {typeof factor.contribution === "number" && !isNaN(factor.contribution) && (
                           <span className="text-muted-foreground font-mono">
                             Impact: {factor.contribution.toFixed(1)}%
                           </span>
@@ -621,7 +637,7 @@ export function InterventionsView({
                           <div className="flex items-center justify-between">
                             <span className="font-medium text-foreground">{ev.subject_name || "Subject"}</span>
                             {ev.is_pinned && (
-                              <span className="rounded bg-primary/10 px-1 py-0.2 text-[9px] font-bold text-primary">
+                              <span className="rounded bg-primary/10 px-1 py-0.5 text-[9px] font-bold text-primary">
                                 Pinned Trigger
                               </span>
                             )}
@@ -747,7 +763,11 @@ export function InterventionsView({
 
       {/* Dismissal Reason Modal */}
       {showDismissModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        >
           <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-2xl">
             <h3 className="text-base font-bold text-foreground">Dismiss Intervention</h3>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -783,7 +803,11 @@ export function InterventionsView({
 
       {/* Complete Outcome Modal */}
       {showCompleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        >
           <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-2xl">
             <h3 className="text-base font-bold text-foreground">Complete Intervention</h3>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -819,7 +843,11 @@ export function InterventionsView({
 
       {/* Reassign Modal */}
       {showReassignModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        >
           <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-2xl">
             <h3 className="text-base font-bold text-foreground">Reassign Intervention</h3>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -860,7 +888,11 @@ export function InterventionsView({
 
       {/* Notify Parent Confirmation Modal */}
       {showNotifyModal && selectedIntervention && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        >
           <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-2xl">
             <div className="flex items-center gap-2">
               <div className="rounded-full bg-primary/10 p-2 text-primary">

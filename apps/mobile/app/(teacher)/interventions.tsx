@@ -50,7 +50,7 @@ interface InterventionItem {
   dismissed_at?: string;
   created_at: string;
   source_snapshot?: {
-    factors: any[];
+    factors: Array<{ key?: string; label?: string; detail?: string; value?: unknown; contribution?: number }>;
     recommended_action: string;
     subject_name?: string;
   };
@@ -83,21 +83,28 @@ export default function TeacherInterventionsScreen() {
   const [outcomeNote, setOutcomeNote] = useState("");
 
   const [showNotifyModal, setShowNotifyModal] = useState(false);
+  const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     if (!ready) return;
-    loadInterventions();
+
+    loadInterventions(isMounted);
+
+    return () => {
+      isMounted = false;
+    };
   }, [ready, statusFilter, kindFilter]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadInterventions();
+    await loadInterventions(true);
     setRefreshing(false);
   }, [statusFilter, kindFilter]);
 
-  async function loadInterventions() {
+  async function loadInterventions(isMounted = true) {
     try {
-      setLoading(true);
+      if (isMounted) setLoading(true);
 
       let query = supabase
         .from("interventions")
@@ -146,6 +153,8 @@ export default function TeacherInterventionsScreen() {
 
       const { data, error } = await query;
 
+      if (!isMounted) return;
+
       if (error) {
         console.error("Error loading interventions:", error);
         Alert.alert("Error", "Could not load interventions.");
@@ -183,7 +192,7 @@ export default function TeacherInterventionsScreen() {
     } catch (err) {
       console.error("Unexpected error in loadInterventions:", err);
     } finally {
-      setLoading(false);
+      if (isMounted) setLoading(false);
     }
   }
 
@@ -234,6 +243,17 @@ export default function TeacherInterventionsScreen() {
     }
   }
 
+  function openNotifyModal() {
+    setPendingRequestId(
+      "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      })
+    );
+    setShowNotifyModal(true);
+  }
+
   async function handleStartIntervention() {
     if (!selectedIntervention) return;
     try {
@@ -246,9 +266,10 @@ export default function TeacherInterventionsScreen() {
 
       Alert.alert("Success", "Intervention is now in progress.");
       setSelectedIntervention((prev) => (prev ? { ...prev, status: "in_progress" } : null));
-      await loadInterventions();
-    } catch (err: any) {
-      Alert.alert("Error", err.message || "Failed to start intervention.");
+      await loadInterventions(true);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to start intervention.";
+      Alert.alert("Error", errorMsg);
     } finally {
       setActionLoading(false);
     }
@@ -271,9 +292,10 @@ export default function TeacherInterventionsScreen() {
       setSelectedIntervention((prev) =>
         prev ? { ...prev, status: "completed", outcome_note: outcomeNote } : null
       );
-      await loadInterventions();
-    } catch (err: any) {
-      Alert.alert("Error", err.message || "Failed to complete intervention.");
+      await loadInterventions(true);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to complete intervention.";
+      Alert.alert("Error", errorMsg);
     } finally {
       setActionLoading(false);
     }
@@ -300,27 +322,22 @@ export default function TeacherInterventionsScreen() {
       setSelectedIntervention((prev) =>
         prev ? { ...prev, status: "dismissed", dismissal_reason: dismissReason } : null
       );
-      await loadInterventions();
-    } catch (err: any) {
-      Alert.alert("Error", err.message || "Failed to dismiss intervention.");
+      await loadInterventions(true);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to dismiss intervention.";
+      Alert.alert("Error", errorMsg);
     } finally {
       setActionLoading(false);
     }
   }
 
   async function handleNotifyParent() {
-    if (!selectedIntervention) return;
+    if (!selectedIntervention || !pendingRequestId) return;
     try {
       setActionLoading(true);
-      const clientRequestId = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-        const r = (Math.random() * 16) | 0;
-        const v = c === "x" ? r : (r & 0x3) | 0x8;
-        return v.toString(16);
-      });
-
       const { error } = await supabase.rpc("notify_parent_for_intervention", {
         p_intervention_id: selectedIntervention.id,
-        p_client_request_id: clientRequestId,
+        p_client_request_id: pendingRequestId,
       });
 
       if (error) throw error;
@@ -330,8 +347,9 @@ export default function TeacherInterventionsScreen() {
       setSelectedIntervention((prev) =>
         prev ? { ...prev, last_parent_notification: new Date().toISOString() } : null
       );
-    } catch (err: any) {
-      Alert.alert("Error", err.message || "Failed to send notification to parent.");
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to send notification to parent.";
+      Alert.alert("Error", errorMsg);
     } finally {
       setActionLoading(false);
     }
@@ -381,7 +399,7 @@ export default function TeacherInterventionsScreen() {
               return (
                 <TouchableOpacity
                   key={tab.id}
-                  onPress={() => setStatusFilter(tab.id as any)}
+                  onPress={() => setStatusFilter(tab.id as "open" | "completed" | "dismissed" | "all")}
                   style={{
                     paddingHorizontal: 14,
                     paddingVertical: 6,
@@ -417,7 +435,7 @@ export default function TeacherInterventionsScreen() {
             return (
               <TouchableOpacity
                 key={tab.id}
-                onPress={() => setKindFilter(tab.id as any)}
+                onPress={() => setKindFilter(tab.id as "all" | "attendance" | "academic")}
                 style={{
                   paddingHorizontal: 10,
                   paddingVertical: 4,
@@ -635,11 +653,11 @@ export default function TeacherInterventionsScreen() {
 
                 <View style={{ backgroundColor: theme.surface, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: theme.border, marginBottom: 16 }}>
                   {selectedIntervention.source_snapshot?.factors && selectedIntervention.source_snapshot.factors.length > 0 ? (
-                    selectedIntervention.source_snapshot.factors.map((f: any, idx: number) => (
-                      <View key={idx} style={{ flexDirection: "row", alignItems: "flex-start", marginBottom: idx === selectedIntervention.source_snapshot!.factors.length - 1 ? 0 : 8 }}>
+                    selectedIntervention.source_snapshot.factors.map((f, idx) => (
+                      <View key={idx} style={{ flexDirection: "row", alignItems: "flex-start", marginBottom: idx === (selectedIntervention.source_snapshot?.factors.length ?? 0) - 1 ? 0 : 8 }}>
                         <Ionicons name="alert-circle-outline" size={16} color={theme.primary} style={{ marginRight: 8, marginTop: 2 }} />
                         <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: theme.textPrimary, flex: 1 }}>
-                          {f.label ?? f.detail ?? JSON.stringify(f)}
+                          {f.label ?? f.detail ?? (typeof f === "object" ? JSON.stringify(f) : String(f))}
                         </Text>
                       </View>
                     ))
@@ -725,7 +743,7 @@ export default function TeacherInterventionsScreen() {
                       disabled={actionLoading}
                     />
                     <TouchableOpacity
-                      onPress={() => setShowNotifyModal(true)}
+                      onPress={openNotifyModal}
                       style={{
                         paddingVertical: 12,
                         borderRadius: 8,
@@ -765,7 +783,7 @@ export default function TeacherInterventionsScreen() {
                       disabled={actionLoading}
                     />
                     <TouchableOpacity
-                      onPress={() => setShowNotifyModal(true)}
+                      onPress={openNotifyModal}
                       style={{
                         paddingVertical: 12,
                         borderRadius: 8,
