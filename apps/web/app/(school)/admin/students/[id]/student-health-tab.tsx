@@ -7,6 +7,8 @@ import {
   Syringe, Plus, Trash2, ClipboardCheck, Check, X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
+import { useFeature } from "@/lib/features-context";
+import { ModuleUnavailable } from "@/components/module-unavailable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -93,6 +95,7 @@ function Card({ icon: Icon, title, children }: { icon: React.ElementType; title:
 }
 
 export function StudentHealthTab({ studentId, schoolId, readOnly = false }: { studentId: string; schoolId: string; readOnly?: boolean }) {
+  const healthRecordsEnabled = useFeature("health_records");
   const [data, setData] = useState<HealthRecord>(EMPTY);
   const [hasRecord, setHasRecord] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -111,20 +114,41 @@ export function StudentHealthTab({ studentId, schoolId, readOnly = false }: { st
   const [reviewNote, setReviewNote] = useState("");
 
   useEffect(() => {
+    if (!healthRecordsEnabled) {
+      setLoading(false);
+      return;
+    }
     load();
-  }, [studentId]);
+  }, [studentId, healthRecordsEnabled]);
 
-  async function load() {
-    setLoading(true);
+  // Fetches only the health-record fields (Medical Information / Emergency
+  // Contact / Doctor Details / Special Notes). Kept separate from loadAux()
+  // so that saving a vaccination or uploading a document — neither of which
+  // touch student_health_records — never overwrites whatever the admin is
+  // currently typing into this form before they've clicked Save.
+  async function loadHealthRecord() {
     const supabase = createClient();
-    const [{ data: record }, { data: checklist }, { data: vax }, { data: subs }] = await Promise.all([
-      supabase
-        .from("student_health_records")
-        .select(
-          "blood_group, allergies, chronic_conditions, current_medications, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, doctor_name, doctor_phone, special_notes, updated_at"
-        )
-        .eq("student_id", studentId)
-        .maybeSingle(),
+    const { data: record } = await supabase
+      .from("student_health_records")
+      .select(
+        "blood_group, allergies, chronic_conditions, current_medications, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, doctor_name, doctor_phone, special_notes, updated_at"
+      )
+      .eq("student_id", studentId)
+      .maybeSingle();
+    if (record) {
+      setData({ ...EMPTY, ...record });
+      setHasRecord(true);
+    } else {
+      setData(EMPTY);
+      setHasRecord(false);
+    }
+  }
+
+  // Vaccinations, medical documents, and pending submissions — independent
+  // of the health-record form above.
+  async function loadAux() {
+    const supabase = createClient();
+    const [{ data: checklist }, { data: vax }, { data: subs }] = await Promise.all([
       supabase.rpc("get_student_kyc_checklist", { p_student_id: studentId }),
       supabase
         .from("student_vaccinations")
@@ -141,16 +165,14 @@ export function StudentHealthTab({ studentId, schoolId, readOnly = false }: { st
         .eq("status", "pending")
         .order("created_at", { ascending: false }),
     ]);
-    if (record) {
-      setData({ ...EMPTY, ...record });
-      setHasRecord(true);
-    } else {
-      setData(EMPTY);
-      setHasRecord(false);
-    }
     setDocs(((checklist ?? []) as ChecklistRow[]).filter((r) => r.category === "medical"));
     setVaccinations((vax ?? []) as Vaccination[]);
     setSubmissions((subs ?? []) as Submission[]);
+  }
+
+  async function load() {
+    setLoading(true);
+    await Promise.all([loadHealthRecord(), loadAux()]);
     setLoading(false);
   }
 
@@ -191,7 +213,7 @@ export function StudentHealthTab({ studentId, schoolId, readOnly = false }: { st
       return;
     }
     toast.success("Health record saved.");
-    load();
+    loadHealthRecord();
   }
 
   function triggerUpload(documentTypeId: string) {
@@ -232,7 +254,7 @@ export function StudentHealthTab({ studentId, schoolId, readOnly = false }: { st
       if (rpcErr) throw rpcErr;
 
       toast.success("Document uploaded.");
-      await load();
+      await loadAux();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -258,7 +280,7 @@ export function StudentHealthTab({ studentId, schoolId, readOnly = false }: { st
       return;
     }
     toast.success("Verified.");
-    load();
+    loadAux();
   }
 
   async function handleSaveVaccination() {
@@ -285,7 +307,7 @@ export function StudentHealthTab({ studentId, schoolId, readOnly = false }: { st
     }
     toast.success(vaxForm.id ? "Vaccination updated." : "Vaccination added.");
     setVaxForm(null);
-    load();
+    loadAux();
   }
 
   async function handleDeleteVaccination(id: string) {
@@ -297,7 +319,7 @@ export function StudentHealthTab({ studentId, schoolId, readOnly = false }: { st
       return;
     }
     toast.success("Vaccination deleted.");
-    load();
+    loadAux();
   }
 
   async function handleReview(id: string, approve: boolean) {
@@ -317,6 +339,8 @@ export function StudentHealthTab({ studentId, schoolId, readOnly = false }: { st
     toast.success(approve ? "Submission approved and applied." : "Submission rejected.");
     load();
   }
+
+  if (!healthRecordsEnabled) return <ModuleUnavailable module="Health Records" />;
 
   if (loading) return <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>;
 

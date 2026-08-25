@@ -134,7 +134,8 @@ export const FEATURE_REGISTRY: Record<FeatureKey, FeatureDef> = {
     defaultOn: false,
     status: "new",
     dependsOn: ["kyc_documents"],
-    gatesTables: ["student_health_records"],
+    gatesTables: ["student_health_records", "student_vaccinations", "student_health_record_submissions"],
+    gatesFunctions: ["send-vaccination-reminders", "get-medical-document-url"],
   },
   leave: {
     key: "leave",

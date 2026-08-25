@@ -65,10 +65,14 @@ serve(async (req) => {
       }
       const { data: sp } = await adminClient
         .from("student_profiles")
-        .select("parent_profile_id")
+        .select("school_id, parent_profile_id")
         .eq("id", student_id)
         .maybeSingle();
       if (!sp || sp.parent_profile_id !== user.id) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { "Content-Type": "application/json" } });
+      }
+      const { data: enabled } = await adminClient.rpc("feature_enabled", { p_school_id: sp.school_id, p_key: "health_records" });
+      if (!enabled) {
         return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { "Content-Type": "application/json" } });
       }
 
@@ -115,11 +119,15 @@ serve(async (req) => {
 
     const { data: sp } = await adminClient
       .from("student_profiles")
-      .select("parent_profile_id")
+      .select("school_id, parent_profile_id")
       .eq("id", doc.subject_id)
       .maybeSingle();
 
     if (!sp || sp.parent_profile_id !== user.id) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { "Content-Type": "application/json" } });
+    }
+    const { data: enabled } = await adminClient.rpc("feature_enabled", { p_school_id: sp.school_id, p_key: "health_records" });
+    if (!enabled) {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { "Content-Type": "application/json" } });
     }
 
