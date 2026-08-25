@@ -12,7 +12,7 @@
 --      UPDATEs existing row to 'excused' (retroactive UPDATE path)
 --
 -- Uses local seed: Demo School / section Class1-A / class teacher aaaaaaaa-0014.
--- Run: docker exec -i supabase_db_plan-2-supabase-auth psql -U postgres -d postgres < supabase/tests/leave_attendance_trigger.test.sql
+-- Run: npx supabase db query --local -f supabase/tests/leave_attendance_trigger.test.sql
 
 BEGIN;
 

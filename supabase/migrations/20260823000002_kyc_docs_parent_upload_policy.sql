@@ -16,11 +16,19 @@
 -- original design.
 --
 -- Path convention: kyc/{school_id}/{subject_id}/{document_type_id}-{ts}.{ext}
--- → school at foldername[2], subject at foldername[3].
+-- → school at foldername[2], subject at foldername[3]. Both segments are
+-- checked (mirroring the staff policy in 20260803094937_kyc_bucket.sql,
+-- which binds role + school segment) so a bogus school prefix can't be used
+-- to write an object outside the child's actual tenant.
 
 CREATE POLICY kyc_docs_parent_upload ON storage.objects FOR INSERT
   TO authenticated
   WITH CHECK (
-    bucket_id = 'kyc-docs' 
+    bucket_id = 'kyc-docs'
     AND public.is_parent_of_student(NULLIF((storage.foldername(name))[3], '')::uuid)
+    AND EXISTS (
+      SELECT 1 FROM public.student_profiles sp
+      WHERE sp.id = NULLIF((storage.foldername(name))[3], '')::uuid
+        AND sp.school_id::text = (storage.foldername(name))[2]
+    )
   );

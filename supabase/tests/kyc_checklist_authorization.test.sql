@@ -9,7 +9,7 @@
 --   parent aaaaaaaa-...0013 (also class teacher of Class 8A / Aryan's section)
 --     -> his own children dddddddd-...0010 (Aarav, Class 5A) / dddddddd-...0011 (Diya, Class 8A)
 --   school_admin aaaaaaaa-...0011
--- Run: docker exec -i supabase_db_plan-2-supabase-auth psql -U postgres -d postgres < supabase/tests/kyc_checklist_authorization.test.sql
+-- Run: npx supabase db query --local -f supabase/tests/kyc_checklist_authorization.test.sql
 
 BEGIN;
 

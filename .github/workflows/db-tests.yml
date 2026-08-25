@@ -1,0 +1,28 @@
+name: Database RLS/RPC tests
+
+on:
+  pull_request:
+    paths:
+      - "supabase/**"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/**"
+
+jobs:
+  test-db:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase stack
+        run: supabase start
+
+      - name: Run SQL regression tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: pnpm test:db

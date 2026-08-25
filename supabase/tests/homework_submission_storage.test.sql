@@ -13,7 +13,7 @@
 -- Same demo-seed identities as kyc_parent_upload_storage.test.sql:
 --   parent aaaaaaaa-...0030 -> student dddddddd-...0001 (Parent A / Child A)
 --   parent aaaaaaaa-...0013 -> student dddddddd-...0010 (Parent B / Child B)
--- Run: docker exec -i supabase_db_plan-2-supabase-auth psql -U postgres -d postgres < supabase/tests/homework_submission_storage.test.sql
+-- Run: npx supabase db query --local -f supabase/tests/homework_submission_storage.test.sql
 
 BEGIN;
 

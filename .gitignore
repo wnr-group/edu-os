@@ -18,3 +18,9 @@ apps/demo-video/
 
 # Play Store listing assets (icons, graphics, screenshots — not source)
 play-assets/
+
+# npm lockfile — this is a pnpm workspace (pnpm-lock.yaml is the source of truth)
+package-lock.json
+
+# Supabase Studio SQL Editor scratch queries — often written against real data
+supabase/snippets/

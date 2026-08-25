@@ -2,6 +2,12 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is not set`);
+  return value;
+}
+
 const PUBLIC_PATHS = ["/login", "/auth/callback", "/download-app", "/apply", "/verify"];
 const PLATFORM_ADMIN_DOMAINS = ["admin.balajierp.com", "core.lvh.me", "core.connectmyskool.com", "core.eduos.com"];
 
@@ -45,7 +51,7 @@ export async function proxy(request: NextRequest) {
   if (!isPlatformAdmin) {
     const service = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321",
-      process.env.SUPABASE_SERVICE_ROLE_KEY || "sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz"
+      requireEnv("SUPABASE_SERVICE_ROLE_KEY")
     );
     const { data: schoolId } = await service.rpc("get_school_id_by_domain", { p_domain: domain });
 
@@ -86,7 +92,7 @@ export async function proxy(request: NextRequest) {
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH",
+    requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
     {
       cookies: {
         getAll() {
@@ -154,7 +160,7 @@ export async function proxy(request: NextRequest) {
   // server-side and the service client is already created above for school validation.
   const serviceForRoles = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321",
-    process.env.SUPABASE_SERVICE_ROLE_KEY || "sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz"
+    requireEnv("SUPABASE_SERVICE_ROLE_KEY")
   );
 
   let role: string | null = null;

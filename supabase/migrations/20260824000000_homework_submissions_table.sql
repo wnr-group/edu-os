@@ -28,11 +28,17 @@ CREATE INDEX idx_homework_submissions_student  ON public.homework_submissions(st
 ALTER TABLE public.homework_submissions ENABLE ROW LEVEL SECURITY;
 
 -- SELECT only: parent-of-student, or staff, or the teacher assigned to the
--- homework's section. Mirrors homework_status_select exactly, plus the
--- teacher branch (homework_status's SELECT policy already covers teacher via
--- get_my_role() = 'teacher' AND school match, which is coarser than section
--- match — this table intentionally requires teaches_homework_section for the
--- teacher branch since submissions are more sensitive student work product).
+-- homework's section OR the teacher who owns the homework (homework.teacher_id
+-- = auth.uid()). Mirrors homework_status_select, plus the teacher branch
+-- (homework_status's SELECT policy already covers teacher via get_my_role() =
+-- 'teacher' AND school match, which is coarser than section match — this
+-- table intentionally requires teaches_homework_section OR homework
+-- ownership for the teacher branch since submissions are more sensitive
+-- student work product). The homework.teacher_id fallback covers schools
+-- where timetable/section_assignment rows are incomplete or the active
+-- academic year diverges, which would otherwise deny the homework's own
+-- teacher access to their own submissions roster — same gap fixed in the
+-- homework-submission-signed-url Edge Function.
 CREATE POLICY "homework_submissions_select" ON public.homework_submissions FOR SELECT
   USING (
     public.get_my_role() = 'super_admin'
@@ -41,7 +47,17 @@ CREATE POLICY "homework_submissions_select" ON public.homework_submissions FOR S
       AND school_id = public.get_my_school_id()
       AND (
         public.get_my_role() IN ('school_admin', 'principal')
-        OR (public.get_my_role() = 'teacher' AND public.teaches_homework_section(homework_id))
+        OR (
+          public.get_my_role() = 'teacher'
+          AND (
+            public.teaches_homework_section(homework_id)
+            OR EXISTS (
+              SELECT 1 FROM public.homework h
+              WHERE h.id = homework_submissions.homework_id
+                AND h.teacher_id = auth.uid()
+            )
+          )
+        )
         OR EXISTS (
           SELECT 1 FROM public.student_profiles sp
           WHERE sp.id = homework_submissions.student_id

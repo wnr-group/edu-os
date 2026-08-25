@@ -7,7 +7,7 @@
 -- student with no linked parent.
 -- Uses local seed's Demo School / student dddddddd-...0001 (Aryan Sharma,
 -- parent aaaaaaaa-...0030) / class teacher aaaaaaaa-...0013.
--- Run: docker exec -i supabase_db_plan-2-supabase-auth psql -U postgres -d postgres < supabase/tests/discipline_parent_notify.test.sql
+-- Run: npx supabase db query --local -f supabase/tests/discipline_parent_notify.test.sql
 
 BEGIN;
 

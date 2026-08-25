@@ -798,3 +798,24 @@ ON CONFLICT (school_id) DO UPDATE
 -- seed_document_types() inserts the seven standard Indian-school types;
 -- it is idempotent (returns immediately if rows already exist).
 SELECT public.seed_document_types('aaaaaaaa-0000-0000-0000-000000000001');
+
+-- ---------------------------------------------------------------
+-- DEMO SCHOOL FEATURE FLAGS
+-- ---------------------------------------------------------------
+-- Enables admissions/kyc_documents/attendance_geo for the local demo school
+-- (apps/mobile is built against aaaaaaaa-0000-0000-0000-000000000001 — see
+-- apps/mobile/.env.local / apps/mobile/app.json's extra.schoolId). These
+-- modules are seeded/backfilled OFF by default
+-- (20260727132543_feature_flags.sql: "not-yet-built modules default OFF"),
+-- so a fresh db reset needs them flipped on here for the Parent Mobile
+-- Admission Enquiry, KYC Documents, and geo-attendance flows to be
+-- end-to-end testable locally. In production, real schools get these flags
+-- through the platform-admin console — this is local fixture data, not a
+-- schema change, so it belongs in seed rather than in supabase/migrations/.
+-- Uses the same jsonb-merge convention as the rest of this file: merges in
+-- exactly these keys, leaves every other features_enabled key untouched.
+-- Scoped to this one school id only; safe to re-run.
+UPDATE public.schools
+SET features_enabled = features_enabled ||
+  '{"admissions": true, "kyc_documents": true, "attendance_geo": true}'::jsonb
+WHERE id = 'aaaaaaaa-0000-0000-0000-000000000001';
