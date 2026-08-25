@@ -83,22 +83,32 @@ SELECT set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-0000000
 
 DO $$
 DECLARE
-  v_notified boolean;
+  v_student    uuid;
+  v_notified   boolean;
+  v_notif_count int;
 BEGIN
+  -- Pick an active student enrolled in teacher 0014's section (1A) with no linked parent
+  SELECT sp.id INTO v_student
+  FROM public.student_profiles sp
+  JOIN public.student_enrollments se ON se.student_profile_id = sp.id
+  WHERE se.section_id = 'cccccccc-0000-0000-0000-000000000101'
+    AND se.is_active = true
+    AND sp.parent_profile_id IS NULL
+  LIMIT 1;
+
+  IF v_student IS NULL THEN
+    RAISE EXCEPTION 'FAIL: no student without linked parent found in section 1A';
+  END IF;
+
   INSERT INTO public.discipline_records (school_id, student_id, category, severity, description, recorded_by)
-  VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'fec9c308-c8d2-4630-81d4-7f3e6eccaaa2', 'academic', 'verbal', 'Regression test - no parent linked', 'aaaaaaaa-0000-0000-0000-000000000014')
+  VALUES ('aaaaaaaa-0000-0000-0000-000000000001', v_student, 'academic', 'verbal', 'Regression test - no parent linked', 'aaaaaaaa-0000-0000-0000-000000000014')
   RETURNING parent_notified INTO v_notified;
 
   IF v_notified THEN
     RAISE EXCEPTION 'FAIL: parent_notified was set true for a student with no linked parent';
   END IF;
-END $$;
 
-RESET ROLE;
-DO $$
-DECLARE v_notif_count int;
-BEGIN
-  SELECT count(*) INTO v_notif_count FROM public.notifications WHERE student_id = 'fec9c308-c8d2-4630-81d4-7f3e6eccaaa2';
+  SELECT count(*) INTO v_notif_count FROM public.notifications WHERE student_id = v_student;
   IF v_notif_count <> 0 THEN
     RAISE EXCEPTION 'FAIL: an orphaned notification was created for a student with no linked parent';
   END IF;
