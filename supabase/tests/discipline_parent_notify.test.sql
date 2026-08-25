@@ -11,6 +11,10 @@
 
 BEGIN;
 
+-- Clean up any pre-existing notifications for Aryan Sharma inside this transaction
+-- so the count assertion is isolated from seed data or prior test runs.
+DELETE FROM public.notifications WHERE student_id = 'dddddddd-0000-0000-0000-000000000001';
+
 -- ── Case 1: student with a linked parent ──────────────────────────────────
 SET LOCAL ROLE authenticated;
 SELECT set_config('app.role', 'teacher', true);
