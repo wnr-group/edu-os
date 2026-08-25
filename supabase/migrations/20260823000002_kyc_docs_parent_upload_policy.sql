@@ -21,14 +21,28 @@
 -- which binds role + school segment) so a bogus school prefix can't be used
 -- to write an object outside the child's actual tenant.
 
+CREATE OR REPLACE FUNCTION public.is_parent_of_student(p_student_id uuid, p_school_id uuid)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.student_profiles sp
+    WHERE sp.id = p_student_id
+      AND sp.parent_profile_id = auth.uid()
+      AND sp.school_id = p_school_id
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.is_parent_of_student(uuid, uuid) TO authenticated;
+
+DROP POLICY IF EXISTS kyc_docs_parent_upload ON storage.objects;
 CREATE POLICY kyc_docs_parent_upload ON storage.objects FOR INSERT
   TO authenticated
   WITH CHECK (
     bucket_id = 'kyc-docs'
-    AND public.is_parent_of_student(NULLIF((storage.foldername(name))[3], '')::uuid)
-    AND EXISTS (
-      SELECT 1 FROM public.student_profiles sp
-      WHERE sp.id = NULLIF((storage.foldername(name))[3], '')::uuid
-        AND sp.school_id::text = (storage.foldername(name))[2]
+    AND public.is_parent_of_student(
+      NULLIF((storage.foldername(name))[3], '')::uuid,
+      NULLIF((storage.foldername(name))[2], '')::uuid
     )
   );
+

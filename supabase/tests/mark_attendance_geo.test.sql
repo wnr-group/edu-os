@@ -28,21 +28,30 @@ SELECT set_config('app.school_id', 'aaaaaaaa-0000-0000-0000-000000000001', true)
 SELECT set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000014"}', true);
 
 -- ── Test 1: inside geofence ──────────────────────────────────────────────
-SELECT public.mark_attendance(
-  'cccccccc-0000-0000-0000-000000000101'::uuid,
-  'FULL_DAY'::public.attendance_session,
-  '2026-08-18'::date,
-  '[{"student_id":"eebd9a6b-e40c-43a7-91b1-d7cec8a012a5","status":"present"}]'::jsonb,
-  12.9716, 77.5946, 5, 'device'
-);
-
 DO $$
-DECLARE r record;
+DECLARE
+  v_student uuid;
+  r record;
 BEGIN
+  SELECT sp.id INTO v_student
+  FROM public.student_profiles sp
+  JOIN public.student_enrollments se ON se.student_profile_id = sp.id
+  WHERE se.section_id = 'cccccccc-0000-0000-0000-000000000101'
+    AND se.is_active = true
+  LIMIT 1 OFFSET 0;
+
+  PERFORM public.mark_attendance(
+    'cccccccc-0000-0000-0000-000000000101'::uuid,
+    'FULL_DAY'::public.attendance_session,
+    '2026-08-18'::date,
+    jsonb_build_array(jsonb_build_object('student_id', v_student, 'status', 'present')),
+    12.9716, 77.5946, 5, 'device'
+  );
+
   SELECT captured_lat, captured_lng, gps_accuracy_m, geo_status, geo_distance_m, matched_geofence_id
   INTO r
   FROM public.attendance_records
-  WHERE student_id = 'eebd9a6b-e40c-43a7-91b1-d7cec8a012a5' AND date = '2026-08-18' AND session = 'FULL_DAY';
+  WHERE student_id = v_student AND date = '2026-08-18' AND session = 'FULL_DAY';
 
   IF r.captured_lat IS NULL OR r.captured_lng IS NULL OR r.gps_accuracy_m IS NULL THEN
     RAISE EXCEPTION 'FAIL: inside-geofence case did not persist captured coordinates: %', r;
@@ -60,21 +69,30 @@ BEGIN
 END $$;
 
 -- ── Test 2: outside geofence (~1.1km north, well past the 100m radius) ───
-SELECT public.mark_attendance(
-  'cccccccc-0000-0000-0000-000000000101'::uuid,
-  'FULL_DAY'::public.attendance_session,
-  '2026-08-18'::date,
-  '[{"student_id":"6773f432-0f68-41aa-ae3c-9892fbc4d796","status":"present"}]'::jsonb,
-  12.9816, 77.5946, 8, 'device'
-);
-
 DO $$
-DECLARE r record;
+DECLARE
+  v_student uuid;
+  r record;
 BEGIN
+  SELECT sp.id INTO v_student
+  FROM public.student_profiles sp
+  JOIN public.student_enrollments se ON se.student_profile_id = sp.id
+  WHERE se.section_id = 'cccccccc-0000-0000-0000-000000000101'
+    AND se.is_active = true
+  LIMIT 1 OFFSET 1;
+
+  PERFORM public.mark_attendance(
+    'cccccccc-0000-0000-0000-000000000101'::uuid,
+    'FULL_DAY'::public.attendance_session,
+    '2026-08-18'::date,
+    jsonb_build_array(jsonb_build_object('student_id', v_student, 'status', 'present')),
+    12.9816, 77.5946, 8, 'device'
+  );
+
   SELECT geo_status, geo_distance_m, matched_geofence_id
   INTO r
   FROM public.attendance_records
-  WHERE student_id = '6773f432-0f68-41aa-ae3c-9892fbc4d796' AND date = '2026-08-18' AND session = 'FULL_DAY';
+  WHERE student_id = v_student AND date = '2026-08-18' AND session = 'FULL_DAY';
 
   IF r.geo_status IS DISTINCT FROM 'outside' THEN
     RAISE EXCEPTION 'FAIL: outside-geofence case geo_status = % (expected outside)', r.geo_status;
@@ -89,21 +107,30 @@ BEGIN
 END $$;
 
 -- ── Test 3: no GPS on device (mobile permission denied / signal unavailable) ─
-SELECT public.mark_attendance(
-  'cccccccc-0000-0000-0000-000000000101'::uuid,
-  'FULL_DAY'::public.attendance_session,
-  '2026-08-18'::date,
-  '[{"student_id":"9c1ebdb9-3526-4c89-9395-b57136fb5088","status":"present"}]'::jsonb,
-  NULL, NULL, NULL, 'device'
-);
-
 DO $$
-DECLARE r record;
+DECLARE
+  v_student uuid;
+  r record;
 BEGIN
+  SELECT sp.id INTO v_student
+  FROM public.student_profiles sp
+  JOIN public.student_enrollments se ON se.student_profile_id = sp.id
+  WHERE se.section_id = 'cccccccc-0000-0000-0000-000000000101'
+    AND se.is_active = true
+  LIMIT 1 OFFSET 2;
+
+  PERFORM public.mark_attendance(
+    'cccccccc-0000-0000-0000-000000000101'::uuid,
+    'FULL_DAY'::public.attendance_session,
+    '2026-08-18'::date,
+    jsonb_build_array(jsonb_build_object('student_id', v_student, 'status', 'present')),
+    NULL, NULL, NULL, 'device'
+  );
+
   SELECT captured_lat, captured_lng, geo_status, geo_distance_m, matched_geofence_id
   INTO r
   FROM public.attendance_records
-  WHERE student_id = '9c1ebdb9-3526-4c89-9395-b57136fb5088' AND date = '2026-08-18' AND session = 'FULL_DAY';
+  WHERE student_id = v_student AND date = '2026-08-18' AND session = 'FULL_DAY';
 
   IF r.captured_lat IS NOT NULL OR r.captured_lng IS NOT NULL THEN
     RAISE EXCEPTION 'FAIL: no-GPS case fabricated coordinates: %', r;
@@ -118,21 +145,30 @@ BEGIN
 END $$;
 
 -- ── Test 4: web not_captured (web never sends coordinates) ───────────────
-SELECT public.mark_attendance(
-  'cccccccc-0000-0000-0000-000000000101'::uuid,
-  'FULL_DAY'::public.attendance_session,
-  '2026-08-18'::date,
-  '[{"student_id":"ebbcc218-de43-4ed1-889b-fbca0a3dddb6","status":"present"}]'::jsonb,
-  NULL, NULL, NULL, 'web'
-);
-
 DO $$
-DECLARE r record;
+DECLARE
+  v_student uuid;
+  r record;
 BEGIN
+  SELECT sp.id INTO v_student
+  FROM public.student_profiles sp
+  JOIN public.student_enrollments se ON se.student_profile_id = sp.id
+  WHERE se.section_id = 'cccccccc-0000-0000-0000-000000000101'
+    AND se.is_active = true
+  LIMIT 1 OFFSET 3;
+
+  PERFORM public.mark_attendance(
+    'cccccccc-0000-0000-0000-000000000101'::uuid,
+    'FULL_DAY'::public.attendance_session,
+    '2026-08-18'::date,
+    jsonb_build_array(jsonb_build_object('student_id', v_student, 'status', 'present')),
+    NULL, NULL, NULL, 'web'
+  );
+
   SELECT geo_status, geo_distance_m, matched_geofence_id
   INTO r
   FROM public.attendance_records
-  WHERE student_id = 'ebbcc218-de43-4ed1-889b-fbca0a3dddb6' AND date = '2026-08-18' AND session = 'FULL_DAY';
+  WHERE student_id = v_student AND date = '2026-08-18' AND session = 'FULL_DAY';
 
   IF r.geo_status IS DISTINCT FROM 'not_captured' THEN
     RAISE EXCEPTION 'FAIL: web case geo_status = % (expected not_captured)', r.geo_status;
@@ -155,21 +191,30 @@ SELECT set_config('app.role', 'teacher', true);
 SELECT set_config('app.school_id', 'aaaaaaaa-0000-0000-0000-000000000001', true);
 SELECT set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000014"}', true);
 
-SELECT public.mark_attendance(
-  'cccccccc-0000-0000-0000-000000000101'::uuid,
-  'FULL_DAY'::public.attendance_session,
-  '2026-08-18'::date,
-  '[{"student_id":"bfbfe6c2-e175-4fbc-8605-f805e4251cb8","status":"present"}]'::jsonb,
-  12.9716, 77.5946, 5, 'device'
-);
-
 DO $$
-DECLARE r record;
+DECLARE
+  v_student uuid;
+  r record;
 BEGIN
+  SELECT sp.id INTO v_student
+  FROM public.student_profiles sp
+  JOIN public.student_enrollments se ON se.student_profile_id = sp.id
+  WHERE se.section_id = 'cccccccc-0000-0000-0000-000000000101'
+    AND se.is_active = true
+  LIMIT 1 OFFSET 4;
+
+  PERFORM public.mark_attendance(
+    'cccccccc-0000-0000-0000-000000000101'::uuid,
+    'FULL_DAY'::public.attendance_session,
+    '2026-08-18'::date,
+    jsonb_build_array(jsonb_build_object('student_id', v_student, 'status', 'present')),
+    12.9716, 77.5946, 5, 'device'
+  );
+
   SELECT status, captured_lat, captured_lng, geo_status, geo_distance_m, matched_geofence_id
   INTO r
   FROM public.attendance_records
-  WHERE student_id = 'bfbfe6c2-e175-4fbc-8605-f805e4251cb8' AND date = '2026-08-18' AND session = 'FULL_DAY';
+  WHERE student_id = v_student AND date = '2026-08-18' AND session = 'FULL_DAY';
 
   IF r.status IS DISTINCT FROM 'present' THEN
     RAISE EXCEPTION 'FAIL: flag-off case did not record attendance status: %', r;
@@ -199,21 +244,30 @@ SELECT set_config('app.role', 'teacher', true);
 SELECT set_config('app.school_id', 'aaaaaaaa-0000-0000-0000-000000000001', true);
 SELECT set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000014"}', true);
 
-SELECT public.mark_attendance(
-  'cccccccc-0000-0000-0000-000000000101'::uuid,
-  'FULL_DAY'::public.attendance_session,
-  '2026-08-18'::date,
-  '[{"student_id":"6773f432-0f68-41aa-ae3c-9892fbc4d796","status":"present"}]'::jsonb,
-  12.9816, 77.5946, 8, 'device'
-);
-
 DO $$
-DECLARE r record;
+DECLARE
+  v_student uuid;
+  r record;
 BEGIN
+  SELECT sp.id INTO v_student
+  FROM public.student_profiles sp
+  JOIN public.student_enrollments se ON se.student_profile_id = sp.id
+  WHERE se.section_id = 'cccccccc-0000-0000-0000-000000000101'
+    AND se.is_active = true
+  LIMIT 1 OFFSET 1;
+
+  PERFORM public.mark_attendance(
+    'cccccccc-0000-0000-0000-000000000101'::uuid,
+    'FULL_DAY'::public.attendance_session,
+    '2026-08-18'::date,
+    jsonb_build_array(jsonb_build_object('student_id', v_student, 'status', 'present')),
+    12.9816, 77.5946, 8, 'device'
+  );
+
   SELECT geo_status, matched_geofence_id
   INTO r
   FROM public.attendance_records
-  WHERE student_id = '6773f432-0f68-41aa-ae3c-9892fbc4d796' AND date = '2026-08-18' AND session = 'FULL_DAY';
+  WHERE student_id = v_student AND date = '2026-08-18' AND session = 'FULL_DAY';
 
   IF r.geo_status IS DISTINCT FROM 'inside' THEN
     RAISE EXCEPTION 'FAIL: geofence-update case geo_status = % (expected inside after radius widened)', r.geo_status;
@@ -226,3 +280,4 @@ END $$;
 
 RESET ROLE;
 ROLLBACK;
+
