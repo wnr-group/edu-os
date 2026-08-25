@@ -526,7 +526,7 @@ export default function ParentMore() {
             icon="card-outline"
             title="Student ID Card"
             subtitle="View your child's digital ID"
-            onPress={() => router.push("/(parent)/id-card")}
+            onPress={() => router.push("/(parent)/id-card" as any)}
           />
           {announcementsEnabled && (
             <ListItem
@@ -540,10 +540,10 @@ export default function ParentMore() {
             <ListItem icon="warning-outline" title="Discipline Records" subtitle="Incidents & actions" onPress={() => navigate("discipline")} />
           )}
           {admissionsEnabled && (
-            <ListItem icon="school-outline" title="Admission Enquiry" subtitle="Enquire about a new admission" onPress={() => router.push("/(parent)/admission-enquiry")} />
+            <ListItem icon="school-outline" title="Admission Enquiry" subtitle="Enquire about a new admission" onPress={() => router.push("/(parent)/admission-enquiry" as any)} />
           )}
           {kycEnabled && (
-            <ListItem icon="document-text-outline" title="KYC Documents" subtitle="View document status" onPress={() => router.push("/(parent)/kyc-documents")} />
+            <ListItem icon="document-text-outline" title="KYC Documents" subtitle="View document status" onPress={() => router.push("/(parent)/kyc-documents" as any)} />
           )}
           {feedbackEnabled && (
             <>

@@ -522,7 +522,47 @@ INSERT INTO public.student_enrollments (student_profile_id, academic_year_id, sc
   ('dddddddd-0000-0000-0000-000000000010', 'aaaaaaaa-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000005', 'cccccccc-0000-0000-0000-000000000501', true),
   ('dddddddd-0000-0000-0000-000000000011', 'aaaaaaaa-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000008', 'cccccccc-0000-0000-0000-000000000801', true);
 
--- Fee payments block removed (fee_payments table dropped in migration 35)
+-- ---------------------------------------------------------------
+-- FEE LINE ITEMS (Aryan Sharma & multi-student fixtures)
+-- ---------------------------------------------------------------
+INSERT INTO public.fee_line_items (
+  school_id, student_id, fee_type_id, total_amount, due_date, added_by, class_id, academic_year_id, status
+)
+SELECT
+  'aaaaaaaa-0000-0000-0000-000000000001',
+  'dddddddd-0000-0000-0000-000000000001',
+  ft.id,
+  item.total_amount,
+  item.due_date,
+  'aaaaaaaa-0000-0000-0000-000000000011',
+  'bbbbbbbb-0000-0000-0000-000000000008',
+  'aaaaaaaa-0000-0000-0000-000000000002',
+  item.status
+FROM (VALUES
+  ('Tuition Fee', 5000.00::numeric, (CURRENT_DATE + INTERVAL '30 days')::date, 'pending'),
+  ('Special Fee / Smart Class Fee', 1500.00::numeric, (CURRENT_DATE + INTERVAL '45 days')::date, 'pending')
+) AS item(type_name, total_amount, due_date, status)
+JOIN public.fee_types ft ON ft.name = item.type_name AND ft.is_predefined = true;
+
+-- Seed fee line items for Aarav (Class 5A) to test isolation & multi-student fee flows
+INSERT INTO public.fee_line_items (
+  school_id, student_id, fee_type_id, total_amount, due_date, added_by, class_id, academic_year_id, status
+)
+SELECT
+  'aaaaaaaa-0000-0000-0000-000000000001',
+  'dddddddd-0000-0000-0000-000000000010',
+  ft.id,
+  item.total_amount,
+  item.due_date,
+  'aaaaaaaa-0000-0000-0000-000000000011',
+  'bbbbbbbb-0000-0000-0000-000000000005',
+  'aaaaaaaa-0000-0000-0000-000000000002',
+  item.status
+FROM (VALUES
+  ('Tuition Fee', 3000.00::numeric, (CURRENT_DATE + INTERVAL '30 days')::date, 'pending'),
+  ('Books, Notebooks, and Stationery Fee', 800.00::numeric, (CURRENT_DATE + INTERVAL '15 days')::date, 'pending')
+) AS item(type_name, total_amount, due_date, status)
+JOIN public.fee_types ft ON ft.name = item.type_name AND ft.is_predefined = true;
 
 -- Attendance (last 30 school days, ~85% present)
 DO $$
