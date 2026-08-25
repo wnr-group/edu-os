@@ -315,11 +315,12 @@ export function TimetableGrid({
           }
           const subj = subjectById.get(slot.subject_id);
           const teacher = teacherById.get(slot.teacher_id);
-          const color = colorForSubject(slot.subject_id);
-          const isConflict = (teacherBusyCount.get(teacherKey(slot.teacher_id, day.value, period)) ?? 0) > 1;
+          const teacherLabel = teacher?.name ?? "Unassigned — teacher removed";
+          const color = teacher ? colorForSubject(slot.subject_id) : { bg: "#fef3c7", fg: "#92400e" };
+          const isConflict = teacher && (teacherBusyCount.get(teacherKey(slot.teacher_id, day.value, period)) ?? 0) > 1;
           return `<td style="border:1px solid ${isConflict ? "#ef4444" : "#e5e7eb"}; padding:8px; background:${color.bg}; color:${color.fg};">
             <div style="font-weight:700; font-size:12px;">${subj?.name ?? ""}</div>
-            <div style="font-size:11px; opacity:.85;">${teacher?.name ?? ""}</div>
+            <div style="font-size:11px; opacity:.85;">${teacherLabel}</div>
             ${slot.is_elective ? `<div style="margin-top:3px; font-size:10px; font-weight:700; color:#4338ca;">ELECTIVE</div>` : ""}
           </td>`;
         }
@@ -502,34 +503,63 @@ export function TimetableGrid({
                     if (slot) {
                       const subj = subjectById.get(slot.subject_id);
                       const teacher = teacherById.get(slot.teacher_id);
+                      const isTeacherMissing = !teacher;
+                      const teacherLabel = teacher?.name ?? "Unassigned — teacher removed";
+                      const isConflict =
+                        teacher ? (teacherBusyCount.get(teacherKey(slot.teacher_id, day.value, period)) ?? 0) > 1 : false;
+                      const color = isTeacherMissing
+                        ? { bg: "#fef3c7", fg: "#92400e" }
+                        : colorForSubject(slot.subject_id);
 
-                      if (teacher) {
-                        const isConflict =
-                          (teacherBusyCount.get(teacherKey(slot.teacher_id, day.value, period)) ?? 0) > 1;
-                        const color = colorForSubject(slot.subject_id);
-                        return (
-                          <button
-                            key={period}
-                            onClick={() => openAssign(day.value, period)}
-                            className="flex min-h-[66px] flex-col justify-center rounded-lg px-2.5 py-2 text-left transition-transform hover:-translate-y-0.5"
-                            style={{
-                              background: color.bg,
-                              color: color.fg,
-                              border: isConflict ? "1px solid #ef4444" : "1px solid rgba(15,23,42,.05)",
-                              boxShadow: isConflict ? "inset 0 0 0 1px #ef4444" : "none",
-                            }}
+                      return (
+                        <button
+                          key={period}
+                          onClick={() => openAssign(day.value, period)}
+                          className="flex min-h-[66px] flex-col justify-center rounded-lg px-2.5 py-2 text-left transition-transform hover:-translate-y-0.5"
+                          style={{
+                            background: color.bg,
+                            color: color.fg,
+                            border: isConflict
+                              ? "1px solid #ef4444"
+                              : isTeacherMissing
+                              ? "1px solid #f59e0b"
+                              : "1px solid rgba(15,23,42,.05)",
+                            boxShadow: isConflict
+                              ? "inset 0 0 0 1px #ef4444"
+                              : isTeacherMissing
+                              ? "inset 0 0 0 1px #f59e0b"
+                              : "none",
+                          }}
+                        >
+                          <div className="text-[13.5px] font-bold leading-tight">{subj?.name ?? ""}</div>
+                          <div
+                            className={cn(
+                              "mt-0.5 text-[11.5px] leading-tight",
+                              isTeacherMissing ? "font-semibold text-amber-700" : "opacity-85"
+                            )}
                           >
-                            <div className="text-[13.5px] font-bold leading-tight">{subj?.name ?? ""}</div>
-                            <div className="mt-0.5 text-[11.5px] leading-tight opacity-85">{teacher.name}</div>
+                            {teacherLabel}
+                          </div>
+                          <div className="mt-1.5 flex flex-wrap gap-1">
+                            {slot.is_elective && (
+                              <span className="inline-flex w-fit items-center gap-1 rounded-full border border-indigo-200 bg-white px-1.5 py-0.5 text-[10.5px] font-bold text-indigo-700">
+                                Elective
+                              </span>
+                            )}
+                            {isTeacherMissing && (
+                              <span className="inline-flex w-fit items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10.5px] font-bold text-amber-800">
+                                Needs teacher
+                              </span>
+                            )}
                             {isConflict && (
-                              <div className="mt-1.5 inline-flex w-fit items-center gap-1 rounded-full border border-red-200 bg-white px-1.5 py-0.5 text-[10.5px] font-bold text-red-700">
+                              <span className="inline-flex w-fit items-center gap-1 rounded-full border border-red-200 bg-white px-1.5 py-0.5 text-[10.5px] font-bold text-red-700">
                                 <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                                 Double-booked
-                              </div>
+                              </span>
                             )}
-                          </button>
-                        );
-                      }
+                          </div>
+                        </button>
+                      );
                     }
                     return (
                       <button

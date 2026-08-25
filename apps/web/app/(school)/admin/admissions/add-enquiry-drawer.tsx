@@ -22,18 +22,31 @@ export function AddEnquiryDrawer({
   function set<K extends keyof typeof form>(k: K, v: string) { setForm((f) => ({ ...f, [k]: v })); }
 
   async function handleSave() {
-    if (!form.applicant_name.trim() || !form.class_applied_id || !form.parent_name.trim() || !form.parent_phone.trim()) {
+    const appName = form.applicant_name.trim();
+    const parentName = form.parent_name.trim();
+
+    if (!appName || !form.class_applied_id || !parentName || !form.parent_phone.trim()) {
       toast.error("Fill in the required fields.");
       return;
     }
 
-    const nameRegex = /^[a-zA-Z\s.'-]+$/;
-    if (!nameRegex.test(form.applicant_name.trim())) {
-      toast.error("Applicant name should only contain letters.");
+    if (appName.length < 2 || appName.length > 100) {
+      toast.error("Applicant name must be between 2 and 100 characters.");
       return;
     }
-    if (!nameRegex.test(form.parent_name.trim())) {
-      toast.error("Parent name should only contain letters.");
+
+    if (parentName.length < 2 || parentName.length > 100) {
+      toast.error("Parent name must be between 2 and 100 characters.");
+      return;
+    }
+
+    const nameRegex = /^[\p{L}\p{M}\s.'-]+$/u;
+    if (!nameRegex.test(appName)) {
+      toast.error("Applicant name should only contain valid letters.");
+      return;
+    }
+    if (!nameRegex.test(parentName)) {
+      toast.error("Parent name should only contain valid letters.");
       return;
     }
 

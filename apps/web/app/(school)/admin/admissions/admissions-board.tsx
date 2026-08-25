@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { Plus, Link2, QrCode, Copy } from "lucide-react";
+import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase";
 import { AddEnquiryDrawer } from "./add-enquiry-drawer";
 import { ReviewDrawer } from "./review-drawer";
@@ -307,11 +308,24 @@ export function AdmissionsBoard({
 
 function QrCodeModal({ url, onClose, onCopy }: { url: string; onClose: () => void; onCopy: () => void }) {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!url) {
+      setQrDataUrl(null);
+      return;
+    }
+    QRCode.toDataURL(url, { margin: 1, width: 220 })
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(null));
+  }, [url]);
 
   if (!mounted) return null;
 
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(url || "")}`;
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -326,10 +340,12 @@ function QrCodeModal({ url, onClose, onCopy }: { url: string; onClose: () => voi
         </p>
 
         <div className="my-5 flex justify-center rounded-xl border border-border bg-slate-50 p-4">
-          {url ? (
-            <img src={qrUrl} alt="Public Application Form QR Code" className="h-52 w-52 rounded-lg shadow-sm" />
+          {url && qrDataUrl ? (
+            <img src={qrDataUrl} alt="Public Application Form QR Code" className="h-52 w-52 rounded-lg shadow-sm" />
           ) : (
-            <p className="py-12 text-xs text-muted-foreground">Public form URL not configured</p>
+            <p className="py-12 text-xs text-muted-foreground">
+              {url ? "Generating QR code…" : "Public form URL not configured"}
+            </p>
           )}
         </div>
 

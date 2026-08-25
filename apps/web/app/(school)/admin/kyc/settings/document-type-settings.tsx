@@ -45,9 +45,25 @@ export function DocumentTypeSettings({ schoolId, types }: { schoolId: string; ty
 
   async function handleToggleRequired(t: DocType) {
     const supabase = createClient();
+    const { data: current } = await supabase
+      .from("document_types")
+      .select("name, description, expires, default_validity_months")
+      .eq("id", t.id)
+      .maybeSingle();
+
+    const name = current?.name ?? t.name;
+    const description = current?.description ?? t.description;
+    const expires = current?.expires ?? t.expires;
+    const months = current?.default_validity_months ?? t.default_validity_months;
+
     const { error } = await supabase.rpc("save_document_type", {
-      p_id: t.id, p_school_id: schoolId, p_name: t.name, p_description: t.description,
-      p_is_required: !t.is_required, p_expires: t.expires, p_default_validity_months: t.default_validity_months,
+      p_id: t.id,
+      p_school_id: schoolId,
+      p_name: name,
+      p_description: description,
+      p_is_required: !t.is_required,
+      p_expires: expires,
+      p_default_validity_months: months,
     });
     if (error) { toast.error(error.message); return; }
     router.refresh();
@@ -55,11 +71,26 @@ export function DocumentTypeSettings({ schoolId, types }: { schoolId: string; ty
 
   async function handleToggleExpires(t: DocType) {
     const nextExpires = !t.expires;
-    const nextMonths = nextExpires ? (t.default_validity_months ?? 12) : null;
     const supabase = createClient();
+    const { data: current } = await supabase
+      .from("document_types")
+      .select("name, description, is_required, default_validity_months")
+      .eq("id", t.id)
+      .maybeSingle();
+
+    const name = current?.name ?? t.name;
+    const description = current?.description ?? t.description;
+    const isRequired = current?.is_required ?? t.is_required;
+    const nextMonths = nextExpires ? (current?.default_validity_months ?? t.default_validity_months ?? 12) : null;
+
     const { error } = await supabase.rpc("save_document_type", {
-      p_id: t.id, p_school_id: schoolId, p_name: t.name, p_description: t.description,
-      p_is_required: t.is_required, p_expires: nextExpires, p_default_validity_months: nextMonths,
+      p_id: t.id,
+      p_school_id: schoolId,
+      p_name: name,
+      p_description: description,
+      p_is_required: isRequired,
+      p_expires: nextExpires,
+      p_default_validity_months: nextMonths,
     });
     if (error) { toast.error(error.message); return; }
     toast.success(`Expiry rule updated to: ${nextExpires ? `${nextMonths} months` : "Never expires"}`);
@@ -68,9 +99,24 @@ export function DocumentTypeSettings({ schoolId, types }: { schoolId: string; ty
 
   async function handleUpdateMonths(t: DocType, months: number) {
     const supabase = createClient();
+    const { data: current } = await supabase
+      .from("document_types")
+      .select("name, description, is_required")
+      .eq("id", t.id)
+      .maybeSingle();
+
+    const name = current?.name ?? t.name;
+    const description = current?.description ?? t.description;
+    const isRequired = current?.is_required ?? t.is_required;
+
     const { error } = await supabase.rpc("save_document_type", {
-      p_id: t.id, p_school_id: schoolId, p_name: t.name, p_description: t.description,
-      p_is_required: t.is_required, p_expires: true, p_default_validity_months: months,
+      p_id: t.id,
+      p_school_id: schoolId,
+      p_name: name,
+      p_description: description,
+      p_is_required: isRequired,
+      p_expires: true,
+      p_default_validity_months: months,
     });
     if (error) { toast.error(error.message); return; }
     toast.success(`Validity updated to ${months} months.`);

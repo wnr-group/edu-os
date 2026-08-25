@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createClient } from "@supabase/supabase-js";
+import { getActiveRoles, hasAnyRole, topRole } from "@/lib/auth/roles";
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerSupabaseClient();
@@ -24,15 +25,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "teacherId and schoolId are required" }, { status: 400 });
   }
 
-  // Check caller role
-  const { data: roleRows } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .eq("is_active", true);
+  // Check caller role scoped to target school
+  const roles = await getActiveRoles(supabase, user.id);
+  const isAuthorized = hasAnyRole(roles, ["school_admin"], schoolId);
 
-  const activeRoles = (roleRows ?? []).map((r) => r.role);
-  const isAuthorized = activeRoles.includes("super_admin") || activeRoles.includes("school_admin");
   if (!isAuthorized) {
     return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
   }
@@ -66,25 +62,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: roleErr.message }, { status: 500 });
   }
 
-  // Clear class_teacher_of assignment if present
-  await adminClient
-    .from("teacher_profiles")
-    .update({ class_teacher_of: null })
-    .eq("id", teacherId);
 
-  // Clear assigned timetable slots for this teacher at this school
-  await adminClient
-    .from("timetable")
-    .delete()
-    .eq("teacher_id", teacherProfile.profile_id)
-    .eq("school_id", schoolId);
-
-  // Clear class teacher assignments for this teacher at this school
-  await adminClient
-    .from("section_assignments")
-    .delete()
-    .eq("class_teacher_id", teacherProfile.profile_id)
-    .eq("school_id", schoolId);
+  // Record audit log entry
+  const actingRole = topRole(roles) ?? "school_admin";
+  await adminClient.from("audit_log").insert({
+    school_id: schoolId,
+    performed_by: user.id,
+    acting_as_role: actingRole,
+    action: "teacher.deactivate",
+    entity_type: "teacher_profile",
+    entity_id: teacherId,
+    metadata: {
+      teacher_profile_id: teacherId,
+      profile_id: teacherProfile.profile_id,
+    },
+  });
 
   return NextResponse.json({ success: true });
 }
+

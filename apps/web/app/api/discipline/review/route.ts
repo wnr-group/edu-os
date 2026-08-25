@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerSupabaseClient();
@@ -12,7 +11,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { incidentId: string; status: "pending" | "reviewed" };
+  let body: { incidentId: string; status: string };
   try {
     body = await request.json();
   } catch {
@@ -24,36 +23,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "incidentId and status are required" }, { status: 400 });
   }
 
-  // Check caller role
-  const { data: roleRows } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .eq("is_active", true);
-
-  const activeRoles = (roleRows ?? []).map((r) => r.role);
-  const isAuthorized =
-    activeRoles.includes("super_admin") ||
-    activeRoles.includes("school_admin") ||
-    activeRoles.includes("principal");
-
-  if (!isAuthorized) {
-    return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
+  if (status !== "pending" && status !== "reviewed") {
+    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
-  const adminClient = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  const { error } = await adminClient
+  const { error, count } = await supabase
     .from("discipline_records")
-    .update({ status })
+    .update({ status }, { count: "exact" })
     .eq("id", incidentId);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  if (count === 0) {
+    return NextResponse.json({ error: "Forbidden or record not found" }, { status: 403 });
+  }
+
   return NextResponse.json({ success: true });
 }
+

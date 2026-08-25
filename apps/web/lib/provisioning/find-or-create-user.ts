@@ -22,13 +22,21 @@ export async function findOrCreateUserByPhone(
 ): Promise<FindOrCreateResult> {
   const { data: existing } = await adminClient
     .from("profiles")
-    .select("id")
+    .select("id, full_name, email")
     .eq("phone", phone)
     .maybeSingle();
 
   if (existing?.id) {
-    if (email?.trim()) {
-      await adminClient.from("profiles").update({ email: email.trim() }).eq("id", existing.id);
+    const updates: Record<string, unknown> = {};
+    if (!existing.full_name?.trim() && fullName?.trim()) {
+      updates.full_name = fullName.trim();
+    }
+    if (!existing.email?.trim() && email?.trim()) {
+      updates.email = email.trim();
+    }
+    if (Object.keys(updates).length > 0) {
+      const { error: updateErr } = await adminClient.from("profiles").update(updates).eq("id", existing.id);
+      if (updateErr) throw new Error(`Failed to update profile: ${updateErr.message}`);
     }
     return { userId: existing.id, created: false };
   }
@@ -43,12 +51,20 @@ export async function findOrCreateUserByPhone(
     // Race: another request created this phone between our lookup and insert.
     const { data: raced } = await adminClient
       .from("profiles")
-      .select("id")
+      .select("id, full_name, email")
       .eq("phone", phone)
       .maybeSingle();
     if (raced?.id) {
-      if (email?.trim()) {
-        await adminClient.from("profiles").update({ email: email.trim() }).eq("id", raced.id);
+      const updates: Record<string, unknown> = {};
+      if (!raced.full_name?.trim() && fullName?.trim()) {
+        updates.full_name = fullName.trim();
+      }
+      if (!raced.email?.trim() && email?.trim()) {
+        updates.email = email.trim();
+      }
+      if (Object.keys(updates).length > 0) {
+        const { error: updateErr } = await adminClient.from("profiles").update(updates).eq("id", raced.id);
+        if (updateErr) throw new Error(`Failed to update profile: ${updateErr.message}`);
       }
       return { userId: raced.id, created: false };
     }
@@ -61,10 +77,12 @@ export async function findOrCreateUserByPhone(
     profileUpdates.email = email.trim();
   }
 
-  await adminClient
+  const { error: profileErr } = await adminClient
     .from("profiles")
     .update(profileUpdates)
     .eq("id", userData.user.id);
+
+  if (profileErr) throw new Error(`Failed to initialize profile: ${profileErr.message}`);
 
   return { userId: userData.user.id, created: true };
 }
