@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { ShieldCheck, AlertTriangle, Clock, FileText, Settings, Eye } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-
+import { usePathname } from "next/navigation";
 export interface QueueRow {
   id: string;
   studentId: string;
@@ -49,7 +49,8 @@ export function KycDashboard({
   const [tab, setTab] = useState<"verify" | "incomplete" | "expiring">("verify");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
-
+  const pathname = usePathname();
+const settingsHref = pathname.startsWith("/principal") ? "/principal/kyc/settings" : "/admin/kyc/settings";
   const toggleOne = (id: string) => setSelected((prev) => {
     const next = new Set(prev);
     next.has(id) ? next.delete(id) : next.add(id);
@@ -99,7 +100,7 @@ export function KycDashboard({
           <h1 className="text-2xl font-bold text-gray-900">Student documents</h1>
           <p className="mt-1 text-sm text-muted-foreground">Verify what's been submitted and see, at a glance, whose records are still incomplete.</p>
         </div>
-        <Link href="/admin/kyc/settings" className="flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-sm font-medium hover:bg-muted">
+        <Link href={settingsHref} className="flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-sm font-medium hover:bg-muted">
           <Settings className="h-3.5 w-3.5" /> Document types
         </Link>
       </div>

@@ -74,7 +74,15 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     .eq("is_predefined", false)
     .eq("school_id", schoolId);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    if (error.code === "23503") {
+      return NextResponse.json(
+        { error: "Cannot delete this fee type because student fee records are currently using it." },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   if (!count) return NextResponse.json({ error: "Not found or forbidden" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

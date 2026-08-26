@@ -29,11 +29,13 @@ interface ExistingResult {
 
 export function MarksEntryForm({
   examId,
+  schoolId,
   subjects,
   students,
   existingResults,
 }: {
   examId: string;
+  schoolId: string;
   subjects: SubjectOption[];
   students: StudentRow[];
   existingResults: ExistingResult[];
@@ -70,14 +72,20 @@ export function MarksEntryForm({
     setSaved(false);
     const supabase = createClient();
 
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     const records = students
       .filter((s) => marks[s.id] !== undefined && marks[s.id] !== "")
       .map((s) => ({
+        school_id: schoolId,
         exam_id: examId,
         student_id: s.id,
         subject_id: subjectId,
         marks_obtained: parseFloat(marks[s.id] ?? "0"),
         max_marks: parseFloat(maxMarks || "100"),
+        teacher_id: user?.id,
       }));
 
     const { error: err } = await supabase

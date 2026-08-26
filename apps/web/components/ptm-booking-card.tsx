@@ -161,7 +161,14 @@ export function PtmBookingCard({
         <div className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-50 py-2.5 text-sm font-semibold text-emerald-700">
           <Check className="h-4 w-4" /> You acknowledged this
         </div>
-      ) : (
+      ) : (roster ?? []).some((r) => r.userId === currentUserId) ? (
+        // Only rendered for someone the roster actually lists (this meeting's
+        // teacher, or a same-school school_admin/principal) — matches
+        // acknowledge_ptm_booking's own authorization exactly, since both are
+        // built from the same rule. A super_admin viewing via "View as School
+        // Admin" is never on the roster (by design — not a day-to-day school
+        // operator), so they see no button here instead of a button that
+        // would fail server-side with not_authorized.
         <button
           onClick={handleAcknowledge}
           disabled={acking}
@@ -169,7 +176,7 @@ export function PtmBookingCard({
         >
           {acking ? "Acknowledging…" : "Acknowledge"}
         </button>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -18,14 +18,26 @@ export async function findOrCreateUserByPhone(
   adminClient: SupabaseClient,
   phone: string,
   fullName: string,
+  email?: string,
 ): Promise<FindOrCreateResult> {
   const { data: existing } = await adminClient
     .from("profiles")
-    .select("id")
+    .select("id, full_name, email")
     .eq("phone", phone)
     .maybeSingle();
 
   if (existing?.id) {
+    const updates: Record<string, unknown> = {};
+    if (!existing.full_name?.trim() && fullName?.trim()) {
+      updates.full_name = fullName.trim();
+    }
+    if (!existing.email?.trim() && email?.trim()) {
+      updates.email = email.trim();
+    }
+    if (Object.keys(updates).length > 0) {
+      const { error: updateErr } = await adminClient.from("profiles").update(updates).eq("id", existing.id);
+      if (updateErr) throw new Error(`Failed to update profile: ${updateErr.message}`);
+    }
     return { userId: existing.id, created: false };
   }
 
@@ -39,20 +51,38 @@ export async function findOrCreateUserByPhone(
     // Race: another request created this phone between our lookup and insert.
     const { data: raced } = await adminClient
       .from("profiles")
-      .select("id")
+      .select("id, full_name, email")
       .eq("phone", phone)
       .maybeSingle();
     if (raced?.id) {
+      const updates: Record<string, unknown> = {};
+      if (!raced.full_name?.trim() && fullName?.trim()) {
+        updates.full_name = fullName.trim();
+      }
+      if (!raced.email?.trim() && email?.trim()) {
+        updates.email = email.trim();
+      }
+      if (Object.keys(updates).length > 0) {
+        const { error: updateErr } = await adminClient.from("profiles").update(updates).eq("id", raced.id);
+        if (updateErr) throw new Error(`Failed to update profile: ${updateErr.message}`);
+      }
       return { userId: raced.id, created: false };
     }
     throw new Error(createError?.message ?? "Failed to create user");
   }
 
-  // Set the profile name for the freshly created user only.
-  await adminClient
+  // Set the profile name and optional email for the freshly created user.
+  const profileUpdates: Record<string, unknown> = { full_name: fullName, phone };
+  if (email?.trim()) {
+    profileUpdates.email = email.trim();
+  }
+
+  const { error: profileErr } = await adminClient
     .from("profiles")
-    .update({ full_name: fullName, phone })
+    .update(profileUpdates)
     .eq("id", userData.user.id);
+
+  if (profileErr) throw new Error(`Failed to initialize profile: ${profileErr.message}`);
 
   return { userId: userData.user.id, created: true };
 }

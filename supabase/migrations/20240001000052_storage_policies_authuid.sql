@@ -48,3 +48,22 @@ CREATE POLICY "school_assets_upload" ON storage.objects FOR INSERT
 CREATE POLICY "school_assets_update" ON storage.objects FOR UPDATE
   TO authenticated
   USING (bucket_id = 'school-assets' AND public._has_storage_admin_role());
+
+-- student-photos
+DROP POLICY IF EXISTS "student_photos_parent_upload" ON storage.objects;
+DROP POLICY IF EXISTS "student_photos_parent_update" ON storage.objects;
+
+CREATE POLICY "student_photos_parent_upload" ON storage.objects FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    bucket_id = 'student-photos'
+    AND public.is_parent_of_student(NULLIF((storage.foldername(name))[2], '')::uuid)
+  );
+
+CREATE POLICY "student_photos_parent_update" ON storage.objects FOR UPDATE
+  TO authenticated
+  USING (
+    bucket_id = 'student-photos'
+    AND public.is_parent_of_student(NULLIF((storage.foldername(name))[2], '')::uuid)
+  );
+

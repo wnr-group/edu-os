@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Image, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -9,9 +9,9 @@ import { PrimaryButton } from "../../../components/PrimaryButton";
 import { SkeletonCard } from "../../../components/Skeleton";
 import {
   loadRoster, loadAttachments, getSignedUrl, reviewStudent, notifyReviewed,
+  getHomeworkSubmissionSignedUrl,
   RosterRow, AttachmentRow, HomeworkRating,
 } from "../../../lib/homework";
-import { Linking } from "react-native";
 
 const RATING_OPTIONS: { value: HomeworkRating; label: string }[] = [
   { value: "good", label: "Good" },
@@ -33,10 +33,11 @@ export default function HomeworkDetail() {
   const [draftRating, setDraftRating] = useState<HomeworkRating>("good");
   const [draftComment, setDraftComment] = useState("");
   const [saving, setSaving] = useState(false);
+  const [submissionUrls, setSubmissionUrls] = useState<Record<string, { url: string | null; loading: boolean; error: string | null }>>({});
   const [groupsOpen, setGroupsOpen] = useState({ done: true, viewed: true, not_started: false });
 
   const load = useCallback(async () => {
-    if (!homeworkId || !secId) return;
+    if (!homeworkId) return;
     setLoading(true);
     const [r, a] = await Promise.all([loadRoster(homeworkId, secId), loadAttachments(homeworkId)]);
     setRoster(r);
@@ -52,11 +53,29 @@ export default function HomeworkDetail() {
   const notStartedRows = roster.filter((r) => r.state === "not_started");
   const doneCount = doneRows.length;
 
+  async function fetchSubmissionUrl(submissionId: string) {
+    setSubmissionUrls((prev) => ({
+      ...prev,
+      [submissionId]: { url: null, loading: true, error: null },
+    }));
+    const res = await getHomeworkSubmissionSignedUrl(submissionId);
+    setSubmissionUrls((prev) => ({
+      ...prev,
+      [submissionId]: { url: res.url, loading: false, error: res.error },
+    }));
+  }
+
   function openReview(row: RosterRow) {
-    if (expandedId === row.studentId) { setExpandedId(null); return; }
+    if (expandedId === row.studentId) {
+      setExpandedId(null);
+      return;
+    }
     setExpandedId(row.studentId);
     setDraftRating(row.rating ?? "good");
     setDraftComment(row.teacherComment ?? "");
+    if (row.submission && !submissionUrls[row.submission.id]?.url && !submissionUrls[row.submission.id]?.loading) {
+      fetchSubmissionUrl(row.submission.id);
+    }
   }
 
   async function saveReview(row: RosterRow) {
@@ -87,16 +106,242 @@ export default function HomeworkDetail() {
           onPress={reviewable ? () => openReview(row) : undefined}
           style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
         >
-          <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: theme.textPrimary }}>{row.fullName}</Text>
-          {row.reviewedAt ? (
-            <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: theme.primary }}>{ratingLabel(row.rating)}</Text>
-          ) : reviewable ? (
-            <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={18} color={theme.textMuted} />
-          ) : null}
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: theme.textPrimary }}>{row.fullName}</Text>
+            {row.submission && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
+                <Ionicons name="attach-outline" size={14} color={theme.primary} />
+                <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: theme.primary }} numberOfLines={1}>
+                  {row.submission.fileName}
+                </Text>
+              </View>
+            )}
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            {row.reviewedAt && row.rating ? (
+              <View style={{ backgroundColor: theme.primaryLight ?? "#EFF6FF", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: theme.primary }}>{ratingLabel(row.rating)}</Text>
+              </View>
+            ) : null}
+            {reviewable ? (
+              <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={18} color={theme.textMuted} />
+            ) : null}
+          </View>
         </TouchableOpacity>
 
         {expanded && reviewable && (
           <View style={{ marginTop: 12, gap: 10 }}>
+            {row.submission && (() => {
+              const subState = submissionUrls[row.submission.id];
+              const isImage =
+                row.submission.fileType.startsWith("image/") ||
+                /\.(jpe?g|png|webp)$/i.test(row.submission.fileName);
+
+              return (
+                <View
+                  style={{
+                    backgroundColor: theme.surfaceRaised,
+                    borderRadius: 12,
+                    padding: 14,
+                    borderWidth: 1,
+                    borderColor: theme.border,
+                    gap: 10,
+                  }}
+                >
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 8,
+                        flex: 1,
+                        marginRight: 8,
+                      }}
+                    >
+                      <Ionicons
+                        name={isImage ? "image-outline" : "document-text-outline"}
+                        size={20}
+                        color={theme.primary}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontFamily: "Inter_600SemiBold",
+                            color: theme.textPrimary,
+                          }}
+                          numberOfLines={1}
+                        >
+                          Submitted {isImage ? "Photo" : "Document"}
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontFamily: "Inter_400Regular",
+                            color: theme.textSecondary,
+                          }}
+                          numberOfLines={1}
+                        >
+                          {row.submission.fileName}
+                        </Text>
+                      </View>
+                    </View>
+                    {subState?.url ? (
+                      <TouchableOpacity
+                        onPress={() => Linking.openURL(subState.url!)}
+                        hitSlop={8}
+                        style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontFamily: "Inter_500Medium",
+                            color: theme.primary,
+                          }}
+                        >
+                          {isImage ? "Full size" : "Open PDF"}
+                        </Text>
+                        <Ionicons name="open-outline" size={14} color={theme.primary} />
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+
+                  {subState?.loading ? (
+                    <View
+                      style={{
+                        height: isImage ? 180 : 60,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: theme.background,
+                        borderRadius: 8,
+                        gap: 8,
+                      }}
+                    >
+                      <ActivityIndicator size="small" color={theme.primary} />
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontFamily: "Inter_400Regular",
+                          color: theme.textMuted,
+                        }}
+                      >
+                        Loading submitted file…
+                      </Text>
+                    </View>
+                  ) : subState?.error ? (
+                    <View
+                      style={{
+                        padding: 12,
+                        backgroundColor: theme.danger + "12",
+                        borderRadius: 8,
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontFamily: "Inter_500Medium",
+                          color: theme.danger,
+                          textAlign: "center",
+                        }}
+                      >
+                        {subState.error}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => fetchSubmissionUrl(row.submission!.id)}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontFamily: "Inter_600SemiBold",
+                            color: theme.primary,
+                          }}
+                        >
+                          Tap to retry
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : subState?.url ? (
+                    isImage ? (
+                      <TouchableOpacity
+                        activeOpacity={0.9}
+                        onPress={() => Linking.openURL(subState.url!)}
+                        style={{ borderRadius: 8, overflow: "hidden" }}
+                      >
+                        <Image
+                          source={{ uri: subState.url }}
+                          style={{
+                            width: "100%",
+                            height: 220,
+                            borderRadius: 8,
+                            backgroundColor: theme.background,
+                          }}
+                          resizeMode="contain"
+                        />
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        onPress={() => Linking.openURL(subState.url!)}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 8,
+                          backgroundColor: theme.primary,
+                          borderRadius: 8,
+                          paddingVertical: 10,
+                        }}
+                      >
+                        <Ionicons name="document-text-outline" size={16} color="#fff" />
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontFamily: "Inter_600SemiBold",
+                            color: "#fff",
+                          }}
+                        >
+                          View PDF Document
+                        </Text>
+                      </TouchableOpacity>
+                    )
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => fetchSubmissionUrl(row.submission!.id)}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
+                        paddingVertical: 10,
+                        backgroundColor: theme.surface,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: theme.border,
+                      }}
+                    >
+                      <Ionicons name="eye-outline" size={16} color={theme.primary} />
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontFamily: "Inter_600SemiBold",
+                          color: theme.primary,
+                        }}
+                      >
+                        Load Submission
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })()}
+
             <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
               {RATING_OPTIONS.map((opt) => (
                 <TouchableOpacity

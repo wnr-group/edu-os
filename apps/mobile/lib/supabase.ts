@@ -65,10 +65,24 @@ export function setActiveRoleHeader(role: string) {
   }
 }
 
-// Rewrite storage URLs that were saved with 127.0.0.1 so they work on physical devices.
-// When supabaseUrl points to a LAN IP, 127.0.0.1 in stored URLs must be replaced.
+// Normalize a storage/signed URL's origin to match this app's own configured
+// Supabase origin. Edge Functions resolve SUPABASE_URL from inside their own
+// runtime (e.g. the internal Docker service address in self-hosted/local
+// setups), which differs from the address this app actually reaches Supabase
+// through — so a signed URL minted by an Edge Function can come back with a
+// host this app (or a physical device) cannot resolve at all. Storage sits
+// behind the same gateway as every other Supabase API this app calls, so
+// swapping in our own origin always lands on a reachable host; in
+// production, where the origins already match, this is a no-op.
 export function fixStorageUrl(url: string): string {
-  const configured = new URL(supabaseUrl);
-  if (configured.hostname === "127.0.0.1") return url;
-  return url.replace("//127.0.0.1:", `//${configured.hostname}:`);
+  try {
+    const configured = new URL(supabaseUrl);
+    const target = new URL(url);
+    if (target.origin === configured.origin) return url;
+    target.protocol = configured.protocol;
+    target.host = configured.host;
+    return target.toString();
+  } catch {
+    return url;
+  }
 }

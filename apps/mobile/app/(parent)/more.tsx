@@ -23,6 +23,8 @@ export default function ParentMore() {
   const announcementsEnabled = useFeature("announcements");
   const disciplineEnabled = useFeature("discipline");
   const ptmEnabled = useFeature("ptm");
+  const admissionsEnabled = useFeature("admissions");
+  const kycEnabled = useFeature("kyc_documents");
   const router = useRouter();
   const { studentId: activeStudentId, activeYearId } = useActiveContext();
   const { section: sectionParam } = useLocalSearchParams<{ section?: string }>();
@@ -525,7 +527,7 @@ export default function ParentMore() {
             icon="card-outline"
             title="Student ID Card"
             subtitle="View your child's digital ID"
-            onPress={() => router.push("/(parent)/id-card")}
+            onPress={() => router.push("/(parent)/id-card" as any)}
           />
           {announcementsEnabled && (
             <ListItem
@@ -540,6 +542,12 @@ export default function ParentMore() {
           )}
           {ptmEnabled && (
             <ListItem icon="people-outline" title="Parent-Teacher Meetings" subtitle="Upcoming & past meetings" onPress={() => router.push("/(parent)/ptm")} />
+          )}
+          {admissionsEnabled && (
+            <ListItem icon="school-outline" title="Admission Enquiry" subtitle="Enquire about a new admission" onPress={() => router.push("/(parent)/admission-enquiry" as any)} />
+          )}
+          {kycEnabled && (
+            <ListItem icon="document-text-outline" title="KYC Documents" subtitle="View document status" onPress={() => router.push("/(parent)/kyc-documents" as any)} />
           )}
           {feedbackEnabled && (
             <>

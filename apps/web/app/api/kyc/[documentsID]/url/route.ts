@@ -52,6 +52,15 @@ export async function GET(request: NextRequest) {
     const { data: teaches } = await supabase.rpc("teaches_student", { p_student_id: doc.subject_id });
     authorized = !!teaches;
   }
+  if (!authorized) {
+    const { data: ownChild } = await supabase
+      .from("student_profiles")
+      .select("id")
+      .eq("id", doc.subject_id)
+      .eq("parent_profile_id", user.id)
+      .maybeSingle();
+    authorized = !!ownChild;
+  }
   if (!authorized) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { data: signed, error: signError } = await adminClient.storage

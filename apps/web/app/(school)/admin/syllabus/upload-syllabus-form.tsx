@@ -108,17 +108,18 @@ export function UploadSyllabusForm({
       {error && (
         <p className="rounded bg-red-50 px-4 py-2 text-sm text-red-600">{error}</p>
       )}
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="w-44">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="flex flex-col gap-1.5">
           <Label>Class</Label>
           <NativeSelect
             options={classes.map((c) => ({ value: c.id, label: c.name }))}
             value={classId}
             onChange={(e) => handleClassChange(e.target.value)}
             placeholder="Select class"
+            className="w-full"
           />
         </div>
-        <div className="w-44">
+        <div className="flex flex-col gap-1.5">
           <Label>Subject</Label>
           <NativeSelect
             options={filteredSubjects.map((s) => ({ value: s.id, label: s.name }))}
@@ -126,25 +127,27 @@ export function UploadSyllabusForm({
             onChange={(e) => setSubjectId(e.target.value)}
             placeholder="Select subject"
             disabled={!classId}
+            className="w-full"
           />
         </div>
-        <div className="w-44">
+        <div className="flex flex-col gap-1.5">
           <Label>Academic Year</Label>
           <NativeSelect
             options={academicYears.map((y) => ({ value: y.id, label: y.name }))}
             value={academicYearId}
             onChange={(e) => setAcademicYearId(e.target.value)}
             placeholder="Select year"
+            className="w-full"
           />
         </div>
       </div>
-      <div>
+      <div className="flex flex-col gap-1.5">
         <Label>PDF File</Label>
         <input
           type="file"
           accept=".pdf,.doc,.docx"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
+          className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
         />
       </div>
       <Button type="submit" disabled={loading || !classId || !subjectId || !academicYearId || !file}>

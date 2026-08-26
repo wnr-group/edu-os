@@ -15,7 +15,6 @@ import Link from "next/link";
 function getLastNSchoolDays(n: number): Date[] {
   const days: Date[] = [];
   let d = new Date();
-  d.setDate(d.getDate() - 1);
   while (days.length < n) {
     const dow = d.getDay();
     if (dow !== 0 && dow !== 6) days.push(new Date(d));
@@ -43,7 +42,7 @@ export default async function TeacherDashboard() {
     { data: sectionData },
     { count: studentCount },
     { data: todayAttRows },
-    { data: classTeacher },
+    { data: classTeacherAssignment },
   ] = await Promise.all([
     supabase
       .from("sections")
@@ -65,20 +64,37 @@ export default async function TeacherDashboard() {
 
     supabase
       .from("section_assignments")
-      .select("class_teacher_id, profiles!class_teacher_id(full_name)")
+      .select("class_teacher_id")
       .eq("section_id", sectionId)
       .maybeSingle(),
   ]);
+
+  let classTeacherName: string | null = null;
+  if (classTeacherAssignment?.class_teacher_id && schoolId) {
+    const { data: activeRole } = await supabase
+      .from("user_roles")
+      .select("is_active")
+      .eq("user_id", classTeacherAssignment.class_teacher_id)
+      .eq("school_id", schoolId)
+      .eq("role", "teacher")
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (activeRole) {
+      const { data: ctProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", classTeacherAssignment.class_teacher_id)
+        .maybeSingle();
+      classTeacherName = ctProfile?.full_name ?? null;
+    }
+  }
 
   // Section display name
   const cls = sectionData?.class as unknown as { name: string } | null;
   const className = cls?.name ?? "";
   const sectionName = sectionData?.name ?? "";
   const sectionLabel = `${className} – Section ${sectionName}`;
-
-  // Class teacher name
-  const ctProfiles = classTeacher?.profiles as unknown as { full_name: string } | null;
-  const classTeacherName = ctProfiles?.full_name ?? null;
 
   // Today's attendance numbers — excused is neutral, excluded from the total.
   const todayRows = (todayAttRows ?? []).filter((r) => r.status !== "excused");

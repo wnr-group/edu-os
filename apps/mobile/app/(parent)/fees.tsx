@@ -233,13 +233,13 @@ export default function ParentFees() {
 
     const paidMap: Record<string, number> = {};
     for (const p of paymentsData ?? []) {
-      for (const lip of (p as any).line_item_payments ?? []) {
+      for (const lip of p.line_item_payments ?? []) {
         const liId: string = lip.line_item_id ?? "";
         paidMap[liId] = (paidMap[liId] ?? 0) + (lip.amount_applied ?? 0);
       }
     }
 
-    const items: FeeLineItem[] = (lineItemsData ?? []).map((li: any) => {
+    const items: FeeLineItem[] = (lineItemsData ?? []).map((li) => {
       const paid = paidMap[li.id] ?? 0;
       const outstanding = Math.max(0, li.total_amount - paid);
       return {
@@ -257,11 +257,18 @@ export default function ParentFees() {
 
     setLineItems(items);
     setHistory(
-      (paymentsData ?? []).map((p: any) => {
-        // A payment inherits its year from the line items it covers (payments
-        // themselves aren't year-tagged). Use the first covered item's year.
+      (paymentsData ?? []).map((p) => {
+        type SupabaseFeeLineItem = {
+          fee_type?: { name?: string } | { name?: string }[];
+          academic_years?: { name?: string; start_date?: string } | { name?: string; start_date?: string }[];
+        };
         const firstYear = ((p.line_item_payments ?? [])
-          .map((lip: any) => lip.fee_line_items?.academic_years)
+          .map((lip) => {
+            const items = lip.fee_line_items as unknown as SupabaseFeeLineItem | SupabaseFeeLineItem[];
+            const firstItem = Array.isArray(items) ? items[0] : items;
+            const ay = firstItem?.academic_years;
+            return Array.isArray(ay) ? ay[0] : ay;
+          })
           .find(Boolean)) as { name?: string; start_date?: string } | undefined;
         return {
           id: p.id,
@@ -270,10 +277,16 @@ export default function ParentFees() {
           payment_method: p.payment_method ?? "",
           mode: p.mode ?? "",
           transaction_id: p.transaction_id ?? p.razorpay_payment_id ?? null,
-          line_items_covered: ((p.line_item_payments ?? []) as any[]).map((lip: any) => ({
-            fee_type: (lip.fee_line_items as { fee_type?: { name?: string } } | null)?.fee_type?.name ?? "—",
-            amount_applied: lip.amount_applied ?? 0,
-          })),
+          line_items_covered: (p.line_item_payments ?? []).map((lip) => {
+            const items = lip.fee_line_items as unknown as SupabaseFeeLineItem | SupabaseFeeLineItem[];
+            const firstItem = Array.isArray(items) ? items[0] : items;
+            const ft = firstItem?.fee_type;
+            const ftName = Array.isArray(ft) ? ft[0]?.name : ft?.name;
+            return {
+              fee_type: ftName ?? "—",
+              amount_applied: lip.amount_applied ?? 0,
+            };
+          }),
           yearName: firstYear?.name ?? "Other",
           yearStart: firstYear?.start_date ?? "",
         };
@@ -322,7 +335,7 @@ export default function ParentFees() {
       const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "";
       if (!supabaseUrl) throw new Error("EXPO_PUBLIC_SUPABASE_URL is not set");
 
-      let orderData: any;
+      let orderData;
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const orderRes = await fetch(`${supabaseUrl}/functions/v1/create-razorpay-order`, {
@@ -339,8 +352,9 @@ export default function ParentFees() {
         });
         orderData = await orderRes.json();
         if (!orderRes.ok) throw new Error(`Order API error (${orderRes.status}): ${orderData.error ?? "unknown"}`);
-      } catch (fetchErr: any) {
-        throw new Error(`Cannot reach payment server: ${fetchErr?.message ?? fetchErr}`);
+      } catch (fetchErr) {
+        const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+        throw new Error(`Cannot reach payment server: ${msg}`);
       }
 
       if (!orderData.order_id) throw new Error("No order ID returned from server");
@@ -361,14 +375,19 @@ export default function ParentFees() {
         theme: { color: "#4F46E5" },
       };
 
-      await RazorpayCheckout.open(options as any);
+      await RazorpayCheckout.open(options );
       // Webhook handles DB write; refresh after short delay
       await new Promise((r) => setTimeout(r, 2000));
       setSelectedIds(new Set());
       await loadFees();
-    } catch (e: any) {
-      if (e?.code !== "PAYMENT_CANCELLED") {
-        Alert.alert("Payment failed", e?.description ?? e?.message ?? "Try again");
+    } catch (e) {
+      const isRecord = e && typeof e === 'object';
+      const code = isRecord && 'code' in e ? String(e.code) : undefined;
+      const description = isRecord && 'description' in e ? String(e.description) : undefined;
+      const message = e instanceof Error ? e.message : (isRecord && 'message' in e ? String(e.message) : String(e));
+
+      if (code !== "PAYMENT_CANCELLED") {
+        Alert.alert("Payment failed", description ?? message ?? "Try again");
         console.error("Payment error:", e);
       }
     } finally {
@@ -441,7 +460,7 @@ export default function ParentFees() {
                     borderColor: selectedIds.has(li.id) ? theme.primary : "transparent",
                   }}
                 >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
                     {paymentsEnabled && (
                       <View style={{
                         width: 20, height: 20, borderRadius: 4, borderWidth: 1.5,
@@ -452,14 +471,14 @@ export default function ParentFees() {
                         {selectedIds.has(li.id) && <Ionicons name="checkmark" size={13} color="#fff" />}
                       </View>
                     )}
-                    <View>
+                    <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: theme.textPrimary }}>{li.fee_type}</Text>
                       <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary, marginTop: 2 }}>
                         Due {li.due_date ? new Date(li.due_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—"}
                       </Text>
                     </View>
                   </View>
-                  <View style={{ alignItems: "flex-end", gap: 4 }}>
+                  <View style={{ alignItems: "flex-end", gap: 4, marginLeft: 16 }}>
                     <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: theme.textPrimary }}>₹{li.outstanding.toLocaleString("en-IN")}</Text>
                   </View>
                 </TouchableOpacity>
@@ -499,7 +518,7 @@ export default function ParentFees() {
               <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: theme.textMuted, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 8 }}>{group.name}</Text>
               {group.rows.map((p) => (
                 <TouchableOpacity key={p.id} onPress={() => setReceipt(p)} style={{ backgroundColor: theme.surface, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }} activeOpacity={0.7}>
-                  <View>
+                  <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: theme.textPrimary }}>
                       {p.line_items_covered.length > 0 ? p.line_items_covered.map((lic) => lic.fee_type).join(", ") : "Payment"}
                     </Text>
@@ -507,7 +526,7 @@ export default function ParentFees() {
                       {p.paid_at ? new Date(p.paid_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
                     </Text>
                   </View>
-                  <View style={{ alignItems: "flex-end", gap: 6 }}>
+                  <View style={{ alignItems: "flex-end", gap: 6, marginLeft: 16 }}>
                     <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: theme.success }}>₹{p.total_amount.toLocaleString("en-IN")}</Text>
                     <StatusBadge variant="paid" />
                   </View>
@@ -545,7 +564,7 @@ export default function ParentFees() {
                 {receipt.line_items_covered?.length > 0 && (
                   <View style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: theme.border }}>
                     <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: theme.textSecondary, marginBottom: 4 }}>Applied to</Text>
-                    {receipt.line_items_covered.map((lic: any, i: number) => (
+                    {receipt.line_items_covered.map((lic, i: number) => (
                       <View key={i} style={{ flexDirection: "row", justifyContent: "space-between" }}>
                         <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary }}>{lic.fee_type}</Text>
                         <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: theme.textPrimary }}>₹{lic.amount_applied.toLocaleString("en-IN")}</Text>

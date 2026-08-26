@@ -12,6 +12,7 @@ export interface RosterRow {
   rating: HomeworkRating | null;
   teacherComment: string | null;
   reviewedAt: string | null;
+  submission: { id: string; fileName: string; fileType: string } | null;
 }
 
 export interface AttachmentRow {
@@ -34,14 +35,23 @@ export async function loadRoster(homeworkId: string, sectionId: string): Promise
     .select("student_id, state, rating, teacher_comment, reviewed_at")
     .eq("homework_id", homeworkId);
 
+  const { data: subs } = await supabase
+    .from("homework_submissions")
+    .select("id, student_id, file_name, file_type")
+    .eq("homework_id", homeworkId);
+
   const byStudent: Record<string, any> = {};
   for (const s of statuses ?? []) byStudent[(s as any).student_id] = s;
+
+  const subsByStudent: Record<string, any> = {};
+  for (const s of subs ?? []) subsByStudent[(s as any).student_id] = s;
 
   return (enrollments ?? [])
     .map((e: any) => e.student_profiles)
     .filter(Boolean)
     .map((sp: any): RosterRow => {
       const s = byStudent[sp.id];
+      const sub = subsByStudent[sp.id];
       return {
         studentId: sp.id,
         fullName: sp.full_name,
@@ -49,6 +59,7 @@ export async function loadRoster(homeworkId: string, sectionId: string): Promise
         rating: s?.rating ?? null,
         teacherComment: s?.teacher_comment ?? null,
         reviewedAt: s?.reviewed_at ?? null,
+        submission: sub ? { id: sub.id, fileName: sub.file_name, fileType: sub.file_type } : null,
       };
     })
     .sort((a, b) => a.fullName.localeCompare(b.fullName));
@@ -112,3 +123,43 @@ async function callNotify(payload: object): Promise<void> {
 export const notifyAssigned = (homeworkId: string) => callNotify({ event: "assigned", homeworkId });
 export const notifyReviewed = (homeworkId: string, studentId: string) =>
   callNotify({ event: "reviewed", homeworkId, studentId });
+
+// Edge Functions resolve SUPABASE_URL from inside their own runtime (e.g. the
+// internal Docker service address in self-hosted/local setups), which can
+// differ from the origin this app actually reaches Supabase through — so a
+// signed URL minted by the Edge Function can come back with a host this
+// browser can't resolve. Storage sits behind the same gateway as every other
+// Supabase API this app calls, so swapping in our own configured origin
+// always lands on a reachable host; in production, where the origins already
+// match, this is a no-op.
+function fixEdgeFunctionUrlOrigin(url: string): string {
+  try {
+    const configured = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!);
+    const target = new URL(url);
+    if (target.origin === configured.origin) return url;
+    target.protocol = configured.protocol;
+    target.host = configured.host;
+    return target.toString();
+  } catch {
+    return url;
+  }
+}
+
+export async function getHomeworkSubmissionSignedUrl(submissionId: string): Promise<{ url: string | null; error: string | null }> {
+  const supabase = createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return { url: null, error: "Not authenticated" };
+
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/homework-submission-signed-url`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ submissionId }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { url: null, error: data.error ?? "Could not open submission" };
+    return { url: data.url ? fixEdgeFunctionUrlOrigin(data.url as string) : null, error: null };
+  } catch {
+    return { url: null, error: "Network error" };
+  }
+}
