@@ -10,6 +10,22 @@ AS $$
   );
 $$;
 
+CREATE OR REPLACE FUNCTION public.is_parent_of_student(p_student_id uuid, p_school_id uuid)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.student_profiles sp
+    WHERE sp.id = p_student_id
+      AND sp.parent_profile_id = auth.uid()
+      AND sp.school_id = p_school_id
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.is_parent_of_student(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_parent_of_student(uuid, uuid) TO authenticated;
+
+
 CREATE OR REPLACE FUNCTION public.teaches_homework_section(p_homework_id uuid)
 RETURNS boolean
 LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = ''

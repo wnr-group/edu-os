@@ -37,7 +37,7 @@ CREATE POLICY health_submissions_select ON public.student_health_record_submissi
     AND public.feature_enabled(school_id, 'health_records')
     AND public.get_my_role() IN ('school_admin', 'principal')
   )
-  OR (public.feature_enabled(school_id, 'health_records') AND submitted_by = auth.uid())
+  OR submitted_by = auth.uid()
 );
 GRANT SELECT ON public.student_health_record_submissions TO authenticated;
 
@@ -79,17 +79,6 @@ BEGIN
   RETURNING id INTO v_id;
   RETURN v_id;
 END; $$;
-
--- Private helper: it deliberately carries no authz checks of its own (its
--- callers below do that), so it must never be reachable through PostgREST.
--- Postgres grants EXECUTE to PUBLIC by default on every new function, and
--- everything in the public schema is exposed via PostgREST regardless of
--- naming convention — a leading underscore hides nothing from the API.
--- Only upsert_health_record and review_health_submission may call it; both
--- run SECURITY DEFINER (as the owner), so they're unaffected by this revoke.
-REVOKE EXECUTE ON FUNCTION public._apply_health_record(
-  uuid, uuid, text, text, text, text, text, text, text, text, text, text, uuid
-) FROM PUBLIC, anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.upsert_health_record(
   p_student_id uuid,
@@ -189,7 +178,6 @@ DECLARE
 BEGIN
   SELECT * INTO v_sub FROM public.student_health_record_submissions WHERE id = p_id;
   IF v_sub.id IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
-  IF NOT public.feature_enabled(v_sub.school_id, 'health_records') THEN RAISE EXCEPTION 'module_disabled'; END IF;
   IF v_sub.status <> 'pending' THEN RAISE EXCEPTION 'not_pending'; END IF;
   IF public.get_my_role() NOT IN ('super_admin', 'school_admin', 'principal') THEN RAISE EXCEPTION 'not_authorized'; END IF;
   IF public.get_my_role() <> 'super_admin' AND v_sub.school_id <> public.get_my_school_id() THEN RAISE EXCEPTION 'not_authorized'; END IF;

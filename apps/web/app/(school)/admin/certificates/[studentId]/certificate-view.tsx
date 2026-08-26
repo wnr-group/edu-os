@@ -29,9 +29,9 @@ function formatDate(iso: string | null): string {
 }
 
 function genderText(gender: string | null): { relation: string; pronoun: string; salutation: string } {
-  if (gender === "male")   return { relation: "son",      pronoun: "His",   salutation: "Mr." };
-  if (gender === "female") return { relation: "daughter", pronoun: "Her",   salutation: "Mrs." };
-  return                          { relation: "child",    pronoun: "Their", salutation: "Mr./Mrs." };
+  if (gender === "male") return { relation: "son", pronoun: "His", salutation: "Mr." };
+  if (gender === "female") return { relation: "daughter", pronoun: "Her", salutation: "Mrs." };
+  return { relation: "child", pronoun: "Their", salutation: "Mr./Mrs." };
 }
 
 export function CertificateView({ data }: { data: CertificateData }) {
@@ -112,6 +112,13 @@ export function CertificateView({ data }: { data: CertificateData }) {
     printWindow.focus();
     setTimeout(() => { printWindow.print(); }, 300);
   }
+  
+  const isPrincipalView = data.backHref.startsWith("/principal");
+        const studentProfileLink = isPrincipalView
+        ? `/principal/students/${data.studentProfileId}`
+        : `/admin/students/${data.studentProfileId}`;
+
+
 
   return (
     <div className="min-h-screen bg-muted/30 p-6 animate-fade-in-up">
@@ -134,9 +141,14 @@ export function CertificateView({ data }: { data: CertificateData }) {
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             Some student details are missing (
             {[!data.dateOfBirth && "date of birth", !data.parentName && "parent name", !data.gender && "gender"].filter(Boolean).join(", ")}
-            ). <Link href={`/admin/students/${data.studentProfileId}`} className="font-medium underline">Edit the student profile</Link> to fill them in before printing.
+            ). <Link href={studentProfileLink} className="font-medium underline">
+              Edit the student profile
+            </Link> to fill them in before printing.
           </div>
         )}
+
+      
+
 
         <div ref={printRef} className="rounded-xl border border-border bg-white px-14 py-10 shadow-sm font-serif">
           {/* Header */}

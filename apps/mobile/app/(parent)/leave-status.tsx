@@ -26,6 +26,15 @@ function daysCount(from: string, to: string): number {
   return Math.round((new Date(to).getTime() - new Date(from).getTime()) / 86400000) + 1;
 }
 
+// Attendance for a leave date is only written to attendance_records once a
+// teacher actually marks that day (or retroactively at approval time for
+// days already marked) — so a leave range ending today-or-later cannot be
+// asserted as already recorded.
+function isFullyPast(toDate: string): boolean {
+  const today = new Date().toISOString().split("T")[0];
+  return toDate < today;
+}
+
 export default function LeaveStatusScreen() {
   const theme = useTheme();
   const router = useRouter();
@@ -101,7 +110,11 @@ export default function LeaveStatusScreen() {
               </View>
               {r.note ? <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary }}>{r.note}</Text> : null}
               {r.status === "approved" && (
-                <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: theme.success }}>✓ Approved — marked Excused</Text>
+                <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: isFullyPast(r.toDate) ? theme.success : theme.warning }}>
+                  {isFullyPast(r.toDate)
+                    ? "✓ Approved — marked Excused"
+                    : "✓ Approved — will be marked Excused automatically"}
+                </Text>
               )}
               {r.status === "rejected" && r.decisionNote && (
                 <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: theme.danger }}>✕ Declined: "{r.decisionNote}"</Text>

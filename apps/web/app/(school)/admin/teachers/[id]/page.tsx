@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getAcademicYearId } from "@/lib/academic-year";
 import { DetailPageTemplate } from "@/components/detail-page-template";
+import { RemoveTeacherButton } from "./remove-teacher-button";
 
 export default async function TeacherDetailPage({
   params,
@@ -77,6 +78,13 @@ export default async function TeacherDetailPage({
       backLabel="Back to Teachers"
       title={profile?.full_name ?? "—"}
       subtitle={`Joined ${new Date(teacher.created_at).toLocaleDateString()}`}
+      actions={
+        <RemoveTeacherButton
+          teacherId={teacher.id}
+          schoolId={schoolId!}
+          teacherName={profile?.full_name ?? "Teacher"}
+        />
+      }
       activeTab=""
       tabs={[]}
       header={

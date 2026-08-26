@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { createServiceSupabaseClient } from "../../../lib/supabase/server";
 import { LoginForm } from "./login-form";
 import { FindSchoolForm } from "./find-school-form";
-
+import { getSchoolId } from "../../../lib/school";
 export const metadata: Metadata = {
   title: "Login",
   robots: { index: false, follow: false },
@@ -26,17 +26,20 @@ export default async function LoginPage() {
     );
   }
 
+  const schoolId = await getSchoolId();
+
+  if (!schoolId) {
+    return <FindSchoolForm host={host} />;
+  }
+
   // Use service role to bypass RLS — login page is unauthenticated
   const supabase = createServiceSupabaseClient();
   const { data: school } = await supabase
     .from("schools")
     .select("id, name, primary_color")
-    .eq("domain", domain)
+    .eq("id", schoolId)
     .single();
 
-  // On the apex/marketing domain no school resolves (unknown subdomains are
-  // rewritten to /school-not-found by middleware before reaching here), so the
-  // visitor is on the bare domain. Help them find their school's subdomain.
   if (!school) {
     return <FindSchoolForm host={host} />;
   }

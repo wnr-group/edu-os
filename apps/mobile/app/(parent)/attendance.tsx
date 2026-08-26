@@ -11,7 +11,7 @@ import { useRouter } from "expo-router";
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const DAY_LABELS = ["S","M","T","W","T","F","S"];
 
-interface AttendanceRecord { date: string; status: "present" | "absent" | "late"; session: "FULL_DAY" | "FN" | "AN" }
+interface AttendanceRecord { date: string; status: "present" | "absent" | "late" | "excused"; session: "FULL_DAY" | "FN" | "AN" }
 
 export default function ParentAttendance() {
   const theme = useTheme();
@@ -52,8 +52,11 @@ export default function ParentAttendance() {
     return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
   });
   const isPresent = (s: string) => s === "present" || s === "late";
-  const presentSessions = monthRecords.filter((r) => isPresent(r.status)).length;
-  const totalSessions = monthRecords.length;
+  // 'excused' (approved leave) is excluded from the attendance-% denominator, matching the
+  // server-side risk engine (supabase/functions/insights-recompute/algorithms.ts).
+  const countedSessions = monthRecords.filter((r) => r.status !== "excused");
+  const presentSessions = countedSessions.filter((r) => isPresent(r.status)).length;
+  const totalSessions = countedSessions.length;
   const pct = totalSessions > 0 ? Math.round((presentSessions / totalSessions) * 100) : 0;
 
   // Group sessions by date for the calendar cell rendering.
@@ -68,6 +71,7 @@ export default function ParentAttendance() {
     if (status === "present") return theme.success;
     if (status === "absent") return theme.danger;
     if (status === "late") return theme.warning;
+    if (status === "excused") return theme.info;
     return theme.border;
   }
 
@@ -162,7 +166,7 @@ export default function ParentAttendance() {
           </View>
         )}
         <View style={{ flexDirection: "row", gap: 16, justifyContent: "center" }}>
-          {[{ color: theme.success, label: "Present" }, { color: theme.danger, label: "Absent" }, { color: theme.warning, label: "Late" }].map((item) => (
+          {[{ color: theme.success, label: "Present" }, { color: theme.danger, label: "Absent" }, { color: theme.warning, label: "Late" }, { color: theme.info, label: "Excused" }].map((item) => (
             <View key={item.label} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: item.color }} />
               <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary }}>{item.label}</Text>

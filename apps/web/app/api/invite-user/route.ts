@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
   let body: {
     phone: string;
     fullName: string;
+    email?: string;
     schoolId: string;
     role: string;
     extraInserts?: { table: string; data: Record<string, unknown> }[];
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
-  const { phone, fullName, schoolId, role, extraInserts } = body;
+  const { phone, fullName, email, schoolId, role, extraInserts } = body;
 
   // school_admin must belong to the target school
   if (callerRole === "school_admin") {
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
 
   let userId: string;
   try {
-    const result = await findOrCreateUserByPhone(adminClient, phone, fullName);
+    const result = await findOrCreateUserByPhone(adminClient, phone, fullName, email);
     userId = result.userId;
     await attachRole(adminClient, userId, schoolId, role);
   } catch (e) {

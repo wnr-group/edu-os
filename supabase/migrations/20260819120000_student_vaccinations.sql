@@ -27,12 +27,9 @@ CREATE POLICY vaccinations_select ON public.student_vaccinations FOR SELECT USIN
     AND public.feature_enabled(school_id, 'health_records')
     AND (public.get_my_role() IN ('school_admin', 'principal') OR public.teaches_student(student_id))
   )
-  OR (
-    public.feature_enabled(school_id, 'health_records')
-    AND EXISTS (
-      SELECT 1 FROM public.student_profiles sp
-      WHERE sp.id = student_id AND sp.parent_profile_id = auth.uid()
-    )
+  OR EXISTS (
+    SELECT 1 FROM public.student_profiles sp
+    WHERE sp.id = student_id AND sp.parent_profile_id = auth.uid()
   )
 );
 GRANT SELECT ON public.student_vaccinations TO authenticated;

@@ -7,13 +7,23 @@ import { ArrowRight, School } from "lucide-react";
 export function FindSchoolForm({ host }: { host: string }) {
   const [slug, setSlug] = useState("");
 
-  // host is the apex the user landed on, e.g. "lvh.me:3000" or
-  // "eduos.com". Strip a leading "www." so the school subdomain
-  // sits directly under the bare apex.
-  const baseHost = host.replace(/^www\./, "");
-  const [hostname, port] = baseHost.split(":");
+  // host may be the apex (lvh.me:3000) or an already-qualified tenant
+  // domain (unknown.lvh.me:3000). Strip a leading "www." and extract the
+  // apex domain so we don't accidentally prepend the school slug twice.
+  const cleanHost = host.replace(/^www\./, "");
+  const [hostname, port] = cleanHost.split(":");
   const portSuffix = port ? `:${port}` : "";
   const protocol = hostname === "localhost" || hostname.endsWith("lvh.me") ? "http" : "https";
+
+  const parts = hostname.split(".");
+  let apexHostname = hostname;
+  // All supported base domains (lvh.me, eduos.com, balajierp.com, connectmyskool.com)
+  // use a 1-part TLD, so taking the last two parts always yields the apex domain.
+  if (parts.length > 2) {
+    apexHostname = parts.slice(-2).join(".");
+  }
+
+  const baseHost = port ? `${apexHostname}:${port}` : apexHostname;
 
   const cleanSlug = slug.trim().toLowerCase();
   const canSubmit = cleanSlug.length > 0;

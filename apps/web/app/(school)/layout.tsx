@@ -134,8 +134,11 @@ export default async function SchoolLayout({
     }
   }
 
-  // When a non-teacher has an active section they're viewing teacher context
-  const inTeacherContext = !!activeSectionId && realRole !== "teacher";
+  // Teacher context is only active when physically on a /teacher/ path.
+  // An admin with active_section visiting /admin/* should still see their
+  // own name and role — not the class teacher's.
+  const currentPath = hdrs.get("x-pathname") ?? "";
+  const inTeacherContext = !!activeSectionId && realRole !== "teacher" && currentPath.startsWith("/teacher");
 
   // If in teacher context, look up the class teacher for the active section
   let sidebarUserName = userName;

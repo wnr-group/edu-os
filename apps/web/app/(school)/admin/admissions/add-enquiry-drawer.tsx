@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase";
 
@@ -14,21 +15,63 @@ export function AddEnquiryDrawer({
     parent_name: "", parent_phone: "", parent_email: "", previous_school: "", area: "", applicant_note: "",
   });
   const [saving, setSaving] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   function set<K extends keyof typeof form>(k: K, v: string) { setForm((f) => ({ ...f, [k]: v })); }
 
   async function handleSave() {
-    if (!form.applicant_name || !form.class_applied_id || !form.parent_name || !form.parent_phone) {
+    const appName = form.applicant_name.trim();
+    const parentName = form.parent_name.trim();
+
+    if (!appName || !form.class_applied_id || !parentName || !form.parent_phone.trim()) {
       toast.error("Fill in the required fields.");
       return;
     }
+
+    if (appName.length < 2 || appName.length > 100) {
+      toast.error("Applicant name must be between 2 and 100 characters.");
+      return;
+    }
+
+    if (parentName.length < 2 || parentName.length > 100) {
+      toast.error("Parent name must be between 2 and 100 characters.");
+      return;
+    }
+
+    const nameRegex = /^[\p{L}\p{M}\s.'-]+$/u;
+    if (!nameRegex.test(appName)) {
+      toast.error("Applicant name should only contain valid letters.");
+      return;
+    }
+    if (!nameRegex.test(parentName)) {
+      toast.error("Parent name should only contain valid letters.");
+      return;
+    }
+
+    const cleanPhone = form.parent_phone.trim().replace(/[\s-]/g, "");
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+      toast.error("Parent phone number must be a valid 10-digit number.");
+      return;
+    }
+
+    if (form.parent_email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(form.parent_email.trim())) {
+        toast.error("Please enter a valid email address.");
+        return;
+      }
+    }
+
     setSaving(true);
     const supabase = createClient();
     const { error } = await supabase.rpc("create_walkin_application", {
-      p_school_id: schoolId, p_applicant_name: form.applicant_name, p_date_of_birth: form.date_of_birth || null,
-      p_gender: form.gender, p_class_applied_id: form.class_applied_id, p_parent_name: form.parent_name,
-      p_parent_phone: form.parent_phone, p_parent_email: form.parent_email || null,
-      p_previous_school: form.previous_school || null, p_area: form.area || null, p_applicant_note: form.applicant_note || null,
+      p_school_id: schoolId, p_applicant_name: form.applicant_name.trim(), p_date_of_birth: form.date_of_birth || null,
+      p_gender: form.gender, p_class_applied_id: form.class_applied_id, p_parent_name: form.parent_name.trim(),
+      p_parent_phone: cleanPhone, p_parent_email: form.parent_email.trim() || null,
+      p_previous_school: form.previous_school.trim() || null, p_area: form.area.trim() || null, p_applicant_note: form.applicant_note.trim() || null,
     });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
@@ -36,7 +79,9 @@ export function AddEnquiryDrawer({
     onSaved();
   }
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
       <div className="h-full w-full max-w-md overflow-y-auto bg-white p-6" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-bold">Add enquiry (walk-in)</h2>
@@ -59,6 +104,7 @@ export function AddEnquiryDrawer({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

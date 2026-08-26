@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 interface ClassAttendanceRow {
   id: string;
   className: string;
@@ -14,10 +16,17 @@ export function AttendanceDetailDrawer({
 }: {
   open: boolean; onClose: () => void; classes: ClassAttendanceRow[]; markedCount: number; totalCount: number;
 }) {
-  if (!open) return null;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!open || !mounted) return null;
+
   const percent = totalCount > 0 ? Math.round((markedCount / totalCount) * 100) : 0;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
       <div
         className="flex h-full w-full max-w-md flex-col bg-white shadow-xl"
@@ -76,6 +85,7 @@ export function AttendanceDetailDrawer({
           Only classes with a timetable for today are counted.
         </p>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
