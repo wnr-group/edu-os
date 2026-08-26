@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, MoreHorizontal } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { AlertTriangle, MoreHorizontal, CheckCircle2 } from "lucide-react";
 import { ListPageTemplate } from "@/components/list-page-template";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,8 +19,8 @@ import {
 type SeverityVariant = "default" | "secondary" | "destructive" | "outline";
 
 function severityVariant(severity: string | null): SeverityVariant {
-  if (severity === "high" || severity === "severe") return "destructive";
-  if (severity === "medium") return "secondary";
+  if (severity === "high" || severity === "severe" || severity === "suspension") return "destructive";
+  if (severity === "medium" || severity === "written") return "secondary";
   return "outline";
 }
 
@@ -28,20 +31,52 @@ export interface DisciplineRow {
   roll_number: string;
   category: string;
   severity: string | null;
+  status: string;
   description: string;
   date: string;
 }
 
 function RowActions({ row }: { row: DisciplineRow }) {
-  if (!row.student_id) return null;
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  async function toggleReviewStatus() {
+    setLoading(true);
+    const newStatus = row.status === "reviewed" ? "pending" : "reviewed";
+    try {
+      const res = await fetch("/api/discipline/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ incidentId: row.id, status: newStatus }),
+      });
+      if (!res.ok) {
+        const { error } = await res.json();
+        toast.error(error ?? "Failed to update incident status.");
+        return;
+      }
+      toast.success(newStatus === "reviewed" ? "Incident marked as reviewed." : "Incident marked as pending.");
+      router.refresh();
+    } catch {
+      toast.error("Error updating incident status.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Row actions" />}>
         <MoreHorizontal className="h-4 w-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem render={<Link href={`/principal/students/${row.student_id}`} />}>
-          View Student
+        {row.student_id && (
+          <DropdownMenuItem render={<Link href={`/principal/students/${row.student_id}`} />}>
+            View Student
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem onClick={toggleReviewStatus} disabled={loading}>
+          <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-600" />
+          {row.status === "reviewed" ? "Mark as Pending" : "Mark as Reviewed"}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -82,7 +117,20 @@ export function DisciplineTable({
         { header: "Category", accessor: (row) => <span className="capitalize">{row.category}</span> },
         {
           header: "Severity",
-          accessor: (row) => <Badge variant={severityVariant(row.severity)}>{row.severity ?? "low"}</Badge>,
+          accessor: (row) => <Badge variant={severityVariant(row.severity)}>{row.severity ?? "verbal"}</Badge>,
+        },
+        {
+          header: "Status",
+          accessor: (row) =>
+            row.status === "reviewed" ? (
+              <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                ✓ Reviewed
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+                Pending
+              </Badge>
+            ),
         },
         { header: "Description", accessor: (row) => <span className="line-clamp-1 max-w-xs">{row.description}</span> },
         { header: "Date", accessor: "date" },
