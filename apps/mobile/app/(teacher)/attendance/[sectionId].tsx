@@ -143,31 +143,28 @@ export default function MarkAttendance() {
       // Get current position on submit
       const currentPos = await getSubmitPosition();
       let submitAdvisory: Advisory | null = null;
-      let geoSource = "device";
 
       if (currentPos && geofences.length > 0) {
         submitAdvisory = computeAdvisory(currentPos.lat, currentPos.lng, currentPos.accuracy, geofences);
-      } else {
-        geoSource = "denied"; // Mark as denied if no position available
       }
 
-      // Prepare records with geo data
-      const records = markedStudents.map((r) => ({
+      const recordsPayload = markedStudents.map((r) => ({
         student_id: r.studentId,
-        section_id: sectionId,
-        school_id: schoolId,
-        date,
-        session,
         status: statuses[r.studentId] as AttendanceStatus,
-        marked_by: userId,
-        captured_lat: currentPos?.lat ?? null,
-        captured_lng: currentPos?.lng ?? null,
-        gps_accuracy_m: currentPos?.accuracy ?? null,
       }));
 
-      const { error } = await supabase
-        .from("attendance_records")
-        .upsert(records, { onConflict: "student_id,date,session" });
+      // Server-side RPC computes and persists geo_status/geo_distance_m/matched_geofence_id —
+      // classification must never be trusted from the client (anti-spoof).
+      const { error } = await supabase.rpc("mark_attendance", {
+        p_section_id: sectionId,
+        p_session: session,
+        p_date: date,
+        p_records: recordsPayload,
+        p_lat: currentPos?.lat ?? null,
+        p_lng: currentPos?.lng ?? null,
+        p_accuracy: currentPos?.accuracy ?? null,
+        p_geo_source: "device",
+      });
 
       if (error) {
         Alert.alert("Error", error.message);
@@ -176,10 +173,10 @@ export default function MarkAttendance() {
         if (submitAdvisory?.status === "outside") {
           Alert.alert(
             "Attendance Recorded",
-            `Saved ${records.length} records.\n⚠️ Staff member is off-campus — attendance will be flagged for review.`
+            `Saved ${recordsPayload.length} records.\n⚠️ Staff member is off-campus — attendance will be flagged for review.`
           );
         } else {
-          Alert.alert("Saved", `Attendance recorded for ${records.length} students.`);
+          Alert.alert("Saved", `Attendance recorded for ${recordsPayload.length} students.`);
         }
       }
     } finally {
@@ -286,9 +283,9 @@ export default function MarkAttendance() {
                     <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary }}>Roll #{row.rollNumber}</Text>
                   </View>
                   {isExcused ? (
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: theme.primary + "1A", borderRadius: 100, paddingHorizontal: 10, paddingVertical: 4 }}>
-                      <Ionicons name="shield-checkmark" size={12} color={theme.primary} />
-                      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: theme.primary }}>Excused</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <StatusBadge variant="absent" />
+                      <Ionicons name="shield-checkmark" size={14} color={theme.primary} />
                     </View>
                   ) : (
                     <StatusBadge variant={status ?? "unmarked"} />

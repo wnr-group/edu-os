@@ -2,6 +2,12 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is not set`);
+  return value;
+}
+
 const PUBLIC_PATHS = ["/login", "/auth/callback", "/download-app", "/apply", "/verify"];
 const PLATFORM_ADMIN_DOMAINS = ["admin.balajierp.com", "core.lvh.me", "core.connectmyskool.com", "core.eduos.com"];
 
@@ -20,6 +26,9 @@ const MARKETING_EXACT_HOSTS = new Set([
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  // Forward pathname to server components so they can conditionally render
+  // context-dependent UI (e.g. inTeacherContext) based on the current route.
+  request.headers.set("x-pathname", pathname);
   const host = request.headers.get("host") ?? "";
   const domain = host.replace(/:\d+$/, "");
   const isPlatformAdmin =
@@ -42,7 +51,7 @@ export async function proxy(request: NextRequest) {
   if (!isPlatformAdmin) {
     const service = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321",
-      process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.qGOA8n458FvP100B26l0_27lS383xT7N5Fw43_t-X8s"
+      requireEnv("SUPABASE_SERVICE_ROLE_KEY")
     );
     const { data: schoolId } = await service.rpc("get_school_id_by_domain", { p_domain: domain });
 
@@ -73,9 +82,17 @@ export async function proxy(request: NextRequest) {
 
   let response = NextResponse.next({ request });
 
+  const redirectWithCookies = (url: URL) => {
+    const redirectResponse = NextResponse.redirect(url);
+    response.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+    });
+    return redirectResponse;
+  };
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0",
+    requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
     {
       cookies: {
         getAll() {
@@ -115,7 +132,7 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return redirectWithCookies(new URL("/login", request.url));
   }
 
   // School already validated above via service-role (RLS hides it from anon
@@ -124,7 +141,9 @@ export async function proxy(request: NextRequest) {
   let schoolId: string | null = resolvedSchoolId;
   if (!isPlatformAdmin && schoolId) {
     request.headers.set("x-school-id", schoolId);
+    const prevCookies1 = response.cookies.getAll();
     response = NextResponse.next({ request });
+    prevCookies1.forEach((c) => response.cookies.set(c.name, c.value, c));
     response.headers.set("x-school-id", schoolId);
   }
 
@@ -142,7 +161,7 @@ export async function proxy(request: NextRequest) {
   // server-side and the service client is already created above for school validation.
   const serviceForRoles = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321",
-    process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.qGOA8n458FvP100B26l0_27lS383xT7N5Fw43_t-X8s"
+    requireEnv("SUPABASE_SERVICE_ROLE_KEY")
   );
 
   let role: string | null = null;
@@ -171,7 +190,7 @@ export async function proxy(request: NextRequest) {
     role = data?.role ?? null;
   }
   if (!role) {
-    return NextResponse.redirect(new URL("/login?reason=no_access", request.url));
+    return redirectWithCookies(new URL("/login?reason=no_access", request.url));
   }
 
   // Pass the resolved school role to PostgREST so scope_pre_request validates
@@ -179,7 +198,9 @@ export async function proxy(request: NextRequest) {
   // school-level role (platform super_admin uses the NULL-school DB path).
   if (schoolId && ROLE_PRECEDENCE[role] !== undefined) {
     request.headers.set("x-active-role", role);
+    const prevCookies2 = response.cookies.getAll();
     response = NextResponse.next({ request });
+    prevCookies2.forEach((c) => response.cookies.set(c.name, c.value, c));
     response.headers.set("x-active-role", role);
     response.headers.set("x-school-id", schoolId);
 
@@ -209,10 +230,10 @@ export async function proxy(request: NextRequest) {
   // Platform admin routing
   if (isPlatformAdmin) {
     if (role !== "super_admin") {
-      return NextResponse.redirect(new URL("/login?reason=no_access", request.url));
+      return redirectWithCookies(new URL("/login?reason=no_access", request.url));
     }
     if (!pathname.startsWith("/platform-admin") && !pathname.startsWith("/api")) {
-      return NextResponse.redirect(new URL("/platform-admin/dashboard", request.url));
+      return redirectWithCookies(new URL("/platform-admin/dashboard", request.url));
     }
     return response;
   }
@@ -262,16 +283,16 @@ export async function proxy(request: NextRequest) {
         ((effectiveRole === "school_admin" || effectiveRole === "principal") && activeSection);
       if (!canAccessTeacher) {
         const dest = effectiveRole === "principal" ? "/principal/dashboard" : "/admin/dashboard";
-        return NextResponse.redirect(new URL(dest, request.url));
+        return redirectWithCookies(new URL(dest, request.url));
       }
     } else if (effectiveRole === "school_admin" && !pathname.startsWith("/admin")) {
-      return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+      return redirectWithCookies(new URL("/admin/dashboard", request.url));
     } else if (effectiveRole === "principal" && !pathname.startsWith("/principal") && !pathname.startsWith("/teacher")) {
-      return NextResponse.redirect(new URL("/principal/dashboard", request.url));
+      return redirectWithCookies(new URL("/principal/dashboard", request.url));
     } else if (effectiveRole === "teacher" && !pathname.startsWith("/teacher")) {
-      return NextResponse.redirect(new URL("/teacher/dashboard", request.url));
+      return redirectWithCookies(new URL("/teacher/dashboard", request.url));
     } else if (effectiveRole === "parent" && !pathname.startsWith("/download-app")) {
-      return NextResponse.redirect(new URL("/download-app", request.url));
+      return redirectWithCookies(new URL("/download-app", request.url));
     }
   }
 

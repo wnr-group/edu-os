@@ -7,7 +7,8 @@
     "dev:full": "pnpm dev:proxy & pnpm dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "type-check": "turbo run type-check"
+    "type-check": "turbo run type-check",
+    "test:db": "for f in supabase/tests/*.test.sql; do psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f \"$f\" || exit 1; done"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",

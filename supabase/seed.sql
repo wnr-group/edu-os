@@ -522,7 +522,47 @@ INSERT INTO public.student_enrollments (student_profile_id, academic_year_id, sc
   ('dddddddd-0000-0000-0000-000000000010', 'aaaaaaaa-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000005', 'cccccccc-0000-0000-0000-000000000501', true),
   ('dddddddd-0000-0000-0000-000000000011', 'aaaaaaaa-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000008', 'cccccccc-0000-0000-0000-000000000801', true);
 
--- Fee payments block removed (fee_payments table dropped in migration 35)
+-- ---------------------------------------------------------------
+-- FEE LINE ITEMS (Aryan Sharma & multi-student fixtures)
+-- ---------------------------------------------------------------
+INSERT INTO public.fee_line_items (
+  school_id, student_id, fee_type_id, total_amount, due_date, added_by, class_id, academic_year_id, status
+)
+SELECT
+  'aaaaaaaa-0000-0000-0000-000000000001',
+  'dddddddd-0000-0000-0000-000000000001',
+  ft.id,
+  item.total_amount,
+  item.due_date,
+  'aaaaaaaa-0000-0000-0000-000000000011',
+  'bbbbbbbb-0000-0000-0000-000000000008',
+  'aaaaaaaa-0000-0000-0000-000000000002',
+  item.status
+FROM (VALUES
+  ('Tuition Fee', 5000.00::numeric, (CURRENT_DATE + INTERVAL '30 days')::date, 'pending'),
+  ('Special Fee / Smart Class Fee', 1500.00::numeric, (CURRENT_DATE + INTERVAL '45 days')::date, 'pending')
+) AS item(type_name, total_amount, due_date, status)
+JOIN public.fee_types ft ON ft.name = item.type_name AND ft.is_predefined = true;
+
+-- Seed fee line items for Aarav (Class 5A) to test isolation & multi-student fee flows
+INSERT INTO public.fee_line_items (
+  school_id, student_id, fee_type_id, total_amount, due_date, added_by, class_id, academic_year_id, status
+)
+SELECT
+  'aaaaaaaa-0000-0000-0000-000000000001',
+  'dddddddd-0000-0000-0000-000000000010',
+  ft.id,
+  item.total_amount,
+  item.due_date,
+  'aaaaaaaa-0000-0000-0000-000000000011',
+  'bbbbbbbb-0000-0000-0000-000000000005',
+  'aaaaaaaa-0000-0000-0000-000000000002',
+  item.status
+FROM (VALUES
+  ('Tuition Fee', 3000.00::numeric, (CURRENT_DATE + INTERVAL '30 days')::date, 'pending'),
+  ('Books, Notebooks, and Stationery Fee', 800.00::numeric, (CURRENT_DATE + INTERVAL '15 days')::date, 'pending')
+) AS item(type_name, total_amount, due_date, status)
+JOIN public.fee_types ft ON ft.name = item.type_name AND ft.is_predefined = true;
 
 -- Attendance (last 30 school days, ~85% present)
 DO $$
@@ -766,3 +806,56 @@ VALUES
    'aaaaaaaa-0000-0000-0000-000000000030', 'school_admin', NULL,
    'Fee receipt not received', 'I paid the March fees via UPI but haven''t received the receipt yet.',
    'open', now() - INTERVAL '2 days');
+-- Opens admissions for the local demo school so the Parent Mobile Admission
+-- Enquiry flow (apps/mobile/app/(parent)/admission-enquiry.tsx) is
+-- end-to-end testable. admission_settings had zero rows for this school —
+-- admission-submit's `if (!settings?.is_open) return { reason: "closed" }`
+-- (supabase/functions/admission-submit/index.ts:41-42) therefore always
+-- fired, regardless of the `admissions` feature flag being on.
+--
+-- This mirrors exactly the INSERT the production save_admission_settings
+-- RPC performs (supabase/migrations/20260803170629_admission_rpcs.sql:91-108
+-- — the same RPC apps/web/app/(school)/admin/admissions/admission-settings-panel.tsx
+-- calls when a school_admin/principal toggles admissions open in the UI) —
+-- same columns, same ON CONFLICT target, no new mechanism introduced.
+-- No application fee is configured (application_fee = 0), so the free-path
+-- branch of admission-submit is exercised; the paid/Razorpay branch remains
+-- untested locally, which is out of scope here.
+--
+-- Scoped to exactly one school id; safe to re-run (ON CONFLICT DO UPDATE).
+
+INSERT INTO public.admission_settings (school_id, is_open, application_fee, admission_academic_year_id)
+VALUES ('aaaaaaaa-0000-0000-0000-000000000001', true, 0, 'aaaaaaaa-0000-0000-0000-000000000002')
+ON CONFLICT (school_id) DO UPDATE
+  SET is_open = true, admission_academic_year_id = 'aaaaaaaa-0000-0000-0000-000000000002';
+
+-- ---------------------------------------------------------------
+-- KYC DOCUMENT TYPES
+-- ---------------------------------------------------------------
+-- Demo School has no document_types rows after a fresh db reset, so
+-- get_student_kyc_checklist() returns zero rows and the Parent Mobile
+-- KYC screen shows "No KYC documents are configured for your school yet."
+-- seed_document_types() inserts the seven standard Indian-school types;
+-- it is idempotent (returns immediately if rows already exist).
+SELECT public.seed_document_types('aaaaaaaa-0000-0000-0000-000000000001');
+
+-- ---------------------------------------------------------------
+-- DEMO SCHOOL FEATURE FLAGS
+-- ---------------------------------------------------------------
+-- Enables admissions/kyc_documents/attendance_geo for the local demo school
+-- (apps/mobile is built against aaaaaaaa-0000-0000-0000-000000000001 — see
+-- apps/mobile/.env.local / apps/mobile/app.json's extra.schoolId). These
+-- modules are seeded/backfilled OFF by default
+-- (20260727132543_feature_flags.sql: "not-yet-built modules default OFF"),
+-- so a fresh db reset needs them flipped on here for the Parent Mobile
+-- Admission Enquiry, KYC Documents, and geo-attendance flows to be
+-- end-to-end testable locally. In production, real schools get these flags
+-- through the platform-admin console — this is local fixture data, not a
+-- schema change, so it belongs in seed rather than in supabase/migrations/.
+-- Uses the same jsonb-merge convention as the rest of this file: merges in
+-- exactly these keys, leaves every other features_enabled key untouched.
+-- Scoped to this one school id only; safe to re-run.
+UPDATE public.schools
+SET features_enabled = features_enabled ||
+  '{"admissions": true, "kyc_documents": true, "attendance_geo": true}'::jsonb
+WHERE id = 'aaaaaaaa-0000-0000-0000-000000000001';
