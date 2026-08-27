@@ -6,7 +6,7 @@
 -- by the correct parent, and is NOT visible for other students.
 -- Uses local seed's Demo School / student dddddddd-...0001 (Aryan Sharma) /
 -- parent aaaaaaaa-...0030.
--- Run: docker exec -i supabase_db_plan-2-supabase-auth psql -U postgres -d postgres < supabase/tests/fee_visibility_isolation.test.sql
+-- Run: npx supabase db query --local -f supabase/tests/fee_visibility_isolation.test.sql
 
 BEGIN;
 

@@ -15,7 +15,7 @@ set -euo pipefail
 
 API_URL="http://127.0.0.1:54321/rest/v1"
 SERVICE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
-DB="docker exec -i supabase_db_plan-2-supabase-auth psql -U postgres -d postgres"
+DB="psql postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 
 STUDENT="dddddddd-0000-0000-0000-000000000001"
 CURRENT_YEAR="aaaaaaaa-0000-0000-0000-000000000002"

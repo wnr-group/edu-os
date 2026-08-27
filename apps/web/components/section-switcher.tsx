@@ -135,18 +135,20 @@ export function SectionSwitcher({
   // The mobile drawer (stack) has room, so it keeps the full text.
   const exitButton = exitUrl && activeSectionId && !isTeacher && (
     isInline ? (
-      <button
+           <button
         type="button"
         onClick={handleExit}
         title={exitLabel}
         aria-label={exitLabel}
         className={cn(
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
-          isLight ? "text-amber-600 hover:bg-amber-50" : "text-amber-300 hover:bg-white/[0.08]"
+          "flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors",
+          isLight ? "text-amber-700 bg-amber-50 hover:bg-amber-100" : "text-amber-300 bg-white/10 hover:bg-white/20"
         )}
       >
-        <ArrowLeft className="h-4 w-4" />
+        <ArrowLeft className="h-3.5 w-3.5" />
+        <span>{exitLabel}</span>
       </button>
+      
     ) : (
       <button
         type="button"

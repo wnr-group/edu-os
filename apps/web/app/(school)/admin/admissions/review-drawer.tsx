@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase";
 import type { ApplicationCard } from "./admissions-board";
@@ -19,6 +20,9 @@ export function ReviewDrawer({
   const [docsNote, setDocsNote] = useState("");
   const [internalNotes, setInternalNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => { load(); }, [app.id]);
 
@@ -51,7 +55,9 @@ export function ReviewDrawer({
 
   const currentIdx = STAGE_ORDER.indexOf(app.stage);
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
       <div className="h-full w-full max-w-lg overflow-y-auto bg-white" onClick={(e) => e.stopPropagation()}>
         <div className="border-b border-border p-5">
@@ -134,6 +140,7 @@ export function ReviewDrawer({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

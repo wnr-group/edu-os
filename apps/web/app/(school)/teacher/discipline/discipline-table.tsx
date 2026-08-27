@@ -28,6 +28,7 @@ export interface DisciplineRow {
   roll_number: string;
   category: string;
   severity: string | null;
+  status: string;
   description: string;
   date: string;
 }
@@ -81,6 +82,19 @@ export function DisciplineTable({
         {
           header: "Severity",
           accessor: (row) => <Badge variant={severityVariant(row.severity)}>{row.severity ?? "verbal"}</Badge>,
+        },
+        {
+          header: "Status",
+          accessor: (row) =>
+            row.status === "reviewed" ? (
+              <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                ✓ Reviewed
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+                Pending
+              </Badge>
+            ),
         },
         { header: "Description", accessor: (row) => <span className="line-clamp-1 max-w-xs">{row.description}</span> },
         { header: "Date", accessor: "date" },

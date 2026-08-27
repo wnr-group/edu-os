@@ -40,11 +40,18 @@ export default async function AdminDashboard() {
 
   // Stat card queries (parallel)
   const [
-    { count: teacherCount },
+    { data: activeRoles },
+    { data: teacherProfiles },
     { count: studentCount },
     { count: sectionCount },
   ] = await Promise.all([
-    supabase.from("teacher_profiles").select("*", { count: "exact", head: true }).eq("school_id", schoolId!),
+    supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("school_id", schoolId!)
+      .eq("role", "teacher")
+      .eq("is_active", true),
+    supabase.from("teacher_profiles").select("profile_id").eq("school_id", schoolId!),
     supabase.from("student_enrollments").select("*", { count: "exact", head: true })
       .eq("school_id", schoolId!)
       .eq("academic_year_id", academicYearId ?? "")
@@ -53,6 +60,9 @@ export default async function AdminDashboard() {
       .eq("school_id", schoolId!)
       .eq("academic_year_id", academicYearId ?? ""),
   ]);
+
+  const activeUserIds = new Set((activeRoles ?? []).map((r) => r.user_id));
+  const teacherCount = (teacherProfiles ?? []).filter((t) => activeUserIds.has(t.profile_id)).length;
 
  // Fee data for this academic year — due_date added so amounts can be
   // bucketed into terms below (no dedicated "term" column exists in the

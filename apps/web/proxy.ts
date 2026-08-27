@@ -2,6 +2,12 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is not set`);
+  return value;
+}
+
 const PUBLIC_PATHS = ["/login", "/auth/callback", "/download-app", "/apply", "/verify"];
 const PLATFORM_ADMIN_DOMAINS = ["admin.balajierp.com", "core.lvh.me", "core.connectmyskool.com", "core.eduos.com"];
 
@@ -45,7 +51,7 @@ export async function proxy(request: NextRequest) {
   if (!isPlatformAdmin) {
     const service = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321",
-      process.env.SUPABASE_SERVICE_ROLE_KEY || "sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz"
+      requireEnv("SUPABASE_SERVICE_ROLE_KEY")
     );
     const { data: schoolId } = await service.rpc("get_school_id_by_domain", { p_domain: domain });
 
@@ -86,7 +92,7 @@ export async function proxy(request: NextRequest) {
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH",
+    requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
     {
       cookies: {
         getAll() {
@@ -143,18 +149,19 @@ export async function proxy(request: NextRequest) {
 
   // Resolve user's role at this school by fixed precedence.
   const ROLE_PRECEDENCE: Record<string, number> = {
-    school_admin: 1,
-    principal: 2,
-    teacher: 3,
-    parent: 4,
-    student: 5,
+    super_admin: 1,
+    school_admin: 2,
+    principal: 3,
+    teacher: 4,
+    parent: 5,
+    student: 6,
   };
 
   // Use service-role client for role lookups to bypass RLS — middleware is
   // server-side and the service client is already created above for school validation.
   const serviceForRoles = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321",
-    process.env.SUPABASE_SERVICE_ROLE_KEY || "sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz"
+    requireEnv("SUPABASE_SERVICE_ROLE_KEY")
   );
 
   let role: string | null = null;
@@ -189,7 +196,7 @@ export async function proxy(request: NextRequest) {
   // Pass the resolved school role to PostgREST so scope_pre_request validates
   // the exact (user, school, role) triple. Only set when we resolved a real
   // school-level role (platform super_admin uses the NULL-school DB path).
-  if (schoolId && ROLE_PRECEDENCE[role]) {
+  if (schoolId && ROLE_PRECEDENCE[role] !== undefined) {
     request.headers.set("x-active-role", role);
     const prevCookies2 = response.cookies.getAll();
     response = NextResponse.next({ request });

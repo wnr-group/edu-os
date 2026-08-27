@@ -136,6 +136,7 @@ export default async function ExamMarksPage({
       <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
         <MarksEntryForm
           examId={examId}
+          schoolId={schoolId}
           subjects={(subjects ?? []).map((s) => ({ id: s.id, name: s.name }))}
           students={studentRows}
           existingResults={existingResults ?? []}

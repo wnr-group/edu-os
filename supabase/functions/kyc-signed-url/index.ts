@@ -41,11 +41,15 @@ Deno.serve(async (req: Request) => {
 
   const { data: ownChild } = await admin
     .from("student_profiles")
-    .select("id")
+    .select("id, school_id")
     .eq("id", doc.subject_id)
     .eq("parent_profile_id", callerId)
     .maybeSingle();
   if (!ownChild) return json({ error: "forbidden" }, 403);
+
+  const { data: enabled } = await admin
+    .rpc("feature_enabled", { p_school_id: ownChild.school_id, p_key: "kyc_documents" });
+  if (!enabled) return json({ error: "module_disabled" }, 403);
 
   const { data: signed, error: signError } = await admin.storage
     .from("kyc-docs")

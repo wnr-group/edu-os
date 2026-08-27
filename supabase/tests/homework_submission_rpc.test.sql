@@ -13,7 +13,7 @@
 --   parent aaaaaaaa-...0030 -> student dddddddd-...0001, class 8 (bbbbbbbb-...0008), section 8A (cccccccc-...0801)
 --   parent aaaaaaaa-...0013 -> student dddddddd-...0010, class 5 (bbbbbbbb-...0005), section 5A (cccccccc-...0501)
 --   teacher aaaaaaaa-...0013 is also class teacher of section 8A (cccccccc-...0801)
--- Run: docker exec -i supabase_db_plan-2-supabase-auth psql -U postgres -d postgres < supabase/tests/homework_submission_rpc.test.sql
+-- Run: npx supabase db query --local -f supabase/tests/homework_submission_rpc.test.sql
 
 BEGIN;
 

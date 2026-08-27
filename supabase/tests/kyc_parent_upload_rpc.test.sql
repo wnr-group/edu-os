@@ -13,7 +13,7 @@
 --   school_admin aaaaaaaa-...0011
 --   principal    aaaaaaaa-...0012
 --   super_admin  aaaaaaaa-...0010
--- Run: docker exec -i supabase_db_plan-2-supabase-auth psql -U postgres -d postgres < supabase/tests/kyc_parent_upload_rpc.test.sql
+-- Run: npx supabase db query --local -f supabase/tests/kyc_parent_upload_rpc.test.sql
 
 BEGIN;
 
