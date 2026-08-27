@@ -50,12 +50,22 @@ BEGIN
   FROM public.student_profiles WHERE id = p_student_id;
   IF v_school_id IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
   IF NOT public.feature_enabled(v_school_id, 'ptm') THEN RAISE EXCEPTION 'feature_disabled'; END IF;
-  IF NOT (
+  IF NOT COALESCE(
     public.get_my_role() = 'super_admin'
-    OR public.get_my_role() IN ('school_admin', 'principal')
+    OR (public.get_my_role() IN ('school_admin', 'principal') AND v_school_id = public.get_my_school_id())
     OR (public.get_my_role() = 'teacher' AND public.teaches_section(p_section_id))
-  ) THEN
+  , false) THEN
     RAISE EXCEPTION 'not_authorized';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.student_enrollments se
+    JOIN public.academic_years ay ON ay.id = se.academic_year_id
+    WHERE se.student_profile_id = p_student_id
+      AND se.section_id = p_section_id
+      AND se.is_active = true
+      AND ay.status = 'active'
+  ) THEN
+    RAISE EXCEPTION 'student_not_in_section';
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM public.section_assignments sa
@@ -100,11 +110,11 @@ BEGIN
   FROM public.ptm_meetings WHERE id = p_meeting_id;
   IF v_school_id IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
   IF NOT public.feature_enabled(v_school_id, 'ptm') THEN RAISE EXCEPTION 'feature_disabled'; END IF;
-  IF NOT (
+  IF NOT COALESCE(
     public.get_my_role() = 'super_admin'
     OR (public.get_my_role() IN ('school_admin', 'principal') AND v_school_id = public.get_my_school_id())
     OR auth.uid() = v_teacher_id
-  ) THEN
+  , false) THEN
     RAISE EXCEPTION 'not_authorized';
   END IF;
   IF v_status <> 'scheduled' THEN RAISE EXCEPTION 'not_scheduled'; END IF;
@@ -132,11 +142,11 @@ BEGIN
   FROM public.ptm_meetings WHERE id = p_meeting_id;
   IF v_school_id IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
   IF NOT public.feature_enabled(v_school_id, 'ptm') THEN RAISE EXCEPTION 'feature_disabled'; END IF;
-  IF NOT (
+  IF NOT COALESCE(
     public.get_my_role() = 'super_admin'
     OR (public.get_my_role() IN ('school_admin', 'principal') AND v_school_id = public.get_my_school_id())
     OR auth.uid() = v_teacher_id
-  ) THEN
+  , false) THEN
     RAISE EXCEPTION 'not_authorized';
   END IF;
   IF v_status <> 'scheduled' THEN RAISE EXCEPTION 'not_scheduled'; END IF;
@@ -162,11 +172,11 @@ BEGIN
   FROM public.ptm_meetings WHERE id = p_meeting_id;
   IF v_school_id IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
   IF NOT public.feature_enabled(v_school_id, 'ptm') THEN RAISE EXCEPTION 'feature_disabled'; END IF;
-  IF NOT (
+  IF NOT COALESCE(
     public.get_my_role() = 'super_admin'
     OR (public.get_my_role() IN ('school_admin', 'principal') AND v_school_id = public.get_my_school_id())
     OR auth.uid() = v_teacher_id
-  ) THEN
+  , false) THEN
     RAISE EXCEPTION 'not_authorized';
   END IF;
   IF v_status <> 'scheduled' THEN RAISE EXCEPTION 'not_scheduled'; END IF;

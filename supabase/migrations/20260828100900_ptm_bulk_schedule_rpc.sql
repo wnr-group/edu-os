@@ -123,6 +123,9 @@ BEGIN
   RETURN v_meeting_ids;
 END $$;
 
+REVOKE EXECUTE ON FUNCTION public.bulk_schedule_ptm_meetings(
+  uuid, date, time, smallint, uuid, uuid, public.ptm_meeting_mode, text
+) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.bulk_schedule_ptm_meetings(
   uuid, date, time, smallint, uuid, uuid, public.ptm_meeting_mode, text
 ) TO authenticated;

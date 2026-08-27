@@ -72,4 +72,5 @@ BEGIN
   ON CONFLICT (meeting_id, user_id) DO NOTHING;
 END $$;
 
+REVOKE EXECUTE ON FUNCTION public.acknowledge_ptm_booking(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.acknowledge_ptm_booking(uuid) TO authenticated;

@@ -223,6 +223,9 @@ BEGIN
   RETURN;
 END $$;
 
+REVOKE EXECUTE ON FUNCTION public.bulk_publish_ptm_slots(
+  uuid, date, time[], smallint, uuid, uuid, public.ptm_meeting_mode, text
+) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.bulk_publish_ptm_slots(
   uuid, date, time[], smallint, uuid, uuid, public.ptm_meeting_mode, text
 ) TO authenticated;

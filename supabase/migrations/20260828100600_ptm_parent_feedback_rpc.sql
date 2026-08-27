@@ -30,4 +30,5 @@ BEGIN
   WHERE f.meeting_id = p_meeting_id AND f.visible_to_parent = true;
 END $$;
 
+REVOKE EXECUTE ON FUNCTION public.get_ptm_feedback_for_parent(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.get_ptm_feedback_for_parent(uuid) TO authenticated;

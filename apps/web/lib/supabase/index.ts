@@ -40,16 +40,6 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321",
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0",
     {
-      // createBrowserClient defaults to a cross-call singleton in the browser,
-      // which bakes scopeHeaders() into the client's headers only on the
-      // FIRST-EVER call in a tab's lifetime — every later createClient() call
-      // (from any component, for any later-logged-in user) would silently
-      // keep sending that same frozen x-school-id/x-active-role pair instead
-      // of the current one. Every caller in this app already does
-      // `const supabase = createClient()` fresh per call/effect, so there's
-      // no code relying on shared identity across calls — disabling the
-      // singleton just makes each call see the cookies as they are right now.
-      isSingleton: false,
       ...(cookieDomain ? { cookieOptions: { domain: cookieDomain } } : {}),
       global: { headers: scopeHeaders() },
     }

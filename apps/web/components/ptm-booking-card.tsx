@@ -6,6 +6,42 @@ import { Check, User, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import type { PtmBookingRow } from "@/lib/ptm";
 
+// The shared browser client (apps/web/lib/supabase/index.ts) is a singleton
+// whose x-school-id/x-active-role headers are frozen at the FIRST-EVER
+// createClient() call in a tab — a known, separately-tracked issue (see PR
+// review discussion). If a teacher logs out and a school_admin/principal
+// logs in in the same tab, this card's requests would otherwise keep
+// carrying the teacher's stale scope headers, and every RLS/RPC check here
+// that depends on get_my_role()/get_my_school_id() (ptm_ack_select,
+// user_roles_select, profiles_select, acknowledge_ptm_booking) would
+// resolve against the wrong identity until a hard refresh. Rather than fix
+// the shared client (out of scope for this PR), each affected request below
+// is given fresh headers via the query builder's own per-request
+// .setHeader(), using the exact same cookie-reading logic as the shared
+// client's scopeHeaders() — deliberately not imported/duplicated as a
+// module, just applied narrowly where this card actually needs it.
+function readCookie(name: string): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const match = document.cookie.match(
+    new RegExp("(?:^|; )" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "=([^;]*)")
+  );
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+function currentScopeHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const schoolId = readCookie("x-school-id");
+  const role = readCookie("x-active-role");
+  if (schoolId) headers["x-school-id"] = schoolId;
+  if (role) headers["x-active-role"] = role;
+  return headers;
+}
+function withFreshScope<T extends { setHeader(name: string, value: string): T }>(builder: T): T {
+  for (const [name, value] of Object.entries(currentScopeHeaders())) {
+    builder = builder.setHeader(name, value);
+  }
+  return builder;
+}
+
 function formatDate(d: string): string {
   return new Date(d + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
@@ -38,12 +74,14 @@ const ROLE_LABEL: Record<string, string> = { teacher: "Teacher", school_admin: "
 async function loadRoster(schoolId: string, teacherId: string, meetingId: string): Promise<RosterEntry[]> {
   const supabase = createClient();
 
-  const { data: staffRoles } = await supabase
-    .from("user_roles")
-    .select("user_id, role")
-    .eq("school_id", schoolId)
-    .eq("is_active", true)
-    .in("role", ["school_admin", "principal"]);
+  const { data: staffRoles } = await withFreshScope(
+    supabase
+      .from("user_roles")
+      .select("user_id, role")
+      .eq("school_id", schoolId)
+      .eq("is_active", true)
+      .in("role", ["school_admin", "principal"])
+  );
 
   const roleById = new Map<string, string>();
   roleById.set(teacherId, "teacher");
@@ -51,8 +89,8 @@ async function loadRoster(schoolId: string, teacherId: string, meetingId: string
   const rosterIds = [...roleById.keys()];
 
   const [{ data: profiles }, { data: acks }] = await Promise.all([
-    supabase.from("profiles").select("id, full_name").in("id", rosterIds),
-    supabase.from("ptm_booking_acknowledgements").select("user_id, acknowledged_at").eq("meeting_id", meetingId),
+    withFreshScope(supabase.from("profiles").select("id, full_name").in("id", rosterIds)),
+    withFreshScope(supabase.from("ptm_booking_acknowledgements").select("user_id, acknowledged_at").eq("meeting_id", meetingId)),
   ]);
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name ?? "—"]));
   const ackByUser = new Map((acks ?? []).map((a) => [a.user_id, a.acknowledged_at]));
@@ -97,7 +135,7 @@ export function PtmBookingCard({
   async function handleAcknowledge() {
     setAcking(true);
     const supabase = createClient();
-    const { error } = await supabase.rpc("acknowledge_ptm_booking", { p_meeting_id: booking.id });
+    const { error } = await withFreshScope(supabase.rpc("acknowledge_ptm_booking", { p_meeting_id: booking.id }));
     setAcking(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Acknowledged.");

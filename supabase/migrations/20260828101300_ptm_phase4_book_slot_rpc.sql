@@ -112,4 +112,5 @@ BEGIN
   RETURN v_meeting_id;
 END $$;
 
+REVOKE EXECUTE ON FUNCTION public.book_ptm_slot(uuid, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.book_ptm_slot(uuid, uuid) TO authenticated;

@@ -19,11 +19,11 @@ BEGIN
   FROM public.ptm_meetings WHERE id = p_meeting_id;
   IF v_school_id IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
   IF NOT public.feature_enabled(v_school_id, 'ptm') THEN RAISE EXCEPTION 'feature_disabled'; END IF;
-  IF NOT (
+  IF NOT COALESCE(
     public.get_my_role() = 'super_admin'
     OR (public.get_my_role() IN ('school_admin', 'principal') AND v_school_id = public.get_my_school_id())
     OR auth.uid() = v_teacher_id
-  ) THEN
+  , false) THEN
     RAISE EXCEPTION 'not_authorized';
   END IF;
   IF v_status <> 'scheduled' THEN RAISE EXCEPTION 'not_scheduled'; END IF;

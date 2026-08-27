@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, TextInput, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "../../lib/theme";
+import { useTheme, useFeature } from "../../lib/theme";
 import { useTeacherContext } from "../../lib/teacherContext";
 import {
   loadTeacherMeetings, markPtmStatus, loadOwnFeedback, recordPtmFeedback,
@@ -55,6 +55,7 @@ function RatingPicker({ label, value, onChange, theme }: { label: string; value:
 
 export default function TeacherPtmScreen() {
   const theme = useTheme();
+  const ptmEnabled = useFeature("ptm");
   const { userId, ready } = useTeacherContext();
 
   const [tab, setTab] = useState<"scheduled" | "completed" | "cancelled">("scheduled");
@@ -129,6 +130,20 @@ export default function TeacherPtmScreen() {
     if (error) { Alert.alert("Error", error); return; }
     Alert.alert("Saved", feedback ? "Feedback updated." : "Feedback saved.");
     setFeedback({ summary: summary.trim(), visibleToParent, internalNotes: feedback?.internalNotes ?? null, academicRating, behaviorRating, followUpRequired });
+  }
+
+  if (!ptmEnabled) {
+    return (
+      <SafeAreaView edges={["top", "bottom"]} style={{ flex: 1, backgroundColor: theme.background, alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <Ionicons name="people-outline" size={40} color={theme.textMuted} />
+        <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: theme.textPrimary, marginTop: 12, textAlign: "center" }}>
+          Parent-Teacher Meetings isn't available
+        </Text>
+        <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: theme.textMuted, marginTop: 4, textAlign: "center" }}>
+          This feature hasn't been turned on for your school yet.
+        </Text>
+      </SafeAreaView>
+    );
   }
 
   const filtered = meetings

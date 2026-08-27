@@ -74,4 +74,5 @@ BEGIN
   RETURN v_cancelled_ids;
 END $$;
 
+REVOKE EXECUTE ON FUNCTION public.bulk_cancel_ptm_meetings(uuid[], text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.bulk_cancel_ptm_meetings(uuid[], text) TO authenticated;

@@ -76,6 +76,9 @@ BEGIN
   RETURN v_id;
 END $$;
 
+REVOKE EXECUTE ON FUNCTION public.publish_ptm_slot(
+  uuid, date, time, smallint, uuid, uuid, public.ptm_meeting_mode, text
+) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.publish_ptm_slot(
   uuid, date, time, smallint, uuid, uuid, public.ptm_meeting_mode, text
 ) TO authenticated;
@@ -110,4 +113,5 @@ BEGIN
   VALUES (v_school_id, auth.uid(), public.get_my_role(), 'ptm.slot_withdrawn', 'ptm_availability_slots', p_slot_id);
 END $$;
 
+REVOKE EXECUTE ON FUNCTION public.withdraw_ptm_slot(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.withdraw_ptm_slot(uuid) TO authenticated;
