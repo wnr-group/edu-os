@@ -40,9 +40,9 @@ BEGIN
      CURRENT_DATE + 3, CURRENT_DATE + 4, 'sick', 'pending', 'aaaaaaaa-0000-0000-0000-000000000011')
   RETURNING id INTO v_leave_id;
 
-  PERFORM set_config('app.role', 'school_admin', true);
+  PERFORM set_config('app.role', 'teacher', true);
   PERFORM set_config('app.school_id', 'aaaaaaaa-0000-0000-0000-000000000001', true);
-  PERFORM set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000011"}', true);
+  PERFORM set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000014"}', true);
 
   PERFORM public.approve_leave(v_leave_id);
 
@@ -110,8 +110,8 @@ BEGIN
      CURRENT_DATE + 6, CURRENT_DATE + 6, 'casual', 'pending', 'aaaaaaaa-0000-0000-0000-000000000011')
   RETURNING id INTO v_leave_id;
 
-  PERFORM set_config('app.role', 'school_admin', true);
-  PERFORM set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000011"}', true);
+  PERFORM set_config('app.role', 'teacher', true);
+  PERFORM set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000014"}', true);
   PERFORM public.approve_leave(v_leave_id);
 
   SELECT status INTO v_status
