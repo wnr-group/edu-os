@@ -95,5 +95,5 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.submit_homework(uuid, uuid, text, text, text, integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.submit_homework(uuid, uuid, text, text, text, integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.submit_homework(uuid, uuid, text, text, text, integer) TO authenticated;
