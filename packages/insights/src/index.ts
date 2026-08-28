@@ -7,8 +7,8 @@
  * This package re-exports for testing and workspace compatibility.
  */
 
-export { computeAttendanceRisk } from './attendance-risk.ts';
-export { computePerformanceForecast } from './performance-forecast.ts';
+export { computeAttendanceRisk } from './attendance-risk';
+export { computePerformanceForecast } from './performance-forecast';
 
 export type {
   Band,
@@ -17,4 +17,4 @@ export type {
   AttendanceRecord,
   AttendanceRiskInput,
   PerformanceInput,
-} from './types.ts';
+} from './types';

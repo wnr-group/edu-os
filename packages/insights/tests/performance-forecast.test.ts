@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { computePerformanceForecast } from '../src/performance-forecast.ts';
-import type { PerformanceInput } from '../src/types.ts';
+import { computePerformanceForecast } from '../src/performance-forecast';
+import type { PerformanceInput } from '../src/types';
 
 describe('PERF_V1: computePerformanceForecast', () => {
   describe('Insufficient Data', () => {
