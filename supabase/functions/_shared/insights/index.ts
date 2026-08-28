@@ -1,10 +1,12 @@
 /**
  * @eduos/insights - Insights & Interventions V1
  *
- * Pure functions for computing risk scores and performance forecasts
+ * CANONICAL IMPLEMENTATION
  *
- * NOTE: Canonical implementation lives in supabase/functions/_shared/insights/
- * This package re-exports for testing and workspace compatibility.
+ * Pure functions for computing risk scores and performance forecasts.
+ * This is the single source of truth used by:
+ * - supabase/functions/insights-recompute/ (production Edge Function)
+ * - packages/insights/src/ (testing wrapper)
  */
 
 export { computeAttendanceRisk } from './attendance-risk.ts';

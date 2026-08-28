@@ -5,7 +5,7 @@ import {
   type AttendanceRecord,
   type AttendanceRiskInput,
   type PerformanceInput,
-} from "./algorithms.ts";
+} from "../_shared/insights/index.ts";
 
 interface RequestBody {
   school_id: string;
@@ -221,8 +221,19 @@ async function processAttendanceRisk(
   // Transform records to match AttendanceRecord type
   const attendanceRecords: AttendanceRecord[] = (records || []).map(
     (r: any) => {
-      const status =
-        r.status === "absent" ? ("absent" as const) : ("present" as const);
+      // Map database status to algorithm type, with safe default for unknown statuses
+      let status: "present" | "absent" | "excused";
+      if (r.status === "absent") {
+        status = "absent";
+      } else if (r.status === "excused") {
+        status = "excused";
+      } else if (r.status === "present") {
+        status = "present";
+      } else {
+        // Unknown status - fail safely by treating as absent (conservative)
+        console.warn(`Unknown attendance status: ${r.status}, treating as absent`);
+        status = "absent";
+      }
       return {
         date: new Date(r.date),
         status,
