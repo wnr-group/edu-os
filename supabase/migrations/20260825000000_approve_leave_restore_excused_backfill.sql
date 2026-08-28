@@ -33,6 +33,7 @@ DECLARE
   v_section_id uuid;
   v_class_teacher_id uuid;
   v_is_super_admin boolean;
+  v_is_school_staff boolean;
   v_backfill_section_id uuid;
 BEGIN
   SELECT lr.student_id, lr.from_date, lr.to_date, lr.status, lr.school_id
@@ -42,12 +43,21 @@ BEGIN
   IF v_student IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
   IF v_status <> 'pending' THEN RAISE EXCEPTION 'not_pending'; END IF;
 
-  -- Authorization: verbatim from 20260824130200_leave_approval_class_teacher_only.sql.
+  -- Authorization: same shape as 20260824130200_leave_approval_class_teacher_only.sql
+  -- (as amended by this PR's own review-comment fix) — this migration must
+  -- carry the same school_admin/principal restoration, since it redefines
+  -- approve_leave() again, later in the replay order, and would otherwise
+  -- silently revert that fix.
   SELECT EXISTS (
     SELECT 1 FROM public.user_roles ur WHERE ur.user_id = auth.uid() AND ur.is_active = true AND ur.role = 'super_admin'
   ) INTO v_is_super_admin;
 
-  IF NOT COALESCE(v_is_super_admin, false) THEN
+  v_is_school_staff := COALESCE(
+    public.get_my_role() IN ('school_admin', 'principal') AND v_school_id = public.get_my_school_id(),
+    false
+  );
+
+  IF NOT COALESCE(v_is_super_admin, false) AND NOT v_is_school_staff THEN
     SELECT ay.id INTO v_year_id FROM public.academic_years ay WHERE ay.school_id = v_school_id AND ay.status = 'active';
     SELECT se.section_id INTO v_section_id FROM public.student_enrollments se
       WHERE se.student_profile_id = v_student AND se.academic_year_id = v_year_id AND se.is_active = true;

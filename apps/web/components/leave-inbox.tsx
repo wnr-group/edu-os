@@ -72,6 +72,21 @@ export function LeaveInbox({ requests, viewerLabel }: { requests: LeaveRow[]; vi
     });
   }
 
+  // Closes out the teacher-facing leave_requested notification this action
+  // was taken from — same shape as notification-center.tsx's resolveEntity.
+  // Awaited (unlike callLeaveNotify) so the resolve's own read of
+  // leave_requests always happens before callLeaveNotify's insert of the
+  // parent's separate leave_decided row for the same entity_id.
+  async function resolveLeaveNotification(leaveId: string): Promise<void> {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/notification-resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+      body: JSON.stringify({ entity_type: "leave_request", entity_id: leaveId }),
+    }).catch(() => {});
+  }
+
   async function handleApprove(id: string) {
     setBusy(true);
     const supabase = createClient();
@@ -79,6 +94,7 @@ export function LeaveInbox({ requests, viewerLabel }: { requests: LeaveRow[]; vi
     setBusy(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Leave approved — covered days marked Excused.");
+    await resolveLeaveNotification(id);
     callLeaveNotify(id);
     router.refresh();
   }
@@ -92,6 +108,7 @@ export function LeaveInbox({ requests, viewerLabel }: { requests: LeaveRow[]; vi
     toast.success("Leave declined.");
     setRejecting(false);
     setRejectReason("");
+    await resolveLeaveNotification(id);
     callLeaveNotify(id);
     router.refresh();
   }

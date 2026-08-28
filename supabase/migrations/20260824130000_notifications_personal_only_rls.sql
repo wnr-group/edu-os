@@ -13,4 +13,11 @@
 -- workflows depend on it).
 DROP POLICY IF EXISTS "notifications_select" ON public.notifications;
 CREATE POLICY "notifications_select" ON public.notifications FOR SELECT
-  USING (user_id = auth.uid());
+  USING (
+    user_id = auth.uid()
+    OR (
+      type = 'fee_reminder'
+      AND school_id = public.get_my_school_id()
+      AND public.get_my_role() IN ('school_admin', 'principal')
+    )
+  );

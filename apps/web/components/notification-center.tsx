@@ -85,12 +85,28 @@ export function NotificationCenter({ feedbackHref, viewerRole }: { feedbackHref:
     refresh();
   }
 
+  // A card can go stale if the same leave request was already decided
+  // elsewhere (e.g. the Leave Inbox page) before this list last refreshed —
+  // the RPC then rejects with 'not_pending'. Rather than surface that raw
+  // Postgres error string, treat it the same as a successful resolution:
+  // the request itself is already settled, this view just hadn't heard yet.
+  async function handleStaleLeaveDecision(n: NotificationRow) {
+    if (!n.entity_id) return;
+    toast("This leave request was already decided.");
+    await resolveEntity("leave_request", n.entity_id);
+    setBusyId(null);
+    await load();
+  }
+
   async function handleApproveLeave(n: NotificationRow) {
     if (!n.entity_id) return;
     setBusyId(n.id);
     const supabase = createClient();
     const { error } = await supabase.rpc("approve_leave", { p_request_id: n.entity_id });
-    if (error) { setBusyId(null); toast.error(error.message); return; }
+    if (error) {
+      if (error.message === "not_pending") { await handleStaleLeaveDecision(n); return; }
+      setBusyId(null); toast.error(error.message); return;
+    }
     toast.success("Leave approved — covered days marked Excused.");
     callLeaveNotify(n.entity_id);
     await resolveEntity("leave_request", n.entity_id);
@@ -103,7 +119,10 @@ export function NotificationCenter({ feedbackHref, viewerRole }: { feedbackHref:
     setBusyId(n.id);
     const supabase = createClient();
     const { error } = await supabase.rpc("reject_leave", { p_request_id: n.entity_id, p_reason: rejectReason || null });
-    if (error) { setBusyId(null); toast.error(error.message); return; }
+    if (error) {
+      if (error.message === "not_pending") { setRejectingId(null); setRejectReason(""); await handleStaleLeaveDecision(n); return; }
+      setBusyId(null); toast.error(error.message); return;
+    }
     toast.success("Leave declined.");
     callLeaveNotify(n.entity_id);
     setRejectingId(null);

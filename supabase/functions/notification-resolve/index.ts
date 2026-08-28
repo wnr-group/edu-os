@@ -45,7 +45,7 @@ Deno.serve(async (req: Request) => {
   const admin = createClient(supabaseUrl, serviceKey);
 
   if (entity_type === "kyc_document") return await resolveKycDocument(admin, entity_id);
-  if (entity_type === "feedback") return await resolveFeedback(admin, entity_id);
+  if (entity_type === "feedback") return await resolveFeedback(admin, entity_id, userData.user.id);
   if (entity_type === "leave_request") return await resolveLeaveRequest(admin, entity_id);
   return json({ error: "bad_entity_type" }, 400);
 });
@@ -64,11 +64,18 @@ async function resolveLeaveRequest(admin: any, leaveId: string): Promise<Respons
   const label = await roleLabelFor(admin, lr.decided_by, lr.school_id);
   const newBody = lr.status === "approved" ? `Leave request approved by ${label}.` : `Leave request rejected by ${label}.`;
 
+  // Scoped to type='leave_requested' — entity_id is shared with the
+  // separate parent-facing 'leave_decided' notification leave-notify
+  // inserts on this same decision (fired concurrently, fire-and-forget, by
+  // the caller). Without this filter, an unlucky race where that insert
+  // lands before this update runs would overwrite the parent's fresh,
+  // still-unread notification with the teacher-facing resolved text.
   const { data: updated } = await admin
     .from("notifications")
     .update({ body: newBody, is_read: true })
     .eq("entity_type", "leave_request")
     .eq("entity_id", leaveId)
+    .eq("type", "leave_requested")
     .select("id");
 
   return json({ result: "ok", resolved: updated?.length ?? 0 });
@@ -115,7 +122,7 @@ async function resolveKycDocument(admin: any, documentId: string): Promise<Respo
 }
 
 // deno-lint-ignore no-explicit-any
-async function resolveFeedback(admin: any, feedbackId: string): Promise<Response> {
+async function resolveFeedback(admin: any, feedbackId: string, callerId: string): Promise<Response> {
   const { data: fb } = await admin
     .from("feedback")
     .select("id, school_id, status, response, responded_by, thread_id")
@@ -124,15 +131,37 @@ async function resolveFeedback(admin: any, feedbackId: string): Promise<Response
   if (!fb) return json({ result: "error", reason: "not_found" }, 404);
   if (fb.status !== "responded" || !fb.responded_by) return json({ result: "no_op" });
 
+  // entity_id is a caller-supplied claim, not a permission — this is the
+  // service-role client, so RLS isn't protecting this read/write at all.
+  // Require the caller to hold an active school_admin/principal role in
+  // THIS row's own school before doing anything else, same shape as
+  // feedback-notify/kyc-document-notify's own authorization checks.
+  const { data: roles } = await admin
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", callerId)
+    .eq("school_id", fb.school_id)
+    .eq("is_active", true);
+  const canResolve = (roles ?? []).some((r: { role: string }) => ["school_admin", "principal"].includes(r.role));
+  if (!canResolve) return json({ result: "error", reason: "forbidden" }, 403);
+
+  const { data: feedbackEnabled } = await admin.rpc("feature_enabled", {
+    p_school_id: fb.school_id, p_key: "feedback",
+  });
+  if (!feedbackEnabled) return json({ result: "error", reason: "module_disabled" }, 403);
+
   // Sibling rows share the same thread_id (Contact Management inserts one
   // per staff role for the same parent submission) — resolving one row
   // must propagate to its sibling(s), not just this one, so the other
   // staff member sees the same "Responded by X" outcome instead of a
-  // second, now-redundant pending item.
+  // second, now-redundant pending item. Scoped to the caller's already-
+  // verified school so a thread_id can't be used to reach into another
+  // school's feedback rows.
   const threadKey = fb.thread_id ?? fb.id;
   const { data: siblings } = await admin
     .from("feedback")
     .select("id")
+    .eq("school_id", fb.school_id)
     .or(`thread_id.eq.${threadKey},id.eq.${threadKey}`);
   const siblingIds = (siblings ?? []).map((s: { id: string }) => s.id);
   if (!siblingIds.includes(fb.id)) siblingIds.push(fb.id);
@@ -142,6 +171,7 @@ async function resolveFeedback(admin: any, feedbackId: string): Promise<Response
     await admin
       .from("feedback")
       .update({ status: "responded", response: fb.response, responded_by: fb.responded_by })
+      .eq("school_id", fb.school_id)
       .in("id", otherIds);
   }
 
@@ -152,6 +182,7 @@ async function resolveFeedback(admin: any, feedbackId: string): Promise<Response
     .from("notifications")
     .update({ body: newBody, is_read: true })
     .eq("entity_type", "feedback")
+    .eq("school_id", fb.school_id)
     .in("entity_id", siblingIds)
     .select("id");
 

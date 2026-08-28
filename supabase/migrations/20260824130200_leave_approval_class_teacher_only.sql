@@ -28,6 +28,7 @@ DECLARE
   v_section_id uuid;
   v_class_teacher_id uuid;
   v_is_super_admin boolean;
+  v_is_school_staff boolean;
 BEGIN
   SELECT lr.student_id, lr.from_date, lr.to_date, lr.status, lr.school_id
     INTO v_student, v_from, v_to, v_status, v_school_id
@@ -40,7 +41,16 @@ BEGIN
     SELECT 1 FROM public.user_roles ur WHERE ur.user_id = auth.uid() AND ur.is_active = true AND ur.role = 'super_admin'
   ) INTO v_is_super_admin;
 
-  IF NOT COALESCE(v_is_super_admin, false) THEN
+  -- Restores the school-scoped school_admin/principal bypass main already
+  -- had (the Admin/Principal Leave pages' Approve/Reject buttons call this
+  -- RPC directly and have no other authorization path) — added alongside,
+  -- not instead of, the class-teacher check below.
+  v_is_school_staff := COALESCE(
+    public.get_my_role() IN ('school_admin', 'principal') AND v_school_id = public.get_my_school_id(),
+    false
+  );
+
+  IF NOT COALESCE(v_is_super_admin, false) AND NOT v_is_school_staff THEN
     SELECT ay.id INTO v_year_id FROM public.academic_years ay WHERE ay.school_id = v_school_id AND ay.status = 'active';
     SELECT se.section_id INTO v_section_id FROM public.student_enrollments se
       WHERE se.student_profile_id = v_student AND se.academic_year_id = v_year_id AND se.is_active = true;
@@ -74,6 +84,7 @@ DECLARE
   v_section_id uuid;
   v_class_teacher_id uuid;
   v_is_super_admin boolean;
+  v_is_school_staff boolean;
 BEGIN
   SELECT lr.student_id, lr.status, lr.school_id INTO v_student, v_status, v_school_id
   FROM public.leave_requests lr WHERE lr.id = p_request_id;
@@ -85,7 +96,12 @@ BEGIN
     SELECT 1 FROM public.user_roles ur WHERE ur.user_id = auth.uid() AND ur.is_active = true AND ur.role = 'super_admin'
   ) INTO v_is_super_admin;
 
-  IF NOT COALESCE(v_is_super_admin, false) THEN
+  v_is_school_staff := COALESCE(
+    public.get_my_role() IN ('school_admin', 'principal') AND v_school_id = public.get_my_school_id(),
+    false
+  );
+
+  IF NOT COALESCE(v_is_super_admin, false) AND NOT v_is_school_staff THEN
     SELECT ay.id INTO v_year_id FROM public.academic_years ay WHERE ay.school_id = v_school_id AND ay.status = 'active';
     SELECT se.section_id INTO v_section_id FROM public.student_enrollments se
       WHERE se.student_profile_id = v_student AND se.academic_year_id = v_year_id AND se.is_active = true;
