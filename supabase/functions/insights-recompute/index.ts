@@ -45,6 +45,21 @@ Deno.serve(async (req: Request) => {
   );
 
   try {
+    // Defensive check: re-verify insights feature is enabled for this school
+    // Prevents TOCTOU race where feature is disabled between dispatcher and execution
+    const { data: school } = await admin
+      .from("schools")
+      .select("features_enabled")
+      .eq("id", school_id)
+      .single();
+
+    if (!school?.features_enabled?.insights) {
+      return json({
+        result: "skipped",
+        message: "Insights feature is disabled for this school",
+      }, 200);
+    }
+
     const workerId = crypto.randomUUID();
 
     // Claim chunk atomically using durable expiring lease
