@@ -155,6 +155,7 @@ export default async function AdminInterventionsPage() {
       currentUserRole="school_admin"
       isAdmin={true}
       staffList={staffList}
+      dbError={!!error}
     />
   );
 }

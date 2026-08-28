@@ -338,34 +338,34 @@ describe('ATTN_RISK_V1: computeAttendanceRisk', () => {
 
   describe('Recommended Actions', () => {
     it('should recommend parent call for HIGH + drop', () => {
-      // Create high drop scenario
+      // [15 present prior, 15 absent recent] → base score 65, always HIGH regardless of weekday.
+      // drop (0.25) > streak (0.20) > rate (0.20) → drop is dominant → 'Call parent within 48 hours.'
       const pattern: ('present' | 'absent' | 'excused')[] = [
-        ...Array(15).fill('present'),      // Prior: 100%
-        ...Array(5).fill('present'),       // Recent: 33.33%
-        ...Array(10).fill('absent'),
+        ...Array(15).fill('present'),
+        ...Array(15).fill('absent'),
       ];
       const records = createRecords(pattern);
       const result = computeAttendanceRisk({ records });
 
-      if (result.band === 'HIGH') {
-        const dropFactor = result.factors.find(f => f.key === 'drop');
-        if (dropFactor && dropFactor.contribution === Math.max(...result.factors.map(f => f.contribution))) {
-          expect(result.recommended_action).toBe('Call parent within 48 hours.');
-        }
-      }
+      expect(result.band).toBe('HIGH');
+      // drop contribution = 0.25 * 1.0 * 100 = 25; streak = 20; rate = 20 → drop is dominant
+      const dropFactor = result.factors.find(f => f.key === 'drop');
+      expect(dropFactor?.contribution).toBe(25);
+      expect(result.recommended_action).toBe('Call parent within 48 hours.');
     });
 
     it('should recommend monitoring for MED band', () => {
+      // [24 present, 6 absent at end]: base score ~38 (rate=0.08, drop=0.10, streak=0.20).
+      // Max weekday component (~0.15) gives total ≤ 53 → always MED regardless of day of week.
       const pattern: ('present' | 'absent' | 'excused')[] = [
-        ...Array(18).fill('present'),
-        ...Array(12).fill('absent'),
+        ...Array(24).fill('present'),
+        ...Array(6).fill('absent'),
       ];
       const records = createRecords(pattern);
       const result = computeAttendanceRisk({ records });
 
-      if (result.band === 'MED') {
-        expect(result.recommended_action).toBe('Send attendance reminder to parent; monitor next 2 weeks.');
-      }
+      expect(result.band).toBe('MED');
+      expect(result.recommended_action).toBe('Send attendance reminder to parent; monitor next 2 weeks.');
     });
 
     it('should recommend no action for LOW band', () => {
@@ -376,20 +376,21 @@ describe('ATTN_RISK_V1: computeAttendanceRisk', () => {
       expect(result.recommended_action).toBe('No action needed.');
     });
 
-    it('should recommend immediate call for HIGH + streak', () => {
+    it('should produce HIGH band for long absence streak', () => {
+      // [15 present, 15 absent]: base score 65 → always HIGH.
+      // This verifies that an extended consecutive absence streak escalates to HIGH severity
+      // and triggers an urgent parent action.
       const pattern: ('present' | 'absent' | 'excused')[] = [
-        ...Array(20).fill('present'),
-        ...Array(10).fill('absent'), // Long streak
+        ...Array(15).fill('present'),
+        ...Array(15).fill('absent'),
       ];
       const records = createRecords(pattern);
       const result = computeAttendanceRisk({ records });
 
-      if (result.band === 'HIGH') {
-        const streakFactor = result.factors.find(f => f.key === 'streak');
-        if (streakFactor && streakFactor.contribution === Math.max(...result.factors.map(f => f.contribution))) {
-          expect(result.recommended_action).toBe('Immediate parent call; check for dropout risk.');
-        }
-      }
+      expect(result.band).toBe('HIGH');
+      // contribution is stored as percentage points (0.20 * 100 = 20)
+      expect(result.factors.find(f => f.key === 'streak')?.contribution).toBe(20);
+      expect(['Call parent within 48 hours.', 'Immediate parent call; check for dropout risk.']).toContain(result.recommended_action);
     });
   });
 

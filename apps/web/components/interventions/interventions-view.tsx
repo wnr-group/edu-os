@@ -18,6 +18,26 @@ import {
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase";
 
+const RPC_ERROR_MESSAGES: Record<string, string> = {
+  not_authorized: "You are not authorized to perform this action.",
+  invalid_status_transition: "This action is not valid for the current intervention status.",
+  intervention_not_found: "Intervention not found — it may have been deleted.",
+  cannot_reassign_terminal_intervention: "Completed or dismissed interventions cannot be reassigned.",
+  student_has_no_parent: "This student has no linked parent to notify.",
+  no_valid_assignee: "No eligible staff member found to assign this intervention.",
+  invalid_assignee: "The selected assignee is not eligible for this intervention.",
+  dismissal_reason_required: "A dismissal reason is required.",
+};
+
+function rpcErrorMessage(err: unknown, fallback: string): string {
+  if (err && typeof err === "object") {
+    const msg = (err as { message?: string }).message ?? "";
+    return RPC_ERROR_MESSAGES[msg] ?? msg ?? fallback;
+  }
+  if (err instanceof Error) return err.message || fallback;
+  return fallback;
+}
+
 export interface AcademicEvidenceItem {
   snapshot_id: string;
   is_pinned: boolean;
@@ -68,12 +88,14 @@ interface InterventionsViewProps {
   currentUserRole?: string;
   isAdmin?: boolean;
   staffList?: StaffOption[];
+  dbError?: boolean;
 }
 
 export function InterventionsView({
   initialInterventions,
   isAdmin = false,
   staffList = [],
+  dbError = false,
 }: InterventionsViewProps) {
   const [interventions, setInterventions] = useState<InterventionRow[]>(initialInterventions);
   const [selectedIntervention, setSelectedIntervention] = useState<InterventionRow | null>(null);
@@ -160,8 +182,7 @@ export function InterventionsView({
         setSelectedIntervention((prev) => (prev ? { ...prev, status: "in_progress" } : null));
       }
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : "Failed to start intervention";
-      toast.error(errorMsg);
+      toast.error(rpcErrorMessage(err, "Failed to start intervention"));
     } finally {
       setActionLoading(false);
     }
@@ -191,8 +212,7 @@ export function InterventionsView({
       setShowCompleteModal(false);
       setOutcomeNote("");
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : "Failed to complete intervention";
-      toast.error(errorMsg);
+      toast.error(rpcErrorMessage(err, "Failed to complete intervention"));
     } finally {
       setActionLoading(false);
     }
@@ -226,8 +246,7 @@ export function InterventionsView({
       setShowDismissModal(false);
       setDismissReason("");
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : "Failed to dismiss intervention";
-      toast.error(errorMsg);
+      toast.error(rpcErrorMessage(err, "Failed to dismiss intervention"));
     } finally {
       setActionLoading(false);
     }
@@ -258,8 +277,7 @@ export function InterventionsView({
       setShowReassignModal(false);
       setReassignTarget("");
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : "Failed to reassign intervention";
-      toast.error(errorMsg);
+      toast.error(rpcErrorMessage(err, "Failed to reassign intervention"));
     } finally {
       setActionLoading(false);
     }
@@ -290,8 +308,7 @@ export function InterventionsView({
       setSelectedIntervention((prev) => (prev ? { ...prev, last_notified_at: nowIso } : null));
       setShowNotifyModal(false);
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : "Failed to send notification to parent";
-      toast.error(errorMsg);
+      toast.error(rpcErrorMessage(err, "Failed to send notification to parent"));
     } finally {
       setActionLoading(false);
     }
@@ -424,7 +441,15 @@ export function InterventionsView({
       </div>
 
       {/* Intervention Items Grid */}
-      {filteredInterventions.length === 0 ? (
+      {dbError ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-destructive/40 p-12 text-center">
+          <AlertTriangle className="h-10 w-10 text-destructive/60" />
+          <h3 className="mt-3 text-base font-semibold text-foreground">Unable to load interventions</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            A database error occurred. Please refresh the page or contact support if the issue persists.
+          </p>
+        </div>
+      ) : filteredInterventions.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border p-12 text-center">
           <CheckCircle2 className="h-10 w-10 text-emerald-500/60" />
           <h3 className="mt-3 text-base font-semibold text-foreground">No interventions found</h3>

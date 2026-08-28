@@ -1,4 +1,25 @@
 import { useEffect, useState, useCallback } from "react";
+
+const RPC_ERROR_MESSAGES: Record<string, string> = {
+  not_authorized: "You are not authorized to perform this action.",
+  invalid_status_transition: "This action is not valid for the current status.",
+  intervention_not_found: "Intervention not found.",
+  cannot_reassign_terminal_intervention: "Completed or dismissed interventions cannot be reassigned.",
+  student_has_no_parent: "This student has no linked parent to notify.",
+  no_valid_assignee: "No eligible staff member found.",
+  invalid_assignee: "The selected assignee is not eligible.",
+  dismissal_reason_required: "A dismissal reason is required.",
+};
+
+function rpcErrorMessage(err: unknown, fallback: string): string {
+  if (err && typeof err === "object") {
+    const msg = (err as { message?: string }).message ?? "";
+    return RPC_ERROR_MESSAGES[msg] ?? msg ?? fallback;
+  }
+  if (err instanceof Error) return err.message || fallback;
+  return fallback;
+}
+
 import {
   View,
   Text,
@@ -268,8 +289,7 @@ export default function TeacherInterventionsScreen() {
       setSelectedIntervention((prev) => (prev ? { ...prev, status: "in_progress" } : null));
       await loadInterventions(true);
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : "Failed to start intervention.";
-      Alert.alert("Error", errorMsg);
+      Alert.alert("Error", rpcErrorMessage(err, "Failed to start intervention."));
     } finally {
       setActionLoading(false);
     }
@@ -294,8 +314,7 @@ export default function TeacherInterventionsScreen() {
       );
       await loadInterventions(true);
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : "Failed to complete intervention.";
-      Alert.alert("Error", errorMsg);
+      Alert.alert("Error", rpcErrorMessage(err, "Failed to complete intervention."));
     } finally {
       setActionLoading(false);
     }
@@ -324,8 +343,7 @@ export default function TeacherInterventionsScreen() {
       );
       await loadInterventions(true);
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : "Failed to dismiss intervention.";
-      Alert.alert("Error", errorMsg);
+      Alert.alert("Error", rpcErrorMessage(err, "Failed to dismiss intervention."));
     } finally {
       setActionLoading(false);
     }
@@ -348,8 +366,7 @@ export default function TeacherInterventionsScreen() {
         prev ? { ...prev, last_parent_notification: new Date().toISOString() } : null
       );
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : "Failed to send notification to parent.";
-      Alert.alert("Error", errorMsg);
+      Alert.alert("Error", rpcErrorMessage(err, "Failed to send notification to parent."));
     } finally {
       setActionLoading(false);
     }

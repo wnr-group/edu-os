@@ -19,9 +19,9 @@ Deno.serve(async (req: Request) => {
     return json({ error: "method_not_allowed" }, 405);
   }
 
-  // Verify cron secret
+  // Verify cron secret — fail closed: secret MUST be configured
   const secret = Deno.env.get("CRON_SECRET");
-  if (secret && req.headers.get("x-cron-secret") !== secret) {
+  if (!secret || req.headers.get("x-cron-secret") !== secret) {
     return json({ error: "unauthorized" }, 401);
   }
 

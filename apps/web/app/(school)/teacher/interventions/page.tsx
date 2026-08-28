@@ -131,6 +131,7 @@ export default async function TeacherInterventionsPage() {
       currentUserId={user.id}
       currentUserRole="teacher"
       isAdmin={false}
+      dbError={!!error}
     />
   );
 }

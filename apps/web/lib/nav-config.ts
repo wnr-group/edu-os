@@ -87,7 +87,6 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
       academic: [
         { label: "Results", href: "/teacher/results", feature: "exams" },
         { label: "Testing", href: "/teacher/testing", feature: "testing" },
-        { label: "Interventions", href: "/teacher/interventions", feature: "insights" },
       ],
       administration: [
         { label: "Discipline", href: "/teacher/discipline", feature: "discipline" },
@@ -109,7 +108,6 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
       academic: [
         { label: "Results", href: "/teacher/results", feature: "exams" },
         { label: "Testing", href: "/teacher/testing", feature: "testing" },
-        { label: "Interventions", href: "/teacher/interventions", feature: "insights" },
       ],
       administration: [
         { label: "Discipline", href: "/teacher/discipline", feature: "discipline" },
