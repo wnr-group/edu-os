@@ -33,7 +33,7 @@ REVOKE ALL ON FUNCTION public.increment_insight_run_counter(uuid, text) FROM PUB
 REVOKE ALL ON FUNCTION public.create_intervention_if_qualifying(uuid) FROM PUBLIC, anon, authenticated;
 
 -- Parent notification (called internally by intervention lifecycle)
-REVOKE ALL ON FUNCTION public.notify_parent_for_intervention(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.notify_parent_for_intervention(uuid, uuid) FROM PUBLIC, anon, authenticated;
 
 -- Advisory lock helper (internal use only)
 REVOKE ALL ON FUNCTION public.pg_advisory_xact_lock(uuid) FROM PUBLIC, anon, authenticated;
@@ -52,5 +52,5 @@ GRANT EXECUTE ON FUNCTION public.complete_intervention(uuid, text) TO authentica
 REVOKE ALL ON FUNCTION public.dismiss_intervention(uuid, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.dismiss_intervention(uuid, text) TO authenticated;
 
-REVOKE ALL ON FUNCTION public.reassign_intervention(uuid, uuid, text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.reassign_intervention(uuid, uuid, text) TO authenticated;
+REVOKE ALL ON FUNCTION public.reassign_intervention(uuid, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.reassign_intervention(uuid, uuid) TO authenticated;
