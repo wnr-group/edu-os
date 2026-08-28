@@ -82,6 +82,12 @@ export default function ParentMore() {
   const [healthDocs, setHealthDocs] = useState<HealthDocument[]>([]);
   const [vaccinations, setVaccinations] = useState<Vaccination[]>([]);
   const [pendingSubmission, setPendingSubmission] = useState<PendingSubmission | null>(null);
+  // True when the last loadHealth() attempt failed to reach the server — a
+  // failed read must never look like "no record yet", since Submit for
+  // Review sends whatever is in healthForm (defaulted from `health`), and a
+  // staff member approving that submission later applies it to the real
+  // record via the same _apply_health_record path the web tab uses.
+  const [healthLoadFailed, setHealthLoadFailed] = useState(false);
   const [showHealthForm, setShowHealthForm] = useState(false);
   const [healthForm, setHealthForm] = useState(EMPTY_HEALTH_FORM);
   const [submittingHealth, setSubmittingHealth] = useState(false);
@@ -225,7 +231,11 @@ export default function ParentMore() {
       setHealth(null); setHealthDocs([]); setVaccinations([]); setPendingSubmission(null); setLoading(false);
       return;
     }
-    const [{ data }, { data: vax }, { data: pending }] = await Promise.all([
+    const [
+      { data, error: healthError },
+      { data: vax, error: vaxError },
+      { data: pending, error: pendingError },
+    ] = await Promise.all([
       supabase
         .from("student_health_records")
         .select(
@@ -245,6 +255,13 @@ export default function ParentMore() {
         .eq("status", "pending")
         .maybeSingle(),
     ]);
+
+    if (healthError || vaxError || pendingError) {
+      setHealthLoadFailed(true);
+      setLoading(false);
+      return; // do NOT touch health/vaccinations/pendingSubmission with a partial result
+    }
+    setHealthLoadFailed(false);
     setHealth(data ?? null);
     setVaccinations((vax ?? []) as Vaccination[]);
     setPendingSubmission(pending ?? null);
@@ -298,6 +315,10 @@ export default function ParentMore() {
 
   async function handleSubmitHealthUpdate() {
     if (!activeStudentId) return;
+    if (healthLoadFailed) {
+      Alert.alert("Can't submit", "The record didn't load. Please pull to refresh and try again.");
+      return;
+    }
     if (!isValidPhone10(healthForm.emergency_contact_phone) || !isValidPhone10(healthForm.doctor_phone)) {
       Alert.alert("Invalid phone number", "Enter a valid 10-digit mobile number, or leave the field empty.");
       return;
@@ -588,7 +609,7 @@ export default function ParentMore() {
                   </View>
                 );
               })}
-              <PrimaryButton label="Submit for Review" onPress={handleSubmitHealthUpdate} loading={submittingHealth} />
+              <PrimaryButton label="Submit for Review" onPress={handleSubmitHealthUpdate} loading={submittingHealth} disabled={healthLoadFailed} />
               <TouchableOpacity onPress={() => setShowHealthForm(false)} style={{ alignItems: "center", paddingVertical: 6 }}>
                 <Text style={{ fontSize: 13, fontFamily: "Inter_500Medium", color: theme.textMuted }}>Cancel</Text>
               </TouchableOpacity>
@@ -596,6 +617,14 @@ export default function ParentMore() {
           )}
           {section === "health" && healthEnabled && !showHealthForm && (
             loading ? [0, 1].map(i => <SkeletonCard key={i} />) :
+            healthLoadFailed ? (
+              <View style={{ alignItems: "center", paddingVertical: 40, gap: 10 }}>
+                <Ionicons name="cloud-offline-outline" size={32} color={theme.textMuted} />
+                <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: theme.textMuted, textAlign: "center", paddingHorizontal: 24 }}>
+                  Couldn't load the health record. Pull down to refresh.
+                </Text>
+              </View>
+            ) :
             <View style={{ gap: 12 }}>
               {pendingSubmission && (
                 <View style={{ backgroundColor: theme.primaryLight, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", gap: 10 }}>

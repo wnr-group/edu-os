@@ -4,7 +4,22 @@
 ALTER TABLE public.document_types ADD COLUMN category text NOT NULL DEFAULT 'general';
 ALTER TABLE public.document_types ADD CONSTRAINT document_types_category_check CHECK (category IN ('general', 'medical'));
 
-UPDATE public.document_types SET category = 'medical' WHERE name = 'Medical / Vaccination';
+-- Exact-name match only catches the untouched seeded default — a school
+-- that renamed this type ("Immunisation Record", "Vaccination Card", ...)
+-- or added its own medical document type (the settings page lets schools
+-- add custom types freely) would stay 'general' forever, and the Health
+-- tab's `.filter(r => r.category === "medical")` would silently show
+-- nothing for them. Widened to a name pattern instead of one exact string.
+-- Guarded by `category = 'general'` so this is idempotent and never
+-- reclassifies a row someone (or a future settings-page toggle) already
+-- set explicitly, in either direction.
+UPDATE public.document_types
+SET category = 'medical'
+WHERE category = 'general'
+  AND (
+    name ILIKE '%vaccin%' OR name ILIKE '%immunis%' OR name ILIKE '%immuniz%'
+    OR name ILIKE '%medical%' OR name ILIKE '%health%'
+  );
 
 CREATE OR REPLACE FUNCTION public.seed_document_types(p_school_id uuid)
 RETURNS void

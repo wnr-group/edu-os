@@ -112,6 +112,11 @@ export function StudentHealthTab({ studentId, schoolId, readOnly = false }: { st
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [reviewNote, setReviewNote] = useState("");
+  // True whenever the last load attempt failed to reach the server — a
+  // failed read must never be treated as "no record yet", since Save
+  // writes back everything currently in `data`, and blanks would overwrite
+  // a real existing row via _apply_health_record's ON CONFLICT DO UPDATE.
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     if (!healthRecordsEnabled) {
@@ -126,15 +131,22 @@ export function StudentHealthTab({ studentId, schoolId, readOnly = false }: { st
   // so that saving a vaccination or uploading a document — neither of which
   // touch student_health_records — never overwrites whatever the admin is
   // currently typing into this form before they've clicked Save.
-  async function loadHealthRecord() {
+  // Returns whether the load succeeded — callers combine this with loadAux's
+  // own result rather than each setting the shared loadFailed flag
+  // independently, since both run concurrently via Promise.all() and one
+  // resolving after the other could otherwise clear a failure it never saw.
+  async function loadHealthRecord(): Promise<boolean> {
     const supabase = createClient();
-    const { data: record } = await supabase
+    const { data: record, error } = await supabase
       .from("student_health_records")
       .select(
         "blood_group, allergies, chronic_conditions, current_medications, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, doctor_name, doctor_phone, special_notes, updated_at"
       )
       .eq("student_id", studentId)
       .maybeSingle();
+
+    if (error) return false; // do NOT touch the form — a failed read is not "no record"
+
     if (record) {
       setData({ ...EMPTY, ...record });
       setHasRecord(true);
@@ -142,13 +154,18 @@ export function StudentHealthTab({ studentId, schoolId, readOnly = false }: { st
       setData(EMPTY);
       setHasRecord(false);
     }
+    return true;
   }
 
   // Vaccinations, medical documents, and pending submissions — independent
   // of the health-record form above.
-  async function loadAux() {
+  async function loadAux(): Promise<boolean> {
     const supabase = createClient();
-    const [{ data: checklist }, { data: vax }, { data: subs }] = await Promise.all([
+    const [
+      { data: checklist, error: checklistError },
+      { data: vax, error: vaxError },
+      { data: subs, error: subsError },
+    ] = await Promise.all([
       supabase.rpc("get_student_kyc_checklist", { p_student_id: studentId }),
       supabase
         .from("student_vaccinations")
@@ -165,14 +182,24 @@ export function StudentHealthTab({ studentId, schoolId, readOnly = false }: { st
         .eq("status", "pending")
         .order("created_at", { ascending: false }),
     ]);
+
+    if (checklistError || vaxError || subsError) return false; // do NOT touch docs/vaccinations/submissions with a partial result
+
     setDocs(((checklist ?? []) as ChecklistRow[]).filter((r) => r.category === "medical"));
     setVaccinations((vax ?? []) as Vaccination[]);
     setSubmissions((subs ?? []) as Submission[]);
+    return true;
   }
 
   async function load() {
     setLoading(true);
-    await Promise.all([loadHealthRecord(), loadAux()]);
+    const [recordOk, auxOk] = await Promise.all([loadHealthRecord(), loadAux()]);
+    if (!recordOk || !auxOk) {
+      setLoadFailed(true);
+      toast.error("Could not load the health record. Please refresh.");
+    } else {
+      setLoadFailed(false);
+    }
     setLoading(false);
   }
 
@@ -188,6 +215,10 @@ export function StudentHealthTab({ studentId, schoolId, readOnly = false }: { st
   const doctorPhoneValid = isValidPhone(data.doctor_phone ?? "");
 
   async function handleSave() {
+    if (loadFailed) {
+      toast.error("Can't save — the record didn't load. Please refresh first.");
+      return;
+    }
     if (!emergencyPhoneValid || !doctorPhoneValid) {
       toast.error("Enter a valid 10-digit mobile number, or leave the field empty.");
       return;
@@ -213,7 +244,9 @@ export function StudentHealthTab({ studentId, schoolId, readOnly = false }: { st
       return;
     }
     toast.success("Health record saved.");
-    loadHealthRecord();
+    const reloadOk = await loadHealthRecord();
+    setLoadFailed(!reloadOk);
+    if (!reloadOk) toast.error("Saved, but could not refresh the form. Please refresh the page.");
   }
 
   function triggerUpload(documentTypeId: string) {
@@ -617,7 +650,7 @@ export function StudentHealthTab({ studentId, schoolId, readOnly = false }: { st
           ) : (
             <span />
           )}
-          <Button onClick={handleSave} disabled={saving}>
+          <Button onClick={handleSave} disabled={saving || loadFailed}>
             {saving ? "Saving…" : "Save Health Record"}
           </Button>
         </div>

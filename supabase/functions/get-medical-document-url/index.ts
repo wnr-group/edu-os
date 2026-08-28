@@ -7,12 +7,30 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // its link from that address, so it needs rewriting to whatever host the
 // client actually used to reach us. Kong (and any standard reverse proxy,
 // including hosted Supabase's own front door) sets x-forwarded-host/-proto/
-// -port to exactly that — no new config needed, and no environment branch:
-// in production SUPABASE_URL is already the public URL, so this either
-// rewrites to the same value or is a no-op there.
+// -port to exactly that — but that's just a request header, so a caller can
+// set it to anything. Only rewrite to a host we actually recognize, never
+// to whatever the request claims — same allowlist convention as
+// getCookieDomain() in apps/web/lib/supabase/index.ts. In production
+// SUPABASE_URL is already the public URL, so this stays a no-op there
+// regardless of what a caller sends.
+const ALLOWED_LOOPBACK_HOSTS = ["127.0.0.1", "localhost"];
+const ALLOWED_FORWARDED_DOMAINS = [
+  "lvh.me",
+  "balajierp.com",
+  "eduos.wnradvisory.com",
+  "eduos.com",
+  "connectmyskool.com",
+];
+
+function isAllowedForwardedHost(hostname: string): boolean {
+  const lower = hostname.toLowerCase();
+  if (ALLOWED_LOOPBACK_HOSTS.includes(lower)) return true;
+  return ALLOWED_FORWARDED_DOMAINS.some((domain) => lower === domain || lower.endsWith(`.${domain}`));
+}
+
 function toPublicUrl(internalUrl: string, req: Request): string {
   const host = req.headers.get("x-forwarded-host");
-  if (!host) return internalUrl;
+  if (!host || !isAllowedForwardedHost(host)) return internalUrl;
   const proto = req.headers.get("x-forwarded-proto") ?? "https";
   const port = req.headers.get("x-forwarded-port");
   const url = new URL(internalUrl);

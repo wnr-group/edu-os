@@ -78,7 +78,14 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 DECLARE
   v_sub record;
 BEGIN
-  SELECT * INTO v_sub FROM public.student_health_record_submissions WHERE id = p_id;
+  -- FOR UPDATE: without it, two concurrent reviewers (e.g. admin and
+  -- principal both clicking Approve/Reject within the same instant) would
+  -- both read status = 'pending' before either commits, both pass the
+  -- not_pending check below, and both proceed — the whole function body is
+  -- one transaction, so this is the standard, low-cost fix for a
+  -- read-then-decide-then-write race (see finalize_conversion_rpc.sql for
+  -- the same pattern already used elsewhere in this codebase).
+  SELECT * INTO v_sub FROM public.student_health_record_submissions WHERE id = p_id FOR UPDATE;
   IF v_sub.id IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
   IF NOT public.feature_enabled(v_sub.school_id, 'health_records') THEN RAISE EXCEPTION 'module_disabled'; END IF;
   IF v_sub.status <> 'pending' THEN RAISE EXCEPTION 'not_pending'; END IF;

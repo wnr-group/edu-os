@@ -46,7 +46,7 @@ Deno.serve(async (req: Request) => {
     const title = "Vaccination reminder";
     const body = `${firstName}'s ${v.vaccine_name} is due on ${v.next_due_date}.`;
 
-    await admin.from("notifications").insert({
+    const { error: notifyError } = await admin.from("notifications").insert({
       school_id: v.school_id,
       user_id: student.parent_profile_id,
       student_id: v.student_id,
@@ -54,6 +54,11 @@ Deno.serve(async (req: Request) => {
       body,
       type: "vaccination_reminder",
     });
+
+    if (notifyError) {
+      console.error("vaccination reminder insert failed", { vaccinationId: v.id, notifyError });
+      continue; // skip the stamp — tomorrow's run retries it
+    }
 
     const { data: parent } = await admin
       .from("profiles").select("push_token").eq("id", student.parent_profile_id).maybeSingle();
@@ -65,6 +70,7 @@ Deno.serve(async (req: Request) => {
       }).catch(() => {});
     }
 
+    // Only stamp once we know the notification actually landed.
     await admin.from("student_vaccinations").update({ reminder_sent_at: new Date().toISOString() }).eq("id", v.id);
     notified++;
   }
