@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
-import { useTheme } from "../../lib/theme";
+import { useTheme, useFeature } from "../../lib/theme";
 import { useTeacherContext } from "../../lib/teacherContext";
 import { Skeleton, SkeletonCard } from "../../components/Skeleton";
 
@@ -28,6 +28,7 @@ export default function TeacherDashboard() {
   const theme = useTheme();
   const router = useRouter();
   const { sections, userId, schoolId, ready } = useTeacherContext();
+  const insightsEnabled = useFeature("insights");
 
   const [data, setData] = useState<DashboardData | null>(null);
   const [todayPeriods, setTodayPeriods] = useState<TodayPeriod[]>([]);
@@ -120,25 +121,32 @@ export default function TeacherDashboard() {
       .gte("due_date", today)
       .lte("due_date", nextWeek.toISOString().split("T")[0]);
 
-    // Open interventions count
-    const { count: openInterventionsCount } = await supabase
-      .from("interventions")
-      .select("id", { count: "exact", head: true })
-      .in("status", ["pending", "in_progress"]);
+    // Open interventions count (only query if insights feature is enabled)
+    let openInterventionsCount = 0;
+    let highRiskCount = 0;
 
-    const { count: highRiskCount } = await supabase
-      .from("interventions")
-      .select("id", { count: "exact", head: true })
-      .in("status", ["pending", "in_progress"])
-      .eq("severity_band", "HIGH");
+    if (insightsEnabled) {
+      const openRes = await supabase
+        .from("interventions")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["pending", "in_progress"]);
+      openInterventionsCount = openRes.count ?? 0;
+
+      const highRes = await supabase
+        .from("interventions")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["pending", "in_progress"])
+        .eq("severity_band", "HIGH");
+      highRiskCount = highRes.count ?? 0;
+    }
 
     setData({
       name,
       totalStudents: totalStudentsRes.count ?? 0,
       hwDueSoon: hwRes.count ?? 0,
       homeroomAttendanceDone,
-      openInterventions: openInterventionsCount ?? 0,
-      highRiskInterventions: highRiskCount ?? 0,
+      openInterventions: openInterventionsCount,
+      highRiskInterventions: highRiskCount,
     });
     setLoading(false);
   }
@@ -169,7 +177,7 @@ export default function TeacherDashboard() {
         </View>
 
         {/* ── Student Interventions Banner ─────────────────────────── */}
-        {!loading && (data?.openInterventions ?? 0) > 0 && (
+        {!loading && insightsEnabled && (data?.openInterventions ?? 0) > 0 && (
           <TouchableOpacity
             onPress={() => router.push("/(teacher)/interventions" as any)}
             activeOpacity={0.8}

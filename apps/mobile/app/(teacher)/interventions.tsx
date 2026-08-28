@@ -35,7 +35,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
-import { useTheme } from "../../lib/theme";
+import { useTheme, useFeature } from "../../lib/theme";
 import { useTeacherContext } from "../../lib/teacherContext";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { SkeletonCard } from "../../components/Skeleton";
@@ -83,6 +83,7 @@ export default function TeacherInterventionsScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { ready } = useTeacherContext();
+  const insightsEnabled = useFeature("insights");
 
   const [interventions, setInterventions] = useState<InterventionItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,14 +109,15 @@ export default function TeacherInterventionsScreen() {
 
   useEffect(() => {
     let isMounted = true;
-    if (!ready) return;
+    // Do not load interventions if insights feature is disabled
+    if (!ready || !insightsEnabled) return;
 
     loadInterventions(isMounted);
 
     return () => {
       isMounted = false;
     };
-  }, [ready, statusFilter, kindFilter]);
+  }, [ready, insightsEnabled, statusFilter, kindFilter]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -382,6 +384,52 @@ export default function TeacherInterventionsScreen() {
     }
     return { label: `Due: ${dueDateStr}`, bg: theme.surface, text: theme.textMuted };
   };
+
+  // Feature gate: Show disabled state when insights feature is not enabled
+  if (!insightsEnabled) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }} edges={["top"]}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: theme.border }}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 12 }}>
+              <Ionicons name="arrow-back" size={24} color={theme.textPrimary} />
+            </TouchableOpacity>
+            <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: theme.textPrimary }}>
+              Student Interventions
+            </Text>
+          </View>
+        </View>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
+          <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: theme.surface, alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+            <Ionicons name="information-circle-outline" size={40} color={theme.textMuted} />
+          </View>
+          <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: theme.textPrimary, textAlign: "center", marginBottom: 8 }}>
+            Feature Not Enabled
+          </Text>
+          <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: theme.textSecondary, textAlign: "center", marginBottom: 24 }}>
+            The insights feature is not currently enabled for your school. Please contact your school administrator to enable this feature.
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.push("/(teacher)/dashboard")}
+            style={{
+              backgroundColor: theme.primary,
+              paddingHorizontal: 24,
+              paddingVertical: 12,
+              borderRadius: 8,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <Ionicons name="home" size={18} color="#FFF" />
+            <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#FFF" }}>
+              Return to Dashboard
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }} edges={["top"]}>

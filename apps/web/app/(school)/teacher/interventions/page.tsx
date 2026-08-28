@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { InterventionsView, type InterventionRow } from "@/components/interventions/interventions-view";
+import { FeatureDisabled } from "@/components/feature-disabled";
+import type { FeatureKey } from "@erp/shared";
 
 export default async function TeacherInterventionsPage() {
   const supabase = await createServerSupabaseClient();
@@ -13,6 +15,25 @@ export default async function TeacherInterventionsPage() {
 
   if (!user || !schoolId) {
     redirect("/login");
+  }
+
+  // Feature gate: Check if insights feature is enabled before loading data
+  const { data: school } = await supabase
+    .from("schools")
+    .select("features_enabled")
+    .eq("id", schoolId)
+    .single();
+
+  const schoolFeatures = (school?.features_enabled ?? {}) as Partial<Record<FeatureKey, boolean>>;
+
+  if (schoolFeatures.insights !== true) {
+    return (
+      <FeatureDisabled
+        featureName="Student Interventions"
+        description="The insights feature is not currently enabled for your school. Please contact your school administrator to enable this feature."
+        dashboardHref="/teacher/dashboard"
+      />
+    );
   }
 
   // Fetch interventions visible to this teacher
