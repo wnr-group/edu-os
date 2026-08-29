@@ -35,6 +35,9 @@ DECLARE
   v_subject_1 UUID;
   v_subject_2 UUID;
   v_today DATE := (now() AT TIME ZONE 'Asia/Kolkata')::date;
+  v_date_low DATE := v_today - 3;
+  v_date_med DATE := v_today - 2;
+  v_date_high DATE := v_today - 1;
   v_snap_low UUID;
   v_snap_med UUID;
   v_snap_high UUID;
@@ -67,7 +70,7 @@ BEGIN
   INSERT INTO public.student_risk_snapshots (
     school_id, student_id, kind, computed_for, score, band, factors, recommended_action, params_hash
   ) VALUES (
-    v_school_id, v_student_id, 'attendance', v_today, 15.00, 'LOW',
+    v_school_id, v_student_id, 'attendance', v_date_low, 15.00, 'LOW',
     '[]'::jsonb, 'Monitor as normal', 'HASH_LOW'
   ) RETURNING id INTO v_snap_low;
 
@@ -81,7 +84,7 @@ BEGIN
   INSERT INTO public.student_risk_snapshots (
     school_id, student_id, kind, computed_for, score, band, factors, recommended_action, params_hash
   ) VALUES (
-    v_school_id, v_student_id, 'attendance', v_today, 55.00, 'MED',
+    v_school_id, v_student_id, 'attendance', v_date_med, 55.00, 'MED',
     '[{"factor":"unexcused_count","detail":"2 absences","weight":0.3}]'::jsonb,
     'Discuss attendance pattern with student', 'HASH_MED'
   ) RETURNING id INTO v_snap_med;
@@ -106,7 +109,7 @@ BEGIN
   INSERT INTO public.student_risk_snapshots (
     school_id, student_id, kind, computed_for, score, band, factors, recommended_action, params_hash
   ) VALUES (
-    v_school_id, v_student_id, 'attendance', v_today, 88.00, 'HIGH',
+    v_school_id, v_student_id, 'attendance', v_date_high, 88.00, 'HIGH',
     '[{"factor":"streak","detail":"3 consecutive unexcused","weight":0.5}]'::jsonb,
     'Call parent immediately', 'HASH_HIGH'
   ) RETURNING id INTO v_snap_high;
