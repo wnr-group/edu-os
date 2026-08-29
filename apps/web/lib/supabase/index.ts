@@ -34,6 +34,20 @@ function scopeHeaders(): Record<string, string> {
   return headers;
 }
 
+// global.headers is captured once when the client is constructed, so with the
+// default (shared) singleton it would freeze whichever cookies were present
+// on the first-ever createClient() call for the life of the tab. global.fetch
+// is instead invoked fresh on every actual network call, so reading
+// scopeHeaders() inside it keeps x-school-id/x-active-role current without
+// giving up the singleton (and its single GoTrueClient/auth-refresh cycle).
+function scopedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const headers = new Headers(init?.headers);
+  for (const [key, value] of Object.entries(scopeHeaders())) {
+    headers.set(key, value);
+  }
+  return fetch(input, { ...init, headers });
+}
+
 export function createClient() {
   const cookieDomain = getCookieDomain();
   return createBrowserClient(
@@ -41,7 +55,7 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0",
     {
       ...(cookieDomain ? { cookieOptions: { domain: cookieDomain } } : {}),
-      global: { headers: scopeHeaders() },
+      global: { fetch: scopedFetch },
     }
   );
 }

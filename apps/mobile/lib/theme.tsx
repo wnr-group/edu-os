@@ -50,7 +50,7 @@ const ThemeContext = createContext<Theme>(buildTheme(DEFAULT_PRIMARY));
 export type FeatureKey =
   | "attendance" | "attendance_geo" | "homework" | "exams" | "exam_schedule"
   | "report_cards" | "syllabus" | "timetable"
-  | "admissions" | "kyc_documents" | "leave" | "testing"
+  | "admissions" | "kyc_documents" | "health_records" | "leave" | "testing"
   | "fees" | "online_payments"
   | "announcements" | "gallery" | "feedback" | "discipline"
   | "insights";
