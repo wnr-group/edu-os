@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
   let authorized = isSchoolStaff;
   if (!authorized) {
-    const { data: teaches } = await supabase.rpc("teaches_student", { p_student_id: doc.subject_id });
+    const { data: teaches } = await supabase.rpc("teaches_student", { p_student_profile_id: doc.subject_id });
     authorized = !!teaches;
   }
   if (!authorized) {
