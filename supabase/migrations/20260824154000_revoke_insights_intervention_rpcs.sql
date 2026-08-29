@@ -8,13 +8,13 @@
 --   - heartbeat_insight_run
 --   - increment_insight_run_counter
 --   - create_intervention_if_qualifying
---   - notify_parent_for_intervention
 --
--- Authenticated functions (called by users with RLS authorization):
+-- Authenticated functions (called by users with internal authorization):
 --   - start_intervention
 --   - complete_intervention
 --   - dismiss_intervention
 --   - reassign_intervention
+--   - notify_parent_for_intervention
 
 -- ===========================================================================
 -- Service-role-only RPCs
@@ -31,9 +31,6 @@ REVOKE ALL ON FUNCTION public.increment_insight_run_counter(uuid, text) FROM PUB
 
 -- Intervention creation (called by insights recompute Edge Function)
 REVOKE ALL ON FUNCTION public.create_intervention_if_qualifying(uuid) FROM PUBLIC, anon, authenticated;
-
--- Parent notification (called internally by intervention lifecycle)
-REVOKE ALL ON FUNCTION public.notify_parent_for_intervention(uuid, uuid) FROM PUBLIC, anon, authenticated;
 
 -- Advisory lock helper (internal use only)
 REVOKE ALL ON FUNCTION public.pg_advisory_xact_lock(uuid) FROM PUBLIC, anon, authenticated;
@@ -54,3 +51,6 @@ GRANT EXECUTE ON FUNCTION public.dismiss_intervention(uuid, text) TO authenticat
 
 REVOKE ALL ON FUNCTION public.reassign_intervention(uuid, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.reassign_intervention(uuid, uuid) TO authenticated;
+
+REVOKE ALL ON FUNCTION public.notify_parent_for_intervention(uuid, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.notify_parent_for_intervention(uuid, uuid) TO authenticated;
