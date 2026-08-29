@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert, TextInput, Image, RefreshControl } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Alert, TextInput, Image, RefreshControl, Linking } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { File } from "expo-file-system";
-import { supabase, fixStorageUrl, SCHOOL_ID } from "../../lib/supabase";
+import { supabase, supabaseUrl, fixStorageUrl, SCHOOL_ID } from "../../lib/supabase";
 import { useActiveContext, clearActiveContext } from "../../lib/active-context";
 import { useTheme, useFeature } from "../../lib/theme";
 import { ListItem } from "../../components/ListItem";
@@ -15,7 +15,50 @@ import { PrimaryButton } from "../../components/PrimaryButton";
 import { SkeletonCard } from "../../components/Skeleton";
 import { useParentCounts } from "../../lib/parent-counts";
 
-type Section = "menu" | "notifications" | "announcements" | "discipline" | "feedback-teacher" | "feedback-management" | "profile";
+type Section = "menu" | "notifications" | "announcements" | "discipline" | "health" | "feedback-teacher" | "feedback-management" | "profile";
+
+interface HealthRecord {
+  blood_group: string | null;
+  allergies: string | null;
+  chronic_conditions: string | null;
+  current_medications: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  emergency_contact_relation: string | null;
+  doctor_name: string | null;
+  doctor_phone: string | null;
+  special_notes: string | null;
+}
+
+interface HealthDocument {
+  id: string;
+  file_name: string;
+  verified_at: string | null;
+  document_type_name: string;
+}
+
+interface Vaccination {
+  id: string;
+  vaccine_name: string;
+  dose_number: number | null;
+  administered_date: string | null;
+  next_due_date: string | null;
+}
+
+interface PendingSubmission {
+  id: string;
+  created_at: string;
+}
+
+const EMPTY_HEALTH_FORM = {
+  blood_group: "", allergies: "", chronic_conditions: "", current_medications: "",
+  emergency_contact_name: "", emergency_contact_phone: "", emergency_contact_relation: "",
+  doctor_name: "", doctor_phone: "", special_notes: "",
+};
+
+function isValidPhone10(value: string) {
+  return value === "" || /^\d{10}$/.test(value);
+}
 
 export default function ParentMore() {
   const theme = useTheme();
@@ -23,6 +66,7 @@ export default function ParentMore() {
   const announcementsEnabled = useFeature("announcements");
   const disciplineEnabled = useFeature("discipline");
   const ptmEnabled = useFeature("ptm");
+  const healthEnabled = useFeature("health_records");
   const admissionsEnabled = useFeature("admissions");
   const kycEnabled = useFeature("kyc_documents");
   const router = useRouter();
@@ -35,6 +79,19 @@ export default function ParentMore() {
   const [student, setStudent] = useState<{ name: string; className: string; sectionName: string; rollNumber: string; admissionNumber: string; photoUrl: string | null } | null>(null);
   const [announcements, setAnnouncements] = useState<{ id: string; title: string; content: string; created_at: string }[]>([]);
   const [discipline, setDiscipline] = useState<{ id: string; incident_date: string; description: string; action_taken: string }[]>([]);
+  const [health, setHealth] = useState<HealthRecord | null>(null);
+  const [healthDocs, setHealthDocs] = useState<HealthDocument[]>([]);
+  const [vaccinations, setVaccinations] = useState<Vaccination[]>([]);
+  const [pendingSubmission, setPendingSubmission] = useState<PendingSubmission | null>(null);
+  // True when the last loadHealth() attempt failed to reach the server — a
+  // failed read must never look like "no record yet", since Submit for
+  // Review sends whatever is in healthForm (defaulted from `health`), and a
+  // staff member approving that submission later applies it to the real
+  // record via the same _apply_health_record path the web tab uses.
+  const [healthLoadFailed, setHealthLoadFailed] = useState(false);
+  const [showHealthForm, setShowHealthForm] = useState(false);
+  const [healthForm, setHealthForm] = useState(EMPTY_HEALTH_FORM);
+  const [submittingHealth, setSubmittingHealth] = useState(false);
   const [teacherFeedback, setTeacherFeedback] = useState({ subject: "", message: "" });
   const [managementFeedback, setManagementFeedback] = useState({ subject: "", message: "" });
   const [classteacherId, setClassteacherId] = useState<string | null>(null);
@@ -67,6 +124,7 @@ export default function ParentMore() {
     if (section === "notifications") await loadNotifications();
     if (section === "announcements") await loadAnnouncements();
     if (section === "discipline") await loadDiscipline();
+    if (section === "health") await loadHealth();
     setRefreshing(false);
   }, [section]);
 
@@ -166,6 +224,133 @@ export default function ParentMore() {
       action_taken: r.severity,
     })));
     setLoading(false);
+  }
+
+  async function loadHealth() {
+    setLoading(true);
+    if (!activeStudentId) {
+      setHealth(null); setHealthDocs([]); setVaccinations([]); setPendingSubmission(null); setLoading(false);
+      return;
+    }
+    const [
+      { data, error: healthError },
+      { data: vax, error: vaxError },
+      { data: pending, error: pendingError },
+    ] = await Promise.all([
+      supabase
+        .from("student_health_records")
+        .select(
+          "blood_group, allergies, chronic_conditions, current_medications, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, doctor_name, doctor_phone, special_notes"
+        )
+        .eq("student_id", activeStudentId)
+        .maybeSingle(),
+      supabase
+        .from("student_vaccinations")
+        .select("id, vaccine_name, dose_number, administered_date, next_due_date")
+        .eq("student_id", activeStudentId)
+        .order("administered_date", { ascending: false, nullsFirst: false }),
+      supabase
+        .from("student_health_record_submissions")
+        .select("id, created_at")
+        .eq("student_id", activeStudentId)
+        .eq("status", "pending")
+        .maybeSingle(),
+    ]);
+
+    if (healthError || vaxError || pendingError) {
+      setHealthLoadFailed(true);
+      setLoading(false);
+      return; // do NOT touch health/vaccinations/pendingSubmission with a partial result
+    }
+    setHealthLoadFailed(false);
+    setHealth(data ?? null);
+    setVaccinations((vax ?? []) as Vaccination[]);
+    setPendingSubmission(pending ?? null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${supabaseUrl}/functions/v1/get-medical-document-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+        body: JSON.stringify({ action: "list", student_id: activeStudentId }),
+      });
+      const result = await res.json();
+      setHealthDocs(res.ok ? (result.documents ?? []) : []);
+    } catch {
+      setHealthDocs([]);
+    }
+    setLoading(false);
+  }
+
+  async function handleViewDocument(documentId: string) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${supabaseUrl}/functions/v1/get-medical-document-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+        body: JSON.stringify({ document_id: documentId }),
+      });
+      const result = await res.json();
+      if (!res.ok || !result.url) throw new Error(result.error ?? "Could not open document");
+      await Linking.openURL(result.url);
+    } catch (e: any) {
+      Alert.alert("Unable to open document", e?.message ?? "Please try again.");
+    }
+  }
+
+  function openHealthForm() {
+    setHealthForm({
+      blood_group: health?.blood_group ?? "",
+      allergies: health?.allergies ?? "",
+      chronic_conditions: health?.chronic_conditions ?? "",
+      current_medications: health?.current_medications ?? "",
+      emergency_contact_name: health?.emergency_contact_name ?? "",
+      emergency_contact_phone: health?.emergency_contact_phone ?? "",
+      emergency_contact_relation: health?.emergency_contact_relation ?? "",
+      doctor_name: health?.doctor_name ?? "",
+      doctor_phone: health?.doctor_phone ?? "",
+      special_notes: health?.special_notes ?? "",
+    });
+    setShowHealthForm(true);
+  }
+
+  async function handleSubmitHealthUpdate() {
+    if (!activeStudentId) return;
+    if (healthLoadFailed) {
+      Alert.alert("Can't submit", "The record didn't load. Please pull to refresh and try again.");
+      return;
+    }
+    if (!isValidPhone10(healthForm.emergency_contact_phone) || !isValidPhone10(healthForm.doctor_phone)) {
+      Alert.alert("Invalid phone number", "Enter a valid 10-digit mobile number, or leave the field empty.");
+      return;
+    }
+    setSubmittingHealth(true);
+    try {
+      const { error } = await supabase.rpc("submit_health_record_update", {
+        p_student_id: activeStudentId,
+        p_blood_group: healthForm.blood_group || null,
+        p_allergies: healthForm.allergies || null,
+        p_chronic_conditions: healthForm.chronic_conditions || null,
+        p_current_medications: healthForm.current_medications || null,
+        p_emergency_contact_name: healthForm.emergency_contact_name || null,
+        p_emergency_contact_phone: healthForm.emergency_contact_phone || null,
+        p_emergency_contact_relation: healthForm.emergency_contact_relation || null,
+        p_doctor_name: healthForm.doctor_name || null,
+        p_doctor_phone: healthForm.doctor_phone || null,
+        p_special_notes: healthForm.special_notes || null,
+      });
+      if (error) throw error;
+      setShowHealthForm(false);
+      Alert.alert("Submitted", "Your update has been sent to the school for review.");
+      await loadHealth();
+    } catch (e: any) {
+      const message = e?.message === "pending_submission_exists"
+        ? "You already have an update awaiting review."
+        : (e?.message ?? "Please try again.");
+      Alert.alert("Unable to submit", message);
+    } finally {
+      setSubmittingHealth(false);
+    }
   }
 
   async function submitTeacherFeedback() {
@@ -303,6 +488,7 @@ export default function ParentMore() {
     if (s === "notifications") loadNotifications();
     if (s === "announcements") { loadAnnouncements(); markAnnouncementsSeen(); }
     if (s === "discipline") loadDiscipline();
+    if (s === "health") loadHealth();
   }
 
   const sectionTitle: Record<Section, string> = {
@@ -310,6 +496,7 @@ export default function ParentMore() {
     notifications: "Notifications",
     announcements: "Announcements",
     discipline: "Discipline Records",
+    health: "Health Record",
     "feedback-teacher": "Message Teacher",
     "feedback-management": "Contact Management",
     profile: "Profile",
@@ -374,6 +561,166 @@ export default function ParentMore() {
                 <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: theme.warning }}>Action: {d.action_taken}</Text>
               </View>
             ))
+          )}
+          {section === "health" && !healthEnabled && (
+            <View style={{ alignItems: "center", paddingVertical: 40, gap: 10 }}>
+              <Ionicons name="medkit-outline" size={32} color={theme.textMuted} />
+              <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: theme.textMuted, textAlign: "center", paddingHorizontal: 24 }}>
+                Health records are currently unavailable for your school.
+              </Text>
+            </View>
+          )}
+          {section === "health" && healthEnabled && showHealthForm && (
+            <View style={{ gap: 14 }}>
+              <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: theme.textSecondary }}>
+                Your update will be sent to the school for review before it appears on the record.
+              </Text>
+              {[
+                { key: "blood_group" as const, label: "Blood Group", placeholder: "e.g. O+" },
+                { key: "allergies" as const, label: "Allergies", multiline: true },
+                { key: "chronic_conditions" as const, label: "Chronic Conditions", multiline: true },
+                { key: "current_medications" as const, label: "Current Medications", multiline: true },
+                { key: "emergency_contact_name" as const, label: "Emergency Contact Name" },
+                { key: "emergency_contact_phone" as const, label: "Emergency Contact Phone", phone: true },
+                { key: "emergency_contact_relation" as const, label: "Relation", placeholder: "e.g. Mother" },
+                { key: "doctor_name" as const, label: "Doctor Name" },
+                { key: "doctor_phone" as const, label: "Doctor Phone", phone: true },
+                { key: "special_notes" as const, label: "Special Notes", multiline: true },
+              ].map((f) => {
+                const invalid = f.phone && !isValidPhone10(healthForm[f.key]);
+                return (
+                  <View key={f.key}>
+                    <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: theme.textSecondary, marginBottom: 6 }}>{f.label}</Text>
+                    <TextInput
+                      style={{
+                        backgroundColor: theme.surface, borderRadius: 12, padding: 14,
+                        borderWidth: 1, borderColor: invalid ? theme.danger : theme.border,
+                        fontSize: 14, fontFamily: "Inter_400Regular", color: theme.textPrimary,
+                        minHeight: f.multiline ? 80 : undefined, textAlignVertical: f.multiline ? "top" : "center",
+                      }}
+                      placeholder={f.placeholder}
+                      placeholderTextColor={theme.textMuted}
+                      multiline={f.multiline}
+                      keyboardType={f.phone ? "number-pad" : "default"}
+                      maxLength={f.phone ? 10 : undefined}
+                      value={healthForm[f.key]}
+                      onChangeText={(v) => setHealthForm((p) => ({ ...p, [f.key]: f.phone ? v.replace(/\D/g, "").slice(0, 10) : v }))}
+                    />
+                    {invalid && <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: theme.danger, marginTop: 4 }}>Enter a valid 10-digit mobile number.</Text>}
+                  </View>
+                );
+              })}
+              <PrimaryButton label="Submit for Review" onPress={handleSubmitHealthUpdate} loading={submittingHealth} disabled={healthLoadFailed} />
+              <TouchableOpacity onPress={() => setShowHealthForm(false)} style={{ alignItems: "center", paddingVertical: 6 }}>
+                <Text style={{ fontSize: 13, fontFamily: "Inter_500Medium", color: theme.textMuted }}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {section === "health" && healthEnabled && !showHealthForm && (
+            loading ? [0, 1].map(i => <SkeletonCard key={i} />) :
+            healthLoadFailed ? (
+              <View style={{ alignItems: "center", paddingVertical: 40, gap: 10 }}>
+                <Ionicons name="cloud-offline-outline" size={32} color={theme.textMuted} />
+                <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: theme.textMuted, textAlign: "center", paddingHorizontal: 24 }}>
+                  Couldn't load the health record. Pull down to refresh.
+                </Text>
+              </View>
+            ) :
+            <View style={{ gap: 12 }}>
+              {pendingSubmission && (
+                <View style={{ backgroundColor: theme.primaryLight, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Ionicons name="time-outline" size={18} color={theme.primary} />
+                  <Text style={{ flex: 1, fontSize: 13, fontFamily: "Inter_500Medium", color: theme.textPrimary }}>
+                    Your update from {new Date(pendingSubmission.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} is awaiting review.
+                  </Text>
+                </View>
+              )}
+              {!health && healthDocs.length === 0 && vaccinations.length === 0 && !pendingSubmission ? (
+                <Text style={{ textAlign: "center", color: theme.textMuted, fontFamily: "Inter_400Regular", paddingVertical: 32 }}>No health record on file</Text>
+              ) : (
+                <>
+                {[
+                  { label: "Blood Group", value: health?.blood_group ?? null },
+                  { label: "Allergies", value: health?.allergies ?? null },
+                  { label: "Chronic Conditions", value: health?.chronic_conditions ?? null },
+                  { label: "Current Medications", value: health?.current_medications ?? null },
+                  {
+                    label: "Emergency Contact",
+                    value: health?.emergency_contact_name
+                      ? [health.emergency_contact_name, health.emergency_contact_relation, health.emergency_contact_phone].filter(Boolean).join(" · ")
+                      : null,
+                  },
+                  {
+                    label: "Doctor",
+                    value: health?.doctor_name
+                      ? [health.doctor_name, health.doctor_phone].filter(Boolean).join(" · ")
+                      : null,
+                  },
+                  { label: "Special Notes", value: health?.special_notes ?? null },
+                ]
+                  .filter((r) => r.value)
+                  .map((r) => (
+                    <View key={r.label} style={{ backgroundColor: theme.surface, borderRadius: 16, padding: 16, gap: 4 }}>
+                      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: theme.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>{r.label}</Text>
+                      <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: theme.textPrimary }}>{r.value}</Text>
+                    </View>
+                  ))}
+                {healthDocs.length > 0 && (
+                  <View style={{ gap: 8, marginTop: 4 }}>
+                    <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: theme.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                      Medical Documents
+                    </Text>
+                    {healthDocs.map((d) => (
+                      <TouchableOpacity
+                        key={d.id}
+                        onPress={() => handleViewDocument(d.id)}
+                        activeOpacity={0.7}
+                        style={{ backgroundColor: theme.surface, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", gap: 12 }}
+                      >
+                        <Ionicons name="document-text-outline" size={20} color={theme.primary} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: theme.textPrimary }}>{d.document_type_name}</Text>
+                          <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textMuted }} numberOfLines={1}>{d.file_name}</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+                {vaccinations.length > 0 && (
+                  <View style={{ gap: 8, marginTop: 4 }}>
+                    <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: theme.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                      Vaccination History
+                    </Text>
+                    {vaccinations.map((v) => (
+                      <View key={v.id} style={{ backgroundColor: theme.surface, borderRadius: 16, padding: 16, gap: 3 }}>
+                        <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: theme.textPrimary }}>
+                          {v.vaccine_name}{v.dose_number ? ` · Dose ${v.dose_number}` : ""}
+                        </Text>
+                        <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textMuted }}>
+                          {v.administered_date ? `Given ${v.administered_date}` : ""}
+                          {v.administered_date && v.next_due_date ? " · " : ""}
+                          {v.next_due_date ? `Next due ${v.next_due_date}` : ""}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                </>
+              )}
+              {!pendingSubmission && (
+                <TouchableOpacity
+                  onPress={openHealthForm}
+                  activeOpacity={0.7}
+                  style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 14, borderWidth: 1, borderColor: theme.border, borderStyle: "dashed", paddingVertical: 14, marginTop: 4 }}
+                >
+                  <Ionicons name="create-outline" size={16} color={theme.textSecondary} />
+                  <Text style={{ fontSize: 13, fontFamily: "Inter_500Medium", color: theme.textSecondary }}>
+                    {health ? "Submit an Update" : "Submit Health Information"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
           )}
           {(section === "feedback-teacher" || section === "feedback-management") && !feedbackEnabled && (
             <View style={{ alignItems: "center", paddingVertical: 40, gap: 10 }}>
@@ -542,6 +889,9 @@ export default function ParentMore() {
           )}
           {ptmEnabled && (
             <ListItem icon="people-outline" title="Parent-Teacher Meetings" subtitle="Upcoming & past meetings" onPress={() => router.push("/(parent)/ptm")} />
+          )}
+          {healthEnabled && (
+            <ListItem icon="medkit-outline" title="Health Record" subtitle="Medical info & emergency contact" onPress={() => navigate("health")} />
           )}
           {admissionsEnabled && (
             <ListItem icon="school-outline" title="Admission Enquiry" subtitle="Enquire about a new admission" onPress={() => router.push("/(parent)/admission-enquiry" as any)} />

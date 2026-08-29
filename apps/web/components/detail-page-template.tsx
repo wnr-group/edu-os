@@ -8,7 +8,7 @@ type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
 
 interface DetailTab {
   key: string;
-  label: string;
+  label: React.ReactNode;
   content: React.ReactNode;
 }
 
@@ -72,7 +72,7 @@ export function DetailPageTemplate({
 
       {tabs.length > 0 && (
         <div>
-          <div className="flex gap-1 overflow-x-auto border-b border-border">
+          <div className="flex gap-1 overflow-x-auto overscroll-x-contain border-b border-border">
             {tabs.map((tab) => {
               const isActive = tab.key === activeTab;
               const tabClassName = cn(

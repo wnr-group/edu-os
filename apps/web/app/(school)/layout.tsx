@@ -253,7 +253,7 @@ const settingsHref = displayRole === "school_admin" ? "/admin/settings" : undefi
           showSectionSwitcher ? <SectionSwitcher {...sectionSwitcherProps} variant="light" /> : null
         }
       />
-      <main className="flex-1 overflow-y-auto p-4 pb-24 lg:p-8 lg:pb-8">
+      <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 pb-24 lg:p-8 lg:pb-8">
         <div className="mb-4">
           <Breadcrumbs homeHref={dashboardHref} />
         </div>
