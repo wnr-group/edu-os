@@ -26,6 +26,12 @@ jobs:
         with:
           version: latest
 
+      - name: Cleanup existing Supabase containers
+        run: |
+          supabase stop || true
+          docker ps -a | grep supabase | awk '{print $1}' | xargs -r docker rm -f || true
+        continue-on-error: true
+
       - name: Start local Supabase stack
         run: supabase start
 
