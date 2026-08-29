@@ -92,7 +92,9 @@ export default async function TeacherInterventionsPage() {
       )
     `)
     .eq("school_id", schoolId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(500);
 
   if (error) {
     console.error("Error fetching teacher interventions:", error);

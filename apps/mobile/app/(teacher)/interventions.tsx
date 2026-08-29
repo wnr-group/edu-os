@@ -160,7 +160,9 @@ export default function TeacherInterventionsScreen() {
             )
           )
         `)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(500);
 
       if (statusFilter === "open") {
         query = query.in("status", ["pending", "in_progress"]);
