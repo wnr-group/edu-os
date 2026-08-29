@@ -65,6 +65,7 @@ export default function ParentMore() {
   const feedbackEnabled = useFeature("feedback");
   const announcementsEnabled = useFeature("announcements");
   const disciplineEnabled = useFeature("discipline");
+  const ptmEnabled = useFeature("ptm");
   const healthEnabled = useFeature("health_records");
   const admissionsEnabled = useFeature("admissions");
   const kycEnabled = useFeature("kyc_documents");
@@ -885,6 +886,9 @@ export default function ParentMore() {
           )}
           {disciplineEnabled && (
             <ListItem icon="warning-outline" title="Discipline Records" subtitle="Incidents & actions" onPress={() => navigate("discipline")} />
+          )}
+          {ptmEnabled && (
+            <ListItem icon="people-outline" title="Parent-Teacher Meetings" subtitle="Upcoming & past meetings" onPress={() => router.push("/(parent)/ptm")} />
           )}
           {healthEnabled && (
             <ListItem icon="medkit-outline" title="Health Record" subtitle="Medical info & emergency contact" onPress={() => navigate("health")} />

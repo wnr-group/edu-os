@@ -6,7 +6,7 @@ export type FeatureKey =
   | "report_cards" | "syllabus" | "timetable"
   | "admissions" | "kyc_documents" | "health_records" | "leave" | "testing"
   | "fees" | "online_payments"
-  | "announcements" | "gallery" | "feedback" | "discipline"
+  | "announcements" | "gallery" | "feedback" | "discipline" | "ptm"
   | "insights";
 
 export interface FeatureDef {
@@ -212,6 +212,16 @@ export const FEATURE_REGISTRY: Record<FeatureKey, FeatureDef> = {
     defaultOn: true,
     status: "existing",
     gatesTables: ["feedback"],
+  },
+  ptm: {
+    key: "ptm",
+    label: "Parent-Teacher Meetings",
+    description: "Schedule PTMs, track history, and record teacher feedback.",
+    category: "Communication",
+    defaultOn: false,
+    status: "new",
+    gatesTables: ["ptm_meetings", "ptm_feedback"],
+    gatesFunctions: ["ptm-notify", "send-ptm-reminders"],
   },
   insights: {
     key: "insights",

@@ -44,6 +44,7 @@ function ParentTabs() {
       <Tabs.Screen name="apply-leave" options={{ href: null }} />
       <Tabs.Screen name="leave-status" options={{ href: null }} />
       <Tabs.Screen name="exam-datesheet" options={{ href: null }} />
+      <Tabs.Screen name="ptm" options={{ href: null }} />
       <Tabs.Screen name="admission-enquiry" options={{ href: null }} />
       <Tabs.Screen name="kyc-documents" options={{ href: null }} />
     </Tabs>
