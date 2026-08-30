@@ -44,14 +44,14 @@ Deno.serve(async (req: Request) => {
 
   const admin = createClient(supabaseUrl, serviceKey);
 
-  if (entity_type === "kyc_document") return await resolveKycDocument(admin, entity_id);
+  if (entity_type === "kyc_document") return await resolveKycDocument(admin, entity_id, userData.user.id);
   if (entity_type === "feedback") return await resolveFeedback(admin, entity_id, userData.user.id);
-  if (entity_type === "leave_request") return await resolveLeaveRequest(admin, entity_id);
+  if (entity_type === "leave_request") return await resolveLeaveRequest(admin, entity_id, userData.user.id);
   return json({ error: "bad_entity_type" }, 400);
 });
 
 // deno-lint-ignore no-explicit-any
-async function resolveLeaveRequest(admin: any, leaveId: string): Promise<Response> {
+async function resolveLeaveRequest(admin: any, leaveId: string, callerId: string): Promise<Response> {
   const { data: lr } = await admin
     .from("leave_requests")
     .select("id, school_id, status, decided_by")
@@ -60,6 +60,12 @@ async function resolveLeaveRequest(admin: any, leaveId: string): Promise<Respons
   if (!lr) return json({ result: "error", reason: "not_found" }, 404);
   if (lr.status !== "approved" && lr.status !== "rejected") return json({ result: "no_op" });
   if (!lr.decided_by) return json({ result: "no_op" });
+  // entity_id is a caller-supplied claim, not a permission — same
+  // re-check-don't-trust philosophy as resolveFeedback. approve_leave/
+  // reject_leave always set decided_by = auth.uid() for the caller who just
+  // acted, so this only ever rejects someone resolving a decision that
+  // isn't theirs.
+  if (lr.decided_by !== callerId) return json({ result: "error", reason: "forbidden" }, 403);
 
   const label = await roleLabelFor(admin, lr.decided_by, lr.school_id);
   const newBody = lr.status === "approved" ? `Leave request approved by ${label}.` : `Leave request rejected by ${label}.`;
@@ -98,7 +104,7 @@ async function roleLabelFor(admin: ReturnType<typeof createClient>, userId: stri
 }
 
 // deno-lint-ignore no-explicit-any
-async function resolveKycDocument(admin: any, documentId: string): Promise<Response> {
+async function resolveKycDocument(admin: any, documentId: string, callerId: string): Promise<Response> {
   const { data: doc } = await admin
     .from("kyc_documents")
     .select("id, school_id, status, verified_by, rejection_reason")
@@ -107,6 +113,11 @@ async function resolveKycDocument(admin: any, documentId: string): Promise<Respo
   if (!doc) return json({ result: "error", reason: "not_found" }, 404);
   if (doc.status !== "verified" && doc.status !== "rejected") return json({ result: "no_op" });
   if (!doc.verified_by) return json({ result: "no_op" });
+  // Same re-check-don't-trust shape as resolveLeaveRequest — verify_documents/
+  // reject_document always set verified_by = auth.uid() for the caller who
+  // just acted, so this only ever rejects someone resolving a decision that
+  // isn't theirs.
+  if (doc.verified_by !== callerId) return json({ result: "error", reason: "forbidden" }, 403);
 
   const label = await roleLabelFor(admin, doc.verified_by, doc.school_id);
   const newBody = doc.status === "verified" ? `Document approved by ${label}.` : `Document rejected by ${label}.`;

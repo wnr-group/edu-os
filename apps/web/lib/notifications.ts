@@ -51,15 +51,20 @@ export function formatWhen(iso: string): string {
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) + `, ${time}`;
 }
 
-// RLS scopes this strictly to the signed-in user's own rows
-// (notifications_select: user_id = auth.uid(), no role-based broadening for
-// anyone) — no explicit user_id filter needed here, same shape as every
-// other client-side load in this app.
+// RLS also carries a narrow fee_reminder exception (school_admin/principal
+// can read same-school parents' fee_reminder rows, for the Fee Status
+// dashboard's own dedicated query) — so it alone no longer guarantees "only
+// my rows" for this general-purpose inbox read. Explicit user_id scoping
+// here keeps the bell/Notification Center personal regardless of what RLS
+// separately permits for that one other consumer.
 export async function loadNotifications(limit = 50): Promise<NotificationRow[]> {
   const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
   const { data } = await supabase
     .from("notifications")
     .select("id, title, body, type, is_read, created_at, entity_type, entity_id, school_id")
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(limit);
   return (data ?? []) as NotificationRow[];
@@ -67,9 +72,12 @@ export async function loadNotifications(limit = 50): Promise<NotificationRow[]> 
 
 export async function loadUnreadCount(): Promise<number> {
   const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return 0;
   const { count } = await supabase
     .from("notifications")
     .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
     .eq("is_read", false);
   return count ?? 0;
 }

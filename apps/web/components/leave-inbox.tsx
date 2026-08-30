@@ -33,6 +33,15 @@ function daysCount(from: string, to: string): number {
   return Math.round((new Date(to).getTime() - new Date(from).getTime()) / 86400000) + 1;
 }
 
+// approve_leave/reject_leave raise bare identifiers, not sentences — same
+// map notification-center.tsx uses for the identical RPCs, so the same
+// underlying condition reads the same way on both surfaces.
+const LEAVE_ERRORS: Record<string, string> = {
+  not_pending: "This request was already decided.",
+  not_found: "This request no longer exists.",
+  not_authorized: "You're not authorized to decide this request.",
+};
+
 export function LeaveInbox({ requests, viewerLabel }: { requests: LeaveRow[]; viewerLabel: string }) {
   const router = useRouter();
   const [tab, setTab] = useState<"pending" | "approved" | "rejected">("pending");
@@ -92,7 +101,11 @@ export function LeaveInbox({ requests, viewerLabel }: { requests: LeaveRow[]; vi
     const supabase = createClient();
     const { error } = await supabase.rpc("approve_leave", { p_request_id: id });
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(LEAVE_ERRORS[error.message] ?? "Something went wrong. Please try again.");
+      if (error.message === "not_pending") { await resolveLeaveNotification(id); router.refresh(); }
+      return;
+    }
     toast.success("Leave approved — covered days marked Excused.");
     await resolveLeaveNotification(id);
     callLeaveNotify(id);
@@ -104,7 +117,11 @@ export function LeaveInbox({ requests, viewerLabel }: { requests: LeaveRow[]; vi
     const supabase = createClient();
     const { error } = await supabase.rpc("reject_leave", { p_request_id: id, p_reason: rejectReason || null });
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(LEAVE_ERRORS[error.message] ?? "Something went wrong. Please try again.");
+      if (error.message === "not_pending") { setRejecting(false); setRejectReason(""); await resolveLeaveNotification(id); router.refresh(); }
+      return;
+    }
     toast.success("Leave declined.");
     setRejecting(false);
     setRejectReason("");
