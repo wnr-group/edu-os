@@ -21,6 +21,8 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - uses: supabase/setup-cli@v1
         with:
@@ -34,9 +36,6 @@ jobs:
 
       - name: Start local Supabase stack
         run: supabase start
-
-      - name: Install pg driver for Node.js concurrency tests
-        run: pnpm add -D pg --filter .
 
       - name: Run SQL regression tests
         env:
