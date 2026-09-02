@@ -11,6 +11,48 @@
 
 BEGIN;
 
+-- ── Preconditions: fail early with clear diagnostics rather than opaque RLS errors ──
+DO $$
+DECLARE
+  v_discipline_enabled BOOLEAN;
+  v_teaches BOOLEAN;
+BEGIN
+  -- 1. Demo School must have discipline feature enabled
+  SELECT (features_enabled ->> 'discipline')::boolean
+  INTO v_discipline_enabled
+  FROM public.schools
+  WHERE id = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+  IF NOT COALESCE(v_discipline_enabled, false) THEN
+    RAISE EXCEPTION 'PRECONDITION FAIL: Demo School does not have discipline=true in features_enabled. '
+      'This is a seed regression — seed.sql must include the complete feature set.';
+  END IF;
+  RAISE NOTICE 'PRECONDITION PASS: Demo School has discipline=true';
+
+  -- 2. Teacher aaaaaaaa-...0013 must teach student dddddddd-...0001
+  SELECT public.teaches_student('dddddddd-0000-0000-0000-000000000001')
+  INTO v_teaches
+  FROM (SELECT set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000013"}', true)) _
+  WHERE (SELECT public.get_my_role() FROM (SELECT set_config('app.role', 'teacher', true)) _ LIMIT 1) IS NOT DISTINCT FROM NULL
+     OR TRUE;
+
+  -- Direct check bypassing RLS: verify timetable/section_assignment relationship
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.student_enrollments se
+    JOIN public.section_assignments sa ON sa.section_id = se.section_id
+    WHERE se.student_profile_id = 'dddddddd-0000-0000-0000-000000000001'
+      AND se.is_active = true
+      AND sa.class_teacher_id = 'aaaaaaaa-0000-0000-0000-000000000013'
+  ) INTO v_teaches;
+
+  IF NOT v_teaches THEN
+    RAISE EXCEPTION 'PRECONDITION FAIL: Teacher aaaaaaaa-...0013 does not teach student dddddddd-...0001. '
+      'Check seed section_assignments and student_enrollments.';
+  END IF;
+  RAISE NOTICE 'PRECONDITION PASS: Teacher 0013 teaches student 0001 via section_assignments';
+END $$;
+
 -- Clean up any pre-existing notifications for Aryan Sharma inside this transaction
 -- so the count assertion is isolated from seed data or prior test runs.
 DELETE FROM public.notifications WHERE student_id = 'dddddddd-0000-0000-0000-000000000001';

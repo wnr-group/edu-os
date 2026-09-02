@@ -14,7 +14,12 @@ VALUES (
   true,
   'demo@example.com',
   '#2563EB',
-  '{"attendance_geo": true, "insights": true}'::jsonb
+  '{"attendance": true, "homework": true, "exams": true, "report_cards": true,
+    "syllabus": true, "timetable": true, "fees": true, "announcements": true,
+    "gallery": true, "feedback": true, "discipline": true,
+    "attendance_geo": true, "exam_schedule": false, "admissions": false,
+    "kyc_documents": false, "leave": false, "testing": false, "online_payments": false,
+    "insights": true}'::jsonb
 );
 
 INSERT INTO public.schools (id, name, domain, is_active, contact_email, primary_color)
