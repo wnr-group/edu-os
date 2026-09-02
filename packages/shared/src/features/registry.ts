@@ -4,9 +4,9 @@
 export type FeatureKey =
   | "attendance" | "attendance_geo" | "homework" | "exams" | "exam_schedule"
   | "report_cards" | "syllabus" | "timetable"
-  | "admissions" | "kyc_documents" | "leave" | "testing"
+  | "admissions" | "kyc_documents" | "health_records" | "leave" | "testing"
   | "fees" | "online_payments"
-  | "announcements" | "gallery" | "feedback" | "discipline"
+  | "announcements" | "gallery" | "feedback" | "discipline" | "ptm"
   | "insights";
 
 export interface FeatureDef {
@@ -126,6 +126,17 @@ export const FEATURE_REGISTRY: Record<FeatureKey, FeatureDef> = {
     status: "new",
     gatesTables: ["kyc_documents", "document_types"],
   },
+  health_records: {
+    key: "health_records",
+    label: "Health Records",
+    description: "Per-student medical info — allergies, conditions, emergency contact, doctor details.",
+    category: "Operations",
+    defaultOn: false,
+    status: "new",
+    dependsOn: ["kyc_documents"],
+    gatesTables: ["student_health_records", "student_vaccinations", "student_health_record_submissions"],
+    gatesFunctions: ["send-vaccination-reminders", "get-medical-document-url"],
+  },
   leave: {
     key: "leave",
     label: "Leave",
@@ -201,6 +212,16 @@ export const FEATURE_REGISTRY: Record<FeatureKey, FeatureDef> = {
     defaultOn: true,
     status: "existing",
     gatesTables: ["feedback"],
+  },
+  ptm: {
+    key: "ptm",
+    label: "Parent-Teacher Meetings",
+    description: "Schedule PTMs, track history, and record teacher feedback.",
+    category: "Communication",
+    defaultOn: false,
+    status: "new",
+    gatesTables: ["ptm_meetings", "ptm_feedback"],
+    gatesFunctions: ["ptm-notify", "send-ptm-reminders"],
   },
   insights: {
     key: "insights",

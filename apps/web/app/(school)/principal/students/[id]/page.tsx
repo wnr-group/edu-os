@@ -12,9 +12,10 @@ import { StudentAcademicsTab } from "@/app/(school)/admin/students/[id]/student-
 import { StudentFeesTab } from "@/app/(school)/admin/students/[id]/student-fees-tab";
 import { StudentDocumentsTab } from "@/app/(school)/admin/students/[id]/student-documents-tab";
 import { StudentIdCardTab } from "@/app/(school)/admin/students/[id]/student-id-card-tab";
+import { StudentHealthTab } from "@/app/(school)/admin/students/[id]/student-health-tab";
 import { avatarColor, initialsOf } from "@/lib/student-avatar";
 
-type Tab = "attendance" | "academics" | "fees" | "documents" | "id-card";
+type Tab = "attendance" | "academics" | "fees" | "documents" | "id-card" | "health";
 
 export default async function PrincipalStudentDetailPage({
   params,
@@ -34,7 +35,7 @@ export default async function PrincipalStudentDetailPage({
   const schoolId = (await getSchoolId())!;
   const academicYearId = await getAcademicYearId(schoolId);
 
- const [{ data: student }, { data: kycCompleteness }] = await Promise.all([
+ const [{ data: student }, { data: kycCompleteness }, { count: pendingHealthCount }] = await Promise.all([
     supabase
       .from("student_profiles")
       .select("id, full_name, email, photo_url, admission_number, date_of_birth, gender, profile:profiles!profile_id(full_name, email), parent:profiles!parent_profile_id(full_name, phone)")
@@ -46,6 +47,11 @@ export default async function PrincipalStudentDetailPage({
       .select("required_total, verified_count")
       .eq("student_id", id)
       .maybeSingle(),
+    supabase
+      .from("student_health_record_submissions")
+      .select("id", { count: "exact", head: true })
+      .eq("student_id", id)
+      .eq("status", "pending"),
   ]);
 
   if (!student) notFound();
@@ -159,6 +165,18 @@ export default async function PrincipalStudentDetailPage({
           content: <StudentDocumentsTab studentId={id} schoolId={schoolId} />,
         },
         { key: "id-card", label: "ID Card", content: <StudentIdCardTab studentId={id} schoolId={schoolId} /> },
+        {
+          key: "health",
+          label: (pendingHealthCount ?? 0) > 0 ? (
+            <span className="inline-flex items-center gap-1.5">
+              Health
+              <span className="h-2 w-2 rounded-full bg-amber-400" title="Pending parent submission awaiting review" />
+            </span>
+          ) : (
+            "Health"
+          ),
+          content: <StudentHealthTab studentId={id} schoolId={schoolId} />,
+        },
       ]}
     />
   );

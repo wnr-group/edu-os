@@ -1,13 +1,14 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "../../lib/theme";
+import { useTheme, useFeature } from "../../lib/theme";
 import { TeacherContextProvider } from "../../lib/teacherContext";
 import { AppBar } from "../../components/AppBar";
 
 export default function TeacherLayout() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const ptmEnabled = useFeature("ptm");
   return (
     <TeacherContextProvider>
     <Tabs
@@ -25,6 +26,14 @@ export default function TeacherLayout() {
       <Tabs.Screen name="classes" options={{ title: "Classes", tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? "school" : "school-outline"} size={22} color={color} /> }} />
       <Tabs.Screen name="leave" options={{ title: "Leave", tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? "airplane" : "airplane-outline"} size={22} color={color} /> }} />
       <Tabs.Screen name="discipline" options={{ title: "Discipline", tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? "shield" : "shield-outline"} size={22} color={color} /> }} />
+      <Tabs.Screen
+        name="ptm"
+        options={{
+          title: "PTM",
+          href: ptmEnabled ? undefined : null,
+          tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? "people" : "people-outline"} size={22} color={color} />,
+        }}
+      />
       <Tabs.Screen name="profile" options={{ title: "Profile", tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? "person" : "person-outline"} size={22} color={color} /> }} />
       <Tabs.Screen name="homework" options={{ href: null }} />
       <Tabs.Screen name="interventions" options={{ href: null }} />

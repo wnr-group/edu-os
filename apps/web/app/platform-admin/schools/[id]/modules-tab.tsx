@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import {
   Calendar, MapPin, BookOpen, TrendingUp, CalendarClock, GraduationCap,
   FileText, Clock, CreditCard, Link2, Megaphone, Image as ImageIcon,
-  MessageSquare, ShieldAlert, Sparkles, ClipboardCheck, Lock, Search,
+  MessageSquare, ShieldAlert, Sparkles, ClipboardCheck, Lock, Search, Users, HeartPulse,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { FEATURE_REGISTRY, type FeatureKey, type FeatureDef } from "@erp/shared";
@@ -46,6 +46,7 @@ const ICONS: Partial<Record<FeatureKey, LucideIcon>> = {
   timetable: Clock,
   admissions: GraduationCap,
   kyc_documents: FileText,
+  health_records: HeartPulse,
   leave: ClipboardCheck,
   testing: ClipboardCheck,
   fees: CreditCard,
@@ -53,6 +54,7 @@ const ICONS: Partial<Record<FeatureKey, LucideIcon>> = {
   announcements: Megaphone,
   gallery: ImageIcon,
   feedback: MessageSquare,
+  ptm: Users,
   discipline: ShieldAlert,
   insights: Sparkles,
 };
