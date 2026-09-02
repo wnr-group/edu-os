@@ -45,11 +45,12 @@ async function runTest() {
       return false;
     }
 
-    if (passCount === 10) {  // 5 anon tests + 5 authenticated tests
+    // 5 anon (3.1-3.5) + 5 authenticated (4.1-4.5) + 4 service_role positive controls (6.1-6.4) = 14
+    if (passCount === 14) {
       console.log(`✓ All ${passCount} tests passed - service-role-only RPCs are properly restricted`);
       return true;
     } else {
-      console.error(`⚠ Expected 10 PASS messages, got ${passCount}`);
+      console.error(`⚠ Expected 14 PASS messages, got ${passCount}`);
       return false;
     }
 

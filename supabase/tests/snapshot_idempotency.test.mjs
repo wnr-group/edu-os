@@ -32,11 +32,12 @@ async function runTest() {
       return false;
     }
 
-    if (passCount === 4) {
+    // SQL test covers 7 idempotency scenarios + 1 upsert test = 8 PASS notices
+    if (passCount === 8) {
       console.log(`✓ All ${passCount} tests passed - snapshot idempotency verified`);
       return true;
     } else {
-      console.error(`⚠ Expected 4 PASS messages, got ${passCount}`);
+      console.error(`⚠ Expected 8 PASS messages, got ${passCount}`);
       return false;
     }
 
