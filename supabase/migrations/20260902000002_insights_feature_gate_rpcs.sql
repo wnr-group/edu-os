@@ -501,30 +501,50 @@ BEGIN
     LIMIT 1;
 
     IF v_assignee IS NOT NULL THEN
-      v_assigned_via := 'principal';
+      v_assigned_via := 'admin_fallback';
     ELSE
       RAISE EXCEPTION 'no_valid_assignee';
     END IF;
   END IF;
 
-  INSERT INTO public.interventions (
-    school_id, student_id, kind, type, title, status,
-    severity_band, due_date, source_snapshot_id, assignee_id, assigned_via
-  ) VALUES (
-    v_school_id, v_student_id,
-    v_kind::public.intervention_kind,
-    v_type,
-    v_title,
-    'pending',
-    v_band,
-    v_due_date,
-    p_snapshot_id,
-    v_assignee,
-    v_assigned_via
-  )
-  ON CONFLICT (school_id, student_id, kind, source_snapshot_id) DO NOTHING
-  RETURNING id INTO v_intervention_id;
+  -- Insert with exception handler: the partial unique index
+  -- uq_interventions_open_per_student_kind prevents two open interventions
+  -- for the same (student, kind). Catch that violation and handle idempotently.
+  BEGIN
+    INSERT INTO public.interventions (
+      school_id, student_id, kind, type, title, source_snapshot_id,
+      status, severity_band, assignee_id, assigned_via, due_date, due_date_original
+    ) VALUES (
+      v_school_id, v_student_id, v_kind::public.intervention_kind, v_type, v_title, p_snapshot_id,
+      'pending', v_band, v_assignee, v_assigned_via, v_due_date, v_due_date
+    ) RETURNING id INTO v_intervention_id;
 
-  RETURN v_intervention_id;
+    -- For academic interventions, record initial pinned evidence
+    IF v_kind = 'academic' THEN
+      INSERT INTO public.intervention_academic_evidence (intervention_id, snapshot_id, is_pinned)
+      VALUES (v_intervention_id, p_snapshot_id, true)
+      ON CONFLICT (intervention_id, snapshot_id) DO NOTHING;
+    END IF;
+
+    RETURN v_intervention_id;
+  EXCEPTION WHEN unique_violation THEN
+    GET STACKED DIAGNOSTICS v_constraint = CONSTRAINT_NAME;
+    IF v_constraint = 'uq_interventions_open_per_student_kind' THEN
+      -- Existing open intervention for this (student, kind) — add sibling evidence
+      SELECT id INTO v_intervention_id FROM public.interventions
+      WHERE student_id = v_student_id AND kind = v_kind::public.intervention_kind
+        AND status IN ('pending', 'in_progress');
+
+      IF v_kind = 'academic' AND v_intervention_id IS NOT NULL THEN
+        INSERT INTO public.intervention_academic_evidence (intervention_id, snapshot_id, is_pinned)
+        VALUES (v_intervention_id, p_snapshot_id, false)
+        ON CONFLICT (intervention_id, snapshot_id) DO NOTHING;
+      END IF;
+
+      RETURN v_intervention_id;
+    ELSE
+      RAISE;
+    END IF;
+  END;
 END;
 $$;
