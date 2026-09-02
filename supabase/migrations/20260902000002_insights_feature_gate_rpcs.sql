@@ -516,7 +516,7 @@ BEGIN
     v_type,
     v_title,
     'pending',
-    v_band::public.severity_band,
+    v_band,
     v_due_date,
     p_snapshot_id,
     v_assignee,
