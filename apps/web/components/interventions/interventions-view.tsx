@@ -93,6 +93,7 @@ interface InterventionsViewProps {
 
 export function InterventionsView({
   initialInterventions,
+  currentUserId,
   isAdmin = false,
   staffList = [],
   dbError = false,
@@ -722,9 +723,13 @@ export function InterventionsView({
             </div>
 
             {/* Modal Actions */}
+            {(() => {
+              const canAct = isAdmin || selectedIntervention.assignee_id === currentUserId;
+              return (
             <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
               <div className="flex items-center gap-2">
-                {/* Notify Parent Action */}
+                {/* Notify Parent Action — available to assignee and admins */}
+                {canAct && (
                 <button
                   onClick={() => openNotifyModal(selectedIntervention)}
                   disabled={actionLoading}
@@ -733,6 +738,7 @@ export function InterventionsView({
                   <Send className="h-3.5 w-3.5 text-primary" />
                   <span>Notify Parent</span>
                 </button>
+                )}
 
                 {/* Admin Reassignment Action */}
                 {isAdmin && ["pending", "in_progress"].includes(selectedIntervention.status) && (
@@ -748,8 +754,8 @@ export function InterventionsView({
               </div>
 
               <div className="flex items-center gap-2">
-                {/* Start Action */}
-                {selectedIntervention.status === "pending" && (
+                {/* Start Action — assignee and admins only */}
+                {canAct && selectedIntervention.status === "pending" && (
                   <button
                     onClick={() => handleStart(selectedIntervention.id)}
                     disabled={actionLoading}
@@ -759,8 +765,8 @@ export function InterventionsView({
                   </button>
                 )}
 
-                {/* Dismiss Action */}
-                {["pending", "in_progress"].includes(selectedIntervention.status) && (
+                {/* Dismiss Action — assignee and admins only */}
+                {canAct && ["pending", "in_progress"].includes(selectedIntervention.status) && (
                   <button
                     onClick={() => setShowDismissModal(true)}
                     disabled={actionLoading}
@@ -770,8 +776,8 @@ export function InterventionsView({
                   </button>
                 )}
 
-                {/* Complete Action */}
-                {["pending", "in_progress"].includes(selectedIntervention.status) && (
+                {/* Complete Action — assignee and admins only */}
+                {canAct && ["pending", "in_progress"].includes(selectedIntervention.status) && (
                   <button
                     onClick={() => setShowCompleteModal(true)}
                     disabled={actionLoading}
@@ -782,6 +788,8 @@ export function InterventionsView({
                 )}
               </div>
             </div>
+              );
+            })()}
           </div>
         </div>
       )}

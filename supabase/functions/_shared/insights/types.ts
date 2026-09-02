@@ -34,4 +34,5 @@ export interface PerformanceInput {
   examScores: number[];         // percentages 0..100, chronological order
   passMarkCurrent?: number;     // default 35
   passMarkTarget?: number;      // default 50
+  subjectName?: string;         // used in recommended_action text
 }

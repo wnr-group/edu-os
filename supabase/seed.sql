@@ -6,14 +6,15 @@
 -- ---------------------------------------------------------------
 -- SCHOOL
 -- ---------------------------------------------------------------
-INSERT INTO public.schools (id, name, domain, is_active, contact_email, primary_color)
+INSERT INTO public.schools (id, name, domain, is_active, contact_email, primary_color, features_enabled)
 VALUES (
   'aaaaaaaa-0000-0000-0000-000000000001',
   'Demo School',
   'school1.lvh.me',
   true,
   'demo@example.com',
-  '#2563EB'
+  '#2563EB',
+  '{"attendance_geo": true, "insights": true}'::jsonb
 );
 
 INSERT INTO public.schools (id, name, domain, is_active, contact_email, primary_color)

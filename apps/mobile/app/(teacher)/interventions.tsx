@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 const RPC_ERROR_MESSAGES: Record<string, string> = {
   not_authorized: "You are not authorized to perform this action.",
@@ -82,7 +82,7 @@ interface InterventionItem {
 export default function TeacherInterventionsScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { ready } = useTeacherContext();
+  const { ready, userId: currentUserId } = useTeacherContext();
   const insightsEnabled = useFeature("insights");
 
   const [interventions, setInterventions] = useState<InterventionItem[]>([]);
@@ -107,27 +107,31 @@ export default function TeacherInterventionsScreen() {
   const [showNotifyModal, setShowNotifyModal] = useState(false);
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
 
+  const isMountedRef = useRef(true);
+
   useEffect(() => {
-    let isMounted = true;
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
     // Do not load interventions if insights feature is disabled
     if (!ready || !insightsEnabled) return;
 
-    loadInterventions(isMounted);
-
-    return () => {
-      isMounted = false;
-    };
+    loadInterventions();
   }, [ready, insightsEnabled, statusFilter, kindFilter]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadInterventions(true);
+    await loadInterventions();
     setRefreshing(false);
   }, [statusFilter, kindFilter]);
 
-  async function loadInterventions(isMounted = true) {
+  async function loadInterventions() {
     try {
-      if (isMounted) setLoading(true);
+      if (isMountedRef.current) setLoading(true);
 
       let query = supabase
         .from("interventions")
@@ -178,7 +182,7 @@ export default function TeacherInterventionsScreen() {
 
       const { data, error } = await query;
 
-      if (!isMounted) return;
+      if (!isMountedRef.current) return;
 
       if (error) {
         console.error("Error loading interventions:", error);
@@ -217,7 +221,7 @@ export default function TeacherInterventionsScreen() {
     } catch (err) {
       console.error("Unexpected error in loadInterventions:", err);
     } finally {
-      if (isMounted) setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
   }
 
@@ -291,7 +295,7 @@ export default function TeacherInterventionsScreen() {
 
       Alert.alert("Success", "Intervention is now in progress.");
       setSelectedIntervention((prev) => (prev ? { ...prev, status: "in_progress" } : null));
-      await loadInterventions(true);
+      await loadInterventions();
     } catch (err: unknown) {
       Alert.alert("Error", rpcErrorMessage(err, "Failed to start intervention."));
     } finally {
@@ -316,7 +320,7 @@ export default function TeacherInterventionsScreen() {
       setSelectedIntervention((prev) =>
         prev ? { ...prev, status: "completed", outcome_note: outcomeNote } : null
       );
-      await loadInterventions(true);
+      await loadInterventions();
     } catch (err: unknown) {
       Alert.alert("Error", rpcErrorMessage(err, "Failed to complete intervention."));
     } finally {
@@ -345,7 +349,7 @@ export default function TeacherInterventionsScreen() {
       setSelectedIntervention((prev) =>
         prev ? { ...prev, status: "dismissed", dismissal_reason: dismissReason } : null
       );
-      await loadInterventions(true);
+      await loadInterventions();
     } catch (err: unknown) {
       Alert.alert("Error", rpcErrorMessage(err, "Failed to dismiss intervention."));
     } finally {
@@ -801,86 +805,93 @@ export default function TeacherInterventionsScreen() {
                   </View>
                 )}
 
-                {/* Actions */}
-                {selectedIntervention.status === "pending" && (
-                  <View style={{ gap: 10, marginBottom: 24 }}>
-                    <PrimaryButton
-                      label={actionLoading ? "Starting..." : "Start Intervention"}
-                      onPress={handleStartIntervention}
-                      disabled={actionLoading}
-                    />
-                    <TouchableOpacity
-                      onPress={openNotifyModal}
-                      style={{
-                        paddingVertical: 12,
-                        borderRadius: 8,
-                        alignItems: "center",
-                        backgroundColor: theme.surface,
-                        borderWidth: 1,
-                        borderColor: theme.primary,
-                      }}
-                    >
-                      <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.primary }}>
-                        Notify Parent
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => setShowDismissModal(true)}
-                      style={{
-                        paddingVertical: 12,
-                        borderRadius: 8,
-                        alignItems: "center",
-                        backgroundColor: theme.surface,
-                        borderWidth: 1,
-                        borderColor: theme.border,
-                      }}
-                    >
-                      <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.danger }}>
-                        Dismiss Intervention
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
+                {/* Actions — only shown to the assigned teacher (server enforces this too) */}
+                {(() => {
+                  const canAct = selectedIntervention.assignee_id === currentUserId;
+                  return canAct ? (
+                    <>
+                      {selectedIntervention.status === "pending" && (
+                        <View style={{ gap: 10, marginBottom: 24 }}>
+                          <PrimaryButton
+                            label={actionLoading ? "Starting..." : "Start Intervention"}
+                            onPress={handleStartIntervention}
+                            disabled={actionLoading}
+                          />
+                          <TouchableOpacity
+                            onPress={openNotifyModal}
+                            style={{
+                              paddingVertical: 12,
+                              borderRadius: 8,
+                              alignItems: "center",
+                              backgroundColor: theme.surface,
+                              borderWidth: 1,
+                              borderColor: theme.primary,
+                            }}
+                          >
+                            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.primary }}>
+                              Notify Parent
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => setShowDismissModal(true)}
+                            style={{
+                              paddingVertical: 12,
+                              borderRadius: 8,
+                              alignItems: "center",
+                              backgroundColor: theme.surface,
+                              borderWidth: 1,
+                              borderColor: theme.border,
+                            }}
+                          >
+                            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.danger }}>
+                              Dismiss Intervention
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
 
-                {selectedIntervention.status === "in_progress" && (
-                  <View style={{ gap: 10, marginBottom: 24 }}>
-                    <PrimaryButton
-                      label="Complete Intervention"
-                      onPress={() => setShowCompleteModal(true)}
-                      disabled={actionLoading}
-                    />
-                    <TouchableOpacity
-                      onPress={openNotifyModal}
-                      style={{
-                        paddingVertical: 12,
-                        borderRadius: 8,
-                        alignItems: "center",
-                        backgroundColor: theme.surface,
-                        borderWidth: 1,
-                        borderColor: theme.primary,
-                      }}
-                    >
-                      <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.primary }}>
-                        Notify Parent
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => setShowDismissModal(true)}
-                      style={{
-                        paddingVertical: 12,
-                        borderRadius: 8,
-                        alignItems: "center",
-                        backgroundColor: theme.surface,
-                        borderWidth: 1,
-                        borderColor: theme.border,
-                      }}
-                    >
-                      <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.danger }}>
-                        Dismiss Intervention
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
+                      {selectedIntervention.status === "in_progress" && (
+                        <View style={{ gap: 10, marginBottom: 24 }}>
+                          <PrimaryButton
+                            label="Complete Intervention"
+                            onPress={() => setShowCompleteModal(true)}
+                            disabled={actionLoading}
+                          />
+                          <TouchableOpacity
+                            onPress={openNotifyModal}
+                            style={{
+                              paddingVertical: 12,
+                              borderRadius: 8,
+                              alignItems: "center",
+                              backgroundColor: theme.surface,
+                              borderWidth: 1,
+                              borderColor: theme.primary,
+                            }}
+                          >
+                            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.primary }}>
+                              Notify Parent
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => setShowDismissModal(true)}
+                            style={{
+                              paddingVertical: 12,
+                              borderRadius: 8,
+                              alignItems: "center",
+                              backgroundColor: theme.surface,
+                              borderWidth: 1,
+                              borderColor: theme.border,
+                            }}
+                          >
+                            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.danger }}>
+                              Dismiss Intervention
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </>
+                  ) : null;
+                })()}
               </ScrollView>
             </View>
           </View>

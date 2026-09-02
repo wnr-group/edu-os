@@ -192,6 +192,208 @@ END $$;
 RESET ROLE;
 
 -- ============================================================================
+-- Finding #4: RPC feature-flag tests for write operations
+-- Tests that lifecycle RPCs raise 'module_disabled' when insights=false
+-- and succeed when insights=true (positive control).
+-- ============================================================================
+
+-- At this point insights=false for School 1 (set in tests 5.3-5.5 above).
+-- Teacher 1 is assignee for the intervention seeded in setup.
+
+-- Test 5.7: start_intervention blocked when insights=false
+SET LOCAL ROLE authenticated;
+SELECT set_config('app.role', 'teacher', true);
+SELECT set_config('app.school_id', 'aaaaaaaa-0000-0000-0000-000000000001', true);
+SELECT set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000013"}', true);
+
+DO $$
+DECLARE
+  v_interv_id UUID;
+  v_blocked BOOLEAN := false;
+BEGIN
+  SELECT id INTO v_interv_id
+  FROM public.interventions
+  WHERE student_id = 'dddddddd-0000-0000-0000-000000000001'
+    AND kind = 'attendance'
+    AND status = 'pending'
+  LIMIT 1;
+
+  IF v_interv_id IS NULL THEN
+    RAISE NOTICE 'SKIP 5.7: No pending intervention found (may have been started already)';
+    RETURN;
+  END IF;
+
+  BEGIN
+    PERFORM public.start_intervention(v_interv_id);
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM = 'module_disabled' THEN
+      v_blocked := true;
+    ELSE
+      RAISE EXCEPTION 'FAIL 5.7: start_intervention raised unexpected error: %', SQLERRM;
+    END IF;
+  END;
+
+  IF NOT v_blocked THEN
+    RAISE EXCEPTION 'FAIL 5.7: start_intervention succeeded but insights=false — module_disabled not raised';
+  END IF;
+  RAISE NOTICE 'PASS 5.7: start_intervention correctly raises module_disabled when insights=false';
+END $$;
+
+RESET ROLE;
+
+-- Test 5.8: notify_parent_for_intervention blocked when insights=false
+SET LOCAL ROLE authenticated;
+SELECT set_config('app.role', 'teacher', true);
+SELECT set_config('app.school_id', 'aaaaaaaa-0000-0000-0000-000000000001', true);
+SELECT set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000013"}', true);
+
+DO $$
+DECLARE
+  v_interv_id UUID;
+  v_blocked BOOLEAN := false;
+BEGIN
+  SELECT id INTO v_interv_id
+  FROM public.interventions
+  WHERE student_id = 'dddddddd-0000-0000-0000-000000000001'
+    AND kind = 'attendance'
+  LIMIT 1;
+
+  IF v_interv_id IS NULL THEN
+    RAISE NOTICE 'SKIP 5.8: No intervention found for notify test';
+    RETURN;
+  END IF;
+
+  BEGIN
+    PERFORM public.notify_parent_for_intervention(v_interv_id, auth.uid());
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM = 'module_disabled' THEN
+      v_blocked := true;
+    ELSE
+      RAISE EXCEPTION 'FAIL 5.8: notify_parent_for_intervention raised unexpected error (expected module_disabled): %', SQLERRM;
+    END IF;
+  END;
+
+  IF NOT v_blocked THEN
+    RAISE EXCEPTION 'FAIL 5.8: notify_parent_for_intervention succeeded but insights=false — module_disabled not raised';
+  END IF;
+  RAISE NOTICE 'PASS 5.8: notify_parent_for_intervention correctly raises module_disabled when insights=false';
+END $$;
+
+RESET ROLE;
+
+-- ============================================================================
+-- Re-enable insights for positive control tests (5.9-5.10)
+-- ============================================================================
+DO $$
+BEGIN
+  ALTER TABLE public.schools DISABLE TRIGGER trg_guard_features;
+
+  UPDATE public.schools
+  SET features_enabled = jsonb_set(
+    COALESCE(features_enabled, '{}'::jsonb),
+    '{insights}',
+    'true'::jsonb
+  )
+  WHERE id = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+  ALTER TABLE public.schools ENABLE TRIGGER trg_guard_features;
+END $$;
+
+-- Test 5.9 (positive control): start_intervention succeeds when insights=true
+SET LOCAL ROLE authenticated;
+SELECT set_config('app.role', 'teacher', true);
+SELECT set_config('app.school_id', 'aaaaaaaa-0000-0000-0000-000000000001', true);
+SELECT set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000013"}', true);
+
+DO $$
+DECLARE
+  v_interv_id UUID;
+  v_succeeded BOOLEAN := false;
+BEGIN
+  SELECT id INTO v_interv_id
+  FROM public.interventions
+  WHERE student_id = 'dddddddd-0000-0000-0000-000000000001'
+    AND kind = 'attendance'
+    AND status = 'pending'
+  LIMIT 1;
+
+  IF v_interv_id IS NULL THEN
+    RAISE NOTICE 'SKIP 5.9: No pending intervention found for positive control';
+    RETURN;
+  END IF;
+
+  BEGIN
+    PERFORM public.start_intervention(v_interv_id);
+    v_succeeded := true;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE EXCEPTION 'FAIL 5.9: start_intervention raised error when insights=true: %', SQLERRM;
+  END;
+
+  IF NOT v_succeeded THEN
+    RAISE EXCEPTION 'FAIL 5.9: start_intervention did not succeed when insights=true';
+  END IF;
+  RAISE NOTICE 'PASS 5.9: start_intervention succeeded (positive control) when insights=true';
+END $$;
+
+RESET ROLE;
+
+-- Test 5.10: complete_intervention blocked when insights=false
+DO $$
+BEGIN
+  ALTER TABLE public.schools DISABLE TRIGGER trg_guard_features;
+
+  UPDATE public.schools
+  SET features_enabled = jsonb_set(
+    COALESCE(features_enabled, '{}'::jsonb),
+    '{insights}',
+    'false'::jsonb
+  )
+  WHERE id = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+  ALTER TABLE public.schools ENABLE TRIGGER trg_guard_features;
+END $$;
+
+SET LOCAL ROLE authenticated;
+SELECT set_config('app.role', 'teacher', true);
+SELECT set_config('app.school_id', 'aaaaaaaa-0000-0000-0000-000000000001', true);
+SELECT set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000013"}', true);
+
+DO $$
+DECLARE
+  v_interv_id UUID;
+  v_blocked BOOLEAN := false;
+BEGIN
+  SELECT id INTO v_interv_id
+  FROM public.interventions
+  WHERE student_id = 'dddddddd-0000-0000-0000-000000000001'
+    AND kind = 'attendance'
+    AND status = 'in_progress'
+  LIMIT 1;
+
+  IF v_interv_id IS NULL THEN
+    RAISE NOTICE 'SKIP 5.10: No in_progress intervention found for complete test';
+    RETURN;
+  END IF;
+
+  BEGIN
+    PERFORM public.complete_intervention(v_interv_id, 'Test outcome note');
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM = 'module_disabled' THEN
+      v_blocked := true;
+    ELSE
+      RAISE EXCEPTION 'FAIL 5.10: complete_intervention raised unexpected error: %', SQLERRM;
+    END IF;
+  END;
+
+  IF NOT v_blocked THEN
+    RAISE EXCEPTION 'FAIL 5.10: complete_intervention succeeded but insights=false — module_disabled not raised';
+  END IF;
+  RAISE NOTICE 'PASS 5.10: complete_intervention correctly raises module_disabled when insights=false';
+END $$;
+
+RESET ROLE;
+
+-- ============================================================================
 -- Cleanup: Re-enable insights for School 1 (restore original state)
 -- ============================================================================
 DO $$

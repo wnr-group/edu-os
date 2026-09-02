@@ -100,6 +100,23 @@ export default async function TeacherInterventionsPage() {
     console.error("Error fetching teacher interventions:", error);
   }
 
+  // Fetch active staff for assignee name resolution (same approach as admin page)
+  const { data: staffRoles } = await supabase
+    .from("user_roles")
+    .select(`
+      user_id,
+      profiles:user_id (
+        full_name
+      )
+    `)
+    .eq("school_id", schoolId)
+    .eq("is_active", true)
+    .in("role", ["teacher", "principal", "school_admin"]);
+
+  const staffMap = new Map<string, string>(
+    (staffRoles || []).map((sr: any) => [sr.user_id, sr.profiles?.full_name || "Staff Member"])
+  );
+
   const rows: InterventionRow[] = (records || []).map((r: any) => {
     const sp = r.student_profiles;
     const activeEnrollment = Array.isArray(sp?.student_enrollments)
@@ -133,6 +150,7 @@ export default async function TeacherInterventionsPage() {
       due_date: r.due_date,
       assigned_via: r.assigned_via,
       assignee_id: r.assignee_id,
+      assignee_name: staffMap.get(r.assignee_id) || "Staff",
       outcome_note: r.outcome_note,
       dismissal_reason: r.dismissal_reason,
       started_at: r.started_at,

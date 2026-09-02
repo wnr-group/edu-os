@@ -18,6 +18,7 @@ export function computePerformanceForecast(input: PerformanceInput): Insight {
     examScores,
     passMarkCurrent = 35,
     passMarkTarget = 50,
+    subjectName,
   } = input;
 
   // Require at least 3 exams
@@ -118,9 +119,10 @@ export function computePerformanceForecast(input: PerformanceInput): Insight {
 
   if (label === 'High risk') {
     const gap = passMarkTarget - pred;
-    const remedial = Math.ceil(gap / 5);
-    // Note: subject is not provided in input, use placeholder
-    recommended_action = `Conduct ${remedial} remedial classes in subject.`;
+    const remedial = Math.max(1, Math.ceil(gap / 5));
+    const subject = subjectName ?? 'the subject';
+    const classWord = remedial === 1 ? 'class' : 'classes';
+    recommended_action = `Conduct ${remedial} remedial ${classWord} in ${subject}.`;
   } else if (label === 'Likely to improve') {
     recommended_action = 'Continue current trajectory; monitor progress.';
   } else {

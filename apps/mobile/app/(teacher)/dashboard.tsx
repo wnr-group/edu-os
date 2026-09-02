@@ -43,7 +43,7 @@ export default function TeacherDashboard() {
   useEffect(() => {
     if (!ready || !userId) return;
     loadDashboard();
-  }, [ready, userId, sections.length]);
+  }, [ready, userId, sections.length, insightsEnabled]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -269,22 +269,35 @@ export default function TeacherDashboard() {
         {/* ── Cross-section summary ───────────────────────────────── */}
         {!loading && (
           <View style={{ flexDirection: "row", gap: 12, paddingHorizontal: 20, marginTop: 20 }}>
-            <TouchableOpacity
-              onPress={() => router.push("/(teacher)/interventions" as any)}
-              activeOpacity={0.8}
-              style={{ flex: 1, backgroundColor: theme.surface, borderRadius: 16, padding: 16, gap: 4 }}
-            >
+            {/* Students tile — always visible */}
+            <View style={{ flex: 1, backgroundColor: theme.surface, borderRadius: 16, padding: 16, gap: 4 }}>
               <Text style={{ fontSize: 28, fontFamily: "Inter_700Bold", color: theme.textPrimary }}>
-                {data?.openInterventions ?? 0}
+                {data?.totalStudents ?? 0}
               </Text>
               <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary }}>
-                Interventions
+                Students across
               </Text>
-              <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: theme.primary }}>
-                Review Support →
+              <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary }}>
+                {sections.length} section{sections.length === 1 ? "" : "s"}
               </Text>
-            </TouchableOpacity>
+            </View>
             <View style={{ flex: 1, gap: 12 }}>
+              {/* Insights intervention tile — only when module is enabled */}
+              {insightsEnabled && (
+                <TouchableOpacity
+                  onPress={() => router.push("/(teacher)/interventions" as any)}
+                  activeOpacity={0.8}
+                  style={{ flex: 1, backgroundColor: theme.surface, borderRadius: 16, padding: 14, flexDirection: "row", alignItems: "center", gap: 10 }}
+                >
+                  <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: theme.primary + "18", alignItems: "center", justifyContent: "center" }}>
+                    <Ionicons name="sparkles-outline" size={16} color={theme.primary} />
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 18, fontFamily: "Inter_700Bold", color: theme.textPrimary }}>{data?.openInterventions ?? 0}</Text>
+                    <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: theme.textSecondary }}>Interventions</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
               <View style={{ flex: 1, backgroundColor: theme.surface, borderRadius: 16, padding: 14, flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: "#10B98118", alignItems: "center", justifyContent: "center" }}>
                   <Ionicons name="calendar-outline" size={16} color="#10B981" />

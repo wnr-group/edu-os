@@ -195,4 +195,87 @@ END $$;
 
 RESET ROLE;
 
+-- ============================================================================
+-- Finding #1: Positive control — service_role CAN execute worker RPCs
+-- These tests prove that the GRANT EXECUTE TO service_role (migration
+-- 20260902000000) is in effect. Without it, every call below would fail
+-- with insufficient_privilege and these tests would FAIL.
+-- ============================================================================
+
+SET ROLE service_role;
+
+-- Test 6.1: service_role CAN call claim_insight_run_chunk
+-- Uses a non-existent school/run_date → will return NULL (no chunk), not an ACL error.
+DO $$
+DECLARE v_result UUID;
+BEGIN
+  SELECT public.claim_insight_run_chunk(
+    'aaaaaaaa-0000-0000-0000-000000000001'::uuid,
+    CURRENT_DATE,
+    0,
+    100,
+    gen_random_uuid(),
+    300
+  ) INTO v_result;
+  -- NULL result means chunk already exists or no students — that's fine.
+  -- What matters is no permission denied exception was raised.
+  RAISE NOTICE 'PASS 6.1: service_role can call claim_insight_run_chunk (result=%)', v_result;
+EXCEPTION WHEN insufficient_privilege THEN
+  RAISE EXCEPTION 'FAIL 6.1: service_role CANNOT call claim_insight_run_chunk — GRANT missing!';
+WHEN OTHERS THEN
+  IF SQLSTATE = '42501' THEN
+    RAISE EXCEPTION 'FAIL 6.1: service_role CANNOT call claim_insight_run_chunk — GRANT missing (42501)!';
+  ELSE
+    -- Other errors (e.g. run_id not found) are acceptable — ACL is fine
+    RAISE NOTICE 'PASS 6.1: service_role can call claim_insight_run_chunk (non-ACL error: %)', SQLERRM;
+  END IF;
+END $$;
+
+-- Test 6.2: service_role CAN call heartbeat_insight_run
+DO $$
+BEGIN
+  PERFORM public.heartbeat_insight_run(gen_random_uuid(), gen_random_uuid(), 60);
+  RAISE NOTICE 'PASS 6.2: service_role can call heartbeat_insight_run';
+EXCEPTION WHEN insufficient_privilege THEN
+  RAISE EXCEPTION 'FAIL 6.2: service_role CANNOT call heartbeat_insight_run — GRANT missing!';
+WHEN OTHERS THEN
+  IF SQLSTATE = '42501' THEN
+    RAISE EXCEPTION 'FAIL 6.2: service_role CANNOT call heartbeat_insight_run — GRANT missing (42501)!';
+  ELSE
+    RAISE NOTICE 'PASS 6.2: service_role can call heartbeat_insight_run (non-ACL error: %)', SQLERRM;
+  END IF;
+END $$;
+
+-- Test 6.3: service_role CAN call increment_insight_run_counter
+DO $$
+BEGIN
+  PERFORM public.increment_insight_run_counter(gen_random_uuid(), 'students_processed');
+  RAISE NOTICE 'PASS 6.3: service_role can call increment_insight_run_counter';
+EXCEPTION WHEN insufficient_privilege THEN
+  RAISE EXCEPTION 'FAIL 6.3: service_role CANNOT call increment_insight_run_counter — GRANT missing!';
+WHEN OTHERS THEN
+  IF SQLSTATE = '42501' THEN
+    RAISE EXCEPTION 'FAIL 6.3: service_role CANNOT call increment_insight_run_counter — GRANT missing (42501)!';
+  ELSE
+    RAISE NOTICE 'PASS 6.3: service_role can call increment_insight_run_counter (non-ACL error: %)', SQLERRM;
+  END IF;
+END $$;
+
+-- Test 6.4: service_role CAN call create_intervention_if_qualifying
+DO $$
+BEGIN
+  PERFORM public.create_intervention_if_qualifying(gen_random_uuid());
+  RAISE NOTICE 'PASS 6.4: service_role can call create_intervention_if_qualifying';
+EXCEPTION WHEN insufficient_privilege THEN
+  RAISE EXCEPTION 'FAIL 6.4: service_role CANNOT call create_intervention_if_qualifying — GRANT missing!';
+WHEN OTHERS THEN
+  IF SQLSTATE = '42501' THEN
+    RAISE EXCEPTION 'FAIL 6.4: service_role CANNOT call create_intervention_if_qualifying — GRANT missing (42501)!';
+  ELSE
+    RAISE NOTICE 'PASS 6.4: service_role can call create_intervention_if_qualifying (non-ACL error: %)', SQLERRM;
+  END IF;
+END $$;
+
+RESET ROLE;
+
 ROLLBACK;

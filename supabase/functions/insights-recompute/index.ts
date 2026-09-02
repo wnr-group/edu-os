@@ -125,12 +125,13 @@ Deno.serve(async (req: Request) => {
       .update({ students_total: studentIds.length })
       .eq("id", runId);
 
-    // Pre-fetch subjects for all relevant classes in one query
+    // Pre-fetch subjects (id, name) for all relevant classes in one query
     const classSubjectsMap = new Map<string, string[]>();
+    const subjectNameMap = new Map<string, string>();
     if (uniqueClassIds.size > 0) {
       const { data: subjectsData, error: subjectsError } = await admin
         .from("subjects")
-        .select("id, class_id")
+        .select("id, name, class_id")
         .in("class_id", Array.from(uniqueClassIds));
 
       if (!subjectsError && subjectsData) {
@@ -138,6 +139,7 @@ Deno.serve(async (req: Request) => {
           const list = classSubjectsMap.get(sub.class_id) || [];
           list.push(sub.id);
           classSubjectsMap.set(sub.class_id, list);
+          if (sub.name) subjectNameMap.set(sub.id, sub.name);
         }
       }
     }
@@ -156,7 +158,7 @@ Deno.serve(async (req: Request) => {
             await processAttendanceRisk(admin, studentId, school_id, run_date, runId);
 
             // Process academic risk
-            await processAcademicRisk(admin, studentId, school_id, run_date, runId, subjectIds);
+            await processAcademicRisk(admin, studentId, school_id, run_date, runId, subjectIds, subjectNameMap);
 
             // Increment students_processed counter
             await admin.rpc("increment_insight_run_counter", {
@@ -315,7 +317,8 @@ async function processAcademicRisk(
   schoolId: string,
   runDate: string,
   runId: string,
-  subjectIds: string[]
+  subjectIds: string[],
+  subjectNameMap: Map<string, string> = new Map()
 ) {
   if (!subjectIds || subjectIds.length === 0) {
     return;
@@ -362,6 +365,7 @@ async function processAcademicRisk(
         examScores: scores,
         passMarkCurrent: 35,
         passMarkTarget: 50,
+        subjectName: subjectNameMap.get(subject_id),
       };
       const insight = computePerformanceForecast(input);
 
