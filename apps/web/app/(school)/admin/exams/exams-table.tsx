@@ -75,7 +75,18 @@ export function ExamsTable({
         <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="font-medium text-foreground">{row.name}</p>
+              <div className="flex items-center gap-2">
+                <p className="font-medium text-foreground">{row.name}</p>
+                {row.isQuiz ? (
+                  <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">
+                    Quiz
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
+                    Exam
+                  </span>
+                )}
+              </div>
               <p className="mt-1 text-xs text-muted-foreground">{row.academic_year}</p>
               <p className="mt-2 text-xs text-muted-foreground">{row.start} – {row.end}</p>
             </div>

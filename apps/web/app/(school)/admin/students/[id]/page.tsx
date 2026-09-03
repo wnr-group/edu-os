@@ -88,8 +88,9 @@ export default async function StudentDetailPage({
 
   const prevDate = new Date(year, month - 1);
   const nextDate = new Date(year, month + 1);
-  const prevHref = `?tab=attendance&month=${prevDate.getMonth()}&year=${prevDate.getFullYear()}`;
-  const nextHref = `?tab=attendance&month=${nextDate.getMonth()}&year=${nextDate.getFullYear()}`;
+  const fromParam = from ? `&from=${encodeURIComponent(from)}` : "";
+  const prevHref = `?tab=attendance&month=${prevDate.getMonth()}&year=${prevDate.getFullYear()}${fromParam}`;
+  const nextHref = `?tab=attendance&month=${nextDate.getMonth()}&year=${nextDate.getFullYear()}${fromParam}`;
   const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
   const subtitleParts = [
@@ -117,6 +118,7 @@ export default async function StudentDetailPage({
       subtitle={subtitleParts.length > 0 ? subtitleParts.join("  ·  ") : undefined}
       basePath={`/admin/students/${id}`}
       activeTab={activeTab}
+      extraQuery={from ? { from } : undefined}
       header={
         <div className="space-y-6">
           <div className="rounded-lg border bg-white p-6 shadow-sm">

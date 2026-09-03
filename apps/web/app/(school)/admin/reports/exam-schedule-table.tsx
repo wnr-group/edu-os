@@ -37,7 +37,10 @@ export function ExamScheduleTable({ rows }: { rows: ExamScheduleRow[] }) {
       searchPlaceholder="Search exams..."
       renderMobileCard={(row) => (
         <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-          <p className="font-medium text-foreground">{row.name}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-medium text-foreground">{row.name}</p>
+            <Badge variant={row.isQuiz ? "outline" : "secondary"}>{row.isQuiz ? "Quiz" : "Exam"}</Badge>
+          </div>
           <p className="mt-1 text-xs text-muted-foreground">{row.academic_year}</p>
           <p className="mt-2 text-xs text-muted-foreground">{row.start_date} – {row.end_date}</p>
         </div>

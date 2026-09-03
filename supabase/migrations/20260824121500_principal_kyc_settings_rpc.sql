@@ -1,4 +1,4 @@
--- Allow principal role alongside super_admin and school_admin to manage KYC document types
+-- Allow principal role alongside super_admin and school_admin to manage KYC document types with tenant isolation
 
 CREATE OR REPLACE FUNCTION public.save_document_type(
   p_id uuid, p_school_id uuid, p_name text, p_description text,
@@ -9,6 +9,7 @@ DECLARE v_id uuid;
 BEGIN
   IF NOT public.feature_enabled(p_school_id, 'kyc_documents') THEN RAISE EXCEPTION 'module_disabled'; END IF;
   IF public.get_my_role() NOT IN ('super_admin', 'school_admin', 'principal') THEN RAISE EXCEPTION 'not_authorized'; END IF;
+  IF public.get_my_role() <> 'super_admin' AND p_school_id <> public.get_my_school_id() THEN RAISE EXCEPTION 'not_authorized'; END IF;
 
   IF p_id IS NOT NULL THEN
     UPDATE public.document_types
@@ -38,6 +39,7 @@ BEGIN
   IF v_school_id IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
   IF NOT public.feature_enabled(v_school_id, 'kyc_documents') THEN RAISE EXCEPTION 'module_disabled'; END IF;
   IF public.get_my_role() NOT IN ('super_admin', 'school_admin', 'principal') THEN RAISE EXCEPTION 'not_authorized'; END IF;
+  IF public.get_my_role() <> 'super_admin' AND v_school_id <> public.get_my_school_id() THEN RAISE EXCEPTION 'not_authorized'; END IF;
 
   UPDATE public.document_types SET is_active = p_active WHERE id = p_id;
 END; $$;

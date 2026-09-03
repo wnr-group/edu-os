@@ -2,12 +2,11 @@ export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { Mail, Phone, Cake, VenetianMask } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { getAcademicYearId } from "@/lib/academic-year";
 import { DetailPageTemplate } from "@/components/detail-page-template";
-import { PhotoUpload } from "@/app/(school)/admin/students/[id]/photo-upload";
-import { StudentEditForm } from "@/app/(school)/admin/students/[id]/student-edit-form";
 import { StudentAttendanceTab } from "@/app/(school)/admin/students/[id]/student-attendance-tab";
 import { StudentAcademicsTab } from "@/app/(school)/admin/students/[id]/student-academics-tab";
 import { StudentFeesTab } from "@/app/(school)/admin/students/[id]/student-fees-tab";
@@ -40,7 +39,7 @@ export default async function PrincipalStudentDetailPage({
   const schoolId = (await getSchoolId())!;
   const academicYearId = await getAcademicYearId(schoolId);
 
-  const [{ data: student }, { data: kycCompleteness }, { count: pendingHealthCount }, { data: classes }] = await Promise.all([
+  const [{ data: student }, { data: kycCompleteness }, { count: pendingHealthCount }] = await Promise.all([
     supabase
       .from("student_profiles")
       .select("id, full_name, email, photo_url, admission_number, date_of_birth, gender, profile:profiles!profile_id(full_name, email), parent:profiles!parent_profile_id(full_name, phone)")
@@ -57,18 +56,13 @@ export default async function PrincipalStudentDetailPage({
       .select("id", { count: "exact", head: true })
       .eq("student_id", id)
       .eq("status", "pending"),
-    supabase
-      .from("classes")
-      .select("id, name")
-      .eq("school_id", schoolId)
-      .order("order"),
   ]);
 
   if (!student) notFound();
 
   const { data: enrollment } = await supabase
     .from("student_enrollments")
-    .select("id, roll_number, class_id, section_id, class:classes(name), section:sections(name)")
+    .select("roll_number, class:classes(name), section:sections(name)")
     .eq("student_profile_id", id)
     .eq("school_id", schoolId)
     .eq("academic_year_id", academicYearId ?? "")
@@ -78,8 +72,6 @@ export default async function PrincipalStudentDetailPage({
   const parent = student.parent as unknown as { full_name: string | null; phone: string | null } | null;
   const displayName = profile?.full_name ?? (student as unknown as { full_name: string | null }).full_name ?? "Student";
   const displayEmail = profile?.email ?? (student as unknown as { email: string | null }).email ?? "";
-  const displayParentPhone = parent?.phone ?? "";
-  const displayParentName = parent?.full_name ?? "";
   const photoUrl = (student as unknown as { photo_url: string | null }).photo_url;
   const cls = enrollment?.class as unknown as { name: string } | null;
   const sec = enrollment?.section as unknown as { name: string } | null;
@@ -87,14 +79,19 @@ export default async function PrincipalStudentDetailPage({
   const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const prevDate = new Date(year, month - 1);
   const nextDate = new Date(year, month + 1);
-  const prevHref = `?tab=attendance&month=${prevDate.getMonth()}&year=${prevDate.getFullYear()}`;
-  const nextHref = `?tab=attendance&month=${nextDate.getMonth()}&year=${nextDate.getFullYear()}`;
+  const fromParam = from ? `&from=${encodeURIComponent(from)}` : "";
+  const prevHref = `?tab=attendance&month=${prevDate.getMonth()}&year=${prevDate.getFullYear()}${fromParam}`;
+  const nextHref = `?tab=attendance&month=${nextDate.getMonth()}&year=${nextDate.getFullYear()}${fromParam}`;
 
   const subtitleParts = [
     cls?.name ? `${cls.name}${sec?.name ? ` · Section ${sec.name}` : ""}` : null,
     enrollment?.roll_number ? `Roll No: ${enrollment.roll_number}` : null,
     student.admission_number ? `Adm: ${student.admission_number}` : null,
   ].filter(Boolean);
+
+  const gender = (student as unknown as { gender: string | null }).gender;
+  const dob = (student as unknown as { date_of_birth: string | null }).date_of_birth;
+  const av = avatarColor(displayName);
 
   const attendanceContent = (
     <>
@@ -115,44 +112,52 @@ export default async function PrincipalStudentDetailPage({
       subtitle={subtitleParts.length > 0 ? subtitleParts.join("  ·  ") : undefined}
       basePath={`/principal/students/${id}`}
       activeTab={activeTab}
+      extraQuery={from ? { from } : undefined}
       header={
-        <div className="space-y-6">
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
-            <div className="flex items-start gap-5">
-              <PhotoUpload
-                studentId={student.id}
-                studentName={displayName}
-                photoUrl={photoUrl}
-              />
-              <div className="min-w-0 flex-1">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Profile</h2>
-                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500">
-                  {cls?.name && <span>{cls.name}{sec?.name ? ` · Section ${sec.name}` : ""}</span>}
-                  {enrollment?.roll_number && <span>Roll No: {enrollment.roll_number}</span>}
-                  {student.admission_number && <span>Adm: {student.admission_number}</span>}
-                </div>
+        <div className="rounded-lg border bg-white p-6 shadow-sm">
+          <div className="flex items-start gap-5">
+            {photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photoUrl} alt={displayName} className="h-20 w-20 shrink-0 rounded-full object-cover" />
+            ) : (
+              <span
+                className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full text-2xl font-bold"
+                style={{ background: av.bg, color: av.fg }}
+              >
+                {initialsOf(displayName)}
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Profile</h2>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-gray-600">
+                {cls?.name && <span>{cls.name}{sec?.name ? ` · Section ${sec.name}` : ""}</span>}
+                {enrollment?.roll_number && <span>Roll No: {enrollment.roll_number}</span>}
+                {student.admission_number && <span>Adm: {student.admission_number}</span>}
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-gray-600">
+                {displayEmail && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Mail className="h-3.5 w-3.5 text-muted-foreground" /> {displayEmail}
+                  </span>
+                )}
+                {parent?.phone && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5 text-muted-foreground" /> {parent.phone}
+                    {parent.full_name ? ` (${parent.full_name})` : ""}
+                  </span>
+                )}
+                {dob && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Cake className="h-3.5 w-3.5 text-muted-foreground" /> {dob}
+                  </span>
+                )}
+                {gender && (
+                  <span className="inline-flex items-center gap-1.5 capitalize">
+                    <VenetianMask className="h-3.5 w-3.5 text-muted-foreground" /> {gender}
+                  </span>
+                )}
               </div>
             </div>
-          </div>
-
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">Edit Profile</h2>
-            <StudentEditForm
-              studentId={student.id}
-              enrollmentId={enrollment?.id ?? null}
-              schoolId={schoolId}
-              initialName={displayName !== "Student" ? displayName : ""}
-              initialEmail={displayEmail}
-              initialParentPhone={displayParentPhone}
-              initialRoll={enrollment?.roll_number ?? ""}
-              initialAdmission={student.admission_number ?? ""}
-              initialDateOfBirth={(student as any).date_of_birth ?? ""}
-              initialParentName={displayParentName}
-              initialGender={(student as any).gender ?? ""}
-              initialClassId={enrollment?.class_id ?? ""}
-              initialSectionId={enrollment?.section_id ?? ""}
-              classes={classes ?? []}
-            />
           </div>
         </div>
       }
