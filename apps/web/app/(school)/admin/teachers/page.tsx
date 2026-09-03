@@ -21,19 +21,23 @@ export default async function TeachersPage() {
   const { data: teachers } = await supabase
     .from("teacher_profiles")
     .select("id, profile_id, profile:profiles(full_name, email, phone)")
-    .eq("school_id", schoolId);
+    .eq("school_id", schoolId)
+    .order("created_at", { ascending: true });
 
-  const rows = (teachers ?? [])
-    .filter((t) => activeUserIds.has(t.profile_id))
-    .map((t) => {
+  const uniqueTeacherMap = new Map<string, { id: string; name: string; email: string; phone: string }>();
+  for (const t of teachers ?? []) {
+    if (activeUserIds.has(t.profile_id) && !uniqueTeacherMap.has(t.profile_id)) {
       const p = (t.profile as unknown as { full_name: string; email: string; phone: string | null } | null);
-      return {
+      uniqueTeacherMap.set(t.profile_id, {
         id: t.id,
         name: p?.full_name ?? "",
         email: p?.email ?? "",
         phone: p?.phone ?? "",
-      };
-    });
+      });
+    }
+  }
+
+  const rows = Array.from(uniqueTeacherMap.values());
 
   return (
     <TeachersTable

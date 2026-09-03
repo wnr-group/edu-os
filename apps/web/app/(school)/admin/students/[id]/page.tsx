@@ -22,7 +22,7 @@ export default async function StudentDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; month?: string; year?: string }>;
+  searchParams: Promise<{ tab?: string; month?: string; year?: string; from?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -30,6 +30,10 @@ export default async function StudentDetailPage({
   const now = new Date();
   const month = sp.month !== undefined ? parseInt(sp.month, 10) : now.getMonth();
   const year = sp.year !== undefined ? parseInt(sp.year, 10) : now.getFullYear();
+  const from = sp.from;
+
+  const backHref = from === "kyc" ? "/admin/kyc" : "/admin/students";
+  const backLabel = from === "kyc" ? "Back to KYC Documents" : "Back to Students";
 
   const supabase = await createServerSupabaseClient();
   const schoolId = (await getSchoolId())!;
@@ -84,8 +88,9 @@ export default async function StudentDetailPage({
 
   const prevDate = new Date(year, month - 1);
   const nextDate = new Date(year, month + 1);
-  const prevHref = `?tab=attendance&month=${prevDate.getMonth()}&year=${prevDate.getFullYear()}`;
-  const nextHref = `?tab=attendance&month=${nextDate.getMonth()}&year=${nextDate.getFullYear()}`;
+  const fromParam = from ? `&from=${encodeURIComponent(from)}` : "";
+  const prevHref = `?tab=attendance&month=${prevDate.getMonth()}&year=${prevDate.getFullYear()}${fromParam}`;
+  const nextHref = `?tab=attendance&month=${nextDate.getMonth()}&year=${nextDate.getFullYear()}${fromParam}`;
   const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
   const subtitleParts = [
@@ -107,12 +112,13 @@ export default async function StudentDetailPage({
 
   return (
     <DetailPageTemplate
-      backHref="/admin/students"
-      backLabel="Back to Students"
+      backHref={backHref}
+      backLabel={backLabel}
       title={displayName}
       subtitle={subtitleParts.length > 0 ? subtitleParts.join("  ·  ") : undefined}
       basePath={`/admin/students/${id}`}
       activeTab={activeTab}
+      extraQuery={from ? { from } : undefined}
       header={
         <div className="space-y-6">
           <div className="rounded-lg border bg-white p-6 shadow-sm">

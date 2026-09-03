@@ -56,7 +56,7 @@ export default async function PrincipalCertificatesPage() {
   return (
     <div>
       <PageHeader title="Certificates" description="Generate bonafide certificates for students." stats={[{ label: "Total Students", value: students.length }]} />
-      <CertificatesTable students={students} history={historyRows} classOptions={classOptions} baseHref="/principal/certificates" />
+      <CertificatesTable students={students} history={historyRows} classOptions={classOptions} baseHref="/principal/certificates" studentDetailHrefPrefix="/principal/students" />
     </div>
   );
 }

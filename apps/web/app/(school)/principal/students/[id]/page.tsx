@@ -22,7 +22,7 @@ export default async function PrincipalStudentDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; month?: string; year?: string }>;
+  searchParams: Promise<{ tab?: string; month?: string; year?: string; from?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -30,12 +30,16 @@ export default async function PrincipalStudentDetailPage({
   const now = new Date();
   const month = sp.month !== undefined ? parseInt(sp.month, 10) : now.getMonth();
   const year = sp.year !== undefined ? parseInt(sp.year, 10) : now.getFullYear();
+  const from = sp.from;
+
+  const backHref = from === "certificates" ? "/principal/certificates" : from === "kyc" ? "/principal/kyc" : "/principal/students";
+  const backLabel = from === "certificates" ? "Back to Certificates" : from === "kyc" ? "Back to KYC Documents" : "Back to Students";
 
   const supabase = await createServerSupabaseClient();
   const schoolId = (await getSchoolId())!;
   const academicYearId = await getAcademicYearId(schoolId);
 
- const [{ data: student }, { data: kycCompleteness }, { count: pendingHealthCount }] = await Promise.all([
+  const [{ data: student }, { data: kycCompleteness }, { count: pendingHealthCount }] = await Promise.all([
     supabase
       .from("student_profiles")
       .select("id, full_name, email, photo_url, admission_number, date_of_birth, gender, profile:profiles!profile_id(full_name, email), parent:profiles!parent_profile_id(full_name, phone)")
@@ -75,8 +79,9 @@ export default async function PrincipalStudentDetailPage({
   const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const prevDate = new Date(year, month - 1);
   const nextDate = new Date(year, month + 1);
-  const prevHref = `?tab=attendance&month=${prevDate.getMonth()}&year=${prevDate.getFullYear()}`;
-  const nextHref = `?tab=attendance&month=${nextDate.getMonth()}&year=${nextDate.getFullYear()}`;
+  const fromParam = from ? `&from=${encodeURIComponent(from)}` : "";
+  const prevHref = `?tab=attendance&month=${prevDate.getMonth()}&year=${prevDate.getFullYear()}${fromParam}`;
+  const nextHref = `?tab=attendance&month=${nextDate.getMonth()}&year=${nextDate.getFullYear()}${fromParam}`;
 
   const subtitleParts = [
     cls?.name ? `${cls.name}${sec?.name ? ` · Section ${sec.name}` : ""}` : null,
@@ -101,12 +106,13 @@ export default async function PrincipalStudentDetailPage({
 
   return (
     <DetailPageTemplate
-      backHref="/principal/students"
-      backLabel="Back to Students"
+      backHref={backHref}
+      backLabel={backLabel}
       title={displayName}
       subtitle={subtitleParts.length > 0 ? subtitleParts.join("  ·  ") : undefined}
       basePath={`/principal/students/${id}`}
       activeTab={activeTab}
+      extraQuery={from ? { from } : undefined}
       header={
         <div className="rounded-lg border bg-white p-6 shadow-sm">
           <div className="flex items-start gap-5">
