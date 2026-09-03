@@ -26,7 +26,7 @@ export default async function ExamsPage() {
       .select("id, name, start_date, end_date, datesheet_published_at, academic_year:academic_years(name)")
       .eq("school_id", schoolId)
       .order("start_date", { ascending: false }),
-    supabase.from("quizzes").select("exam_id").eq("school_id", schoolId).not("exam_id", "is", null),
+    supabase.from("quizzes").select("exam_id").eq("school_id", schoolId).not("exam_id", "is", null).limit(5000),
   ]);
 
   const quizExamIds = new Set((quizLinks ?? []).map((q) => q.exam_id));

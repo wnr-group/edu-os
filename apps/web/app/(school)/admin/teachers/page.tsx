@@ -21,7 +21,8 @@ export default async function TeachersPage() {
   const { data: teachers } = await supabase
     .from("teacher_profiles")
     .select("id, profile_id, profile:profiles(full_name, email, phone)")
-    .eq("school_id", schoolId);
+    .eq("school_id", schoolId)
+    .order("created_at", { ascending: true });
 
   const uniqueTeacherMap = new Map<string, { id: string; name: string; email: string; phone: string }>();
   for (const t of teachers ?? []) {

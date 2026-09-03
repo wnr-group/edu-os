@@ -32,6 +32,7 @@ interface DetailPageTemplateProps {
   tabMode?: "link" | "state";
   onTabChange?: (key: string) => void;
   basePath?: string;
+  extraQuery?: Record<string, string | undefined>;
 }
 
 export function DetailPageTemplate({
@@ -47,8 +48,19 @@ export function DetailPageTemplate({
   tabMode = "link",
   onTabChange,
   basePath,
+  extraQuery,
 }: DetailPageTemplateProps) {
   const activeContent = tabs.find((t) => t.key === activeTab)?.content ?? tabs[0]?.content;
+
+  const qs = (tabKey: string) => {
+    const p = new URLSearchParams({ tab: tabKey });
+    for (const [k, v] of Object.entries(extraQuery ?? {})) {
+      if (v !== undefined && v !== "") {
+        p.set(k, v);
+      }
+    }
+    return `${basePath ?? ""}?${p.toString()}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -87,7 +99,7 @@ export function DetailPageTemplate({
                 );
               }
               return (
-                <Link key={tab.key} href={`${basePath ?? ""}?tab=${tab.key}`} scroll={false} className={tabClassName}>
+                <Link key={tab.key} href={qs(tab.key)} scroll={false} className={tabClassName}>
                   {tab.label}
                 </Link>
               );

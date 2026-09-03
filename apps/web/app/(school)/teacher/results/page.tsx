@@ -35,7 +35,8 @@ export default async function ResultsPage() {
       .from("quizzes")
       .select("exam_id, section_id")
       .eq("school_id", schoolId)
-      .not("exam_id", "is", null),
+      .not("exam_id", "is", null)
+      .limit(5000),
   ]);
 
   const sectionQuizExamIds = new Set(

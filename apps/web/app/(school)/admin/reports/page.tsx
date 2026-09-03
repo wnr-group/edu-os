@@ -32,7 +32,7 @@ export default async function AdminReportsPage() {
       .from("attendance_records")
       .select("id", { count: "exact", head: true })
       .eq("school_id", schoolId),
-    supabase.from("quizzes").select("exam_id").eq("school_id", schoolId).not("exam_id", "is", null),
+    supabase.from("quizzes").select("exam_id").eq("school_id", schoolId).not("exam_id", "is", null).limit(5000),
   ]);
 
   const quizExamIds = new Set((quizLinks ?? []).map((q) => q.exam_id));
