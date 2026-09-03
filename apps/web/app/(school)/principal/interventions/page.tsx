@@ -1,3 +1,5 @@
-import AdminInterventionsPage from "../../admin/interventions/page";
+import { InterventionsPage } from "../../admin/interventions/page";
 
-export default AdminInterventionsPage;
+export default function PrincipalInterventionsPage() {
+  return <InterventionsPage currentUserRole="principal" />;
+}

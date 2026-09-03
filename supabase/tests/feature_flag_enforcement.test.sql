@@ -64,6 +64,19 @@ BEGIN
     LIMIT 1;
   END IF;
 
+  IF v_interv_id IS NULL THEN
+    RAISE EXCEPTION 'FAIL setup: create_intervention_if_qualifying did not produce an intervention for the fixture';
+  END IF;
+
+  -- Carry the fixture's intervention id via a session-level setting (not a
+  -- plpgsql variable, which does not survive across separate DO blocks) so
+  -- tests 5.7/5.8/5.10 don't have to re-discover it via SELECT as the teacher role
+  -- while insights=false — that SELECT is itself blocked by the very RLS
+  -- policy those tests are probing for a different purpose (read visibility,
+  -- already covered by 5.3-5.5), which previously caused them to silently
+  -- SKIP instead of exercising the RPC-level module_disabled check.
+  PERFORM set_config('test.interv_id', v_interv_id::text, false);
+
   RAISE NOTICE 'Setup complete: snapshot=%, intervention=%', v_snap_id, v_interv_id;
 END $$;
 
@@ -211,16 +224,10 @@ DECLARE
   v_interv_id UUID;
   v_blocked BOOLEAN := false;
 BEGIN
-  SELECT id INTO v_interv_id
-  FROM public.interventions
-  WHERE student_id = 'dddddddd-0000-0000-0000-000000000001'
-    AND kind = 'attendance'
-    AND status = 'pending'
-  LIMIT 1;
+  v_interv_id := current_setting('test.interv_id', true)::uuid;
 
   IF v_interv_id IS NULL THEN
-    RAISE NOTICE 'SKIP 5.7: No pending intervention found (may have been started already)';
-    RETURN;
+    RAISE EXCEPTION 'FAIL 5.7: fixture did not produce an intervention (test.interv_id not set)';
   END IF;
 
   BEGIN
@@ -252,15 +259,10 @@ DECLARE
   v_interv_id UUID;
   v_blocked BOOLEAN := false;
 BEGIN
-  SELECT id INTO v_interv_id
-  FROM public.interventions
-  WHERE student_id = 'dddddddd-0000-0000-0000-000000000001'
-    AND kind = 'attendance'
-  LIMIT 1;
+  v_interv_id := current_setting('test.interv_id', true)::uuid;
 
   IF v_interv_id IS NULL THEN
-    RAISE NOTICE 'SKIP 5.8: No intervention found for notify test';
-    RETURN;
+    RAISE EXCEPTION 'FAIL 5.8: fixture did not produce an intervention (test.interv_id not set)';
   END IF;
 
   BEGIN
@@ -310,16 +312,10 @@ DECLARE
   v_interv_id UUID;
   v_succeeded BOOLEAN := false;
 BEGIN
-  SELECT id INTO v_interv_id
-  FROM public.interventions
-  WHERE student_id = 'dddddddd-0000-0000-0000-000000000001'
-    AND kind = 'attendance'
-    AND status = 'pending'
-  LIMIT 1;
+  v_interv_id := current_setting('test.interv_id', true)::uuid;
 
   IF v_interv_id IS NULL THEN
-    RAISE NOTICE 'SKIP 5.9: No pending intervention found for positive control';
-    RETURN;
+    RAISE EXCEPTION 'FAIL 5.9: fixture did not produce an intervention (test.interv_id not set)';
   END IF;
 
   BEGIN
@@ -336,6 +332,24 @@ BEGIN
 END $$;
 
 RESET ROLE;
+
+-- Verify 5.9's precondition for 5.10 as postgres (bypassing RLS) *before*
+-- insights is disabled again below — checking it under the teacher role
+-- while insights=false would hit the same RLS read-block that 5.3/5.4
+-- verify on purpose, hiding the row regardless of its real status and
+-- producing a false failure here.
+DO $$
+DECLARE
+  v_interv_id UUID := current_setting('test.interv_id', true)::uuid;
+BEGIN
+  IF v_interv_id IS NULL THEN
+    RAISE EXCEPTION 'FAIL 5.10: fixture did not produce an intervention (test.interv_id not set)';
+  END IF;
+  PERFORM 1 FROM public.interventions WHERE id = v_interv_id AND status = 'in_progress';
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'FAIL 5.10: fixture intervention % is not in_progress ahead of complete_intervention test (5.9 positive control did not transition it)', v_interv_id;
+  END IF;
+END $$;
 
 -- Test 5.10: complete_intervention blocked when insights=false
 DO $$
@@ -363,16 +377,10 @@ DECLARE
   v_interv_id UUID;
   v_blocked BOOLEAN := false;
 BEGIN
-  SELECT id INTO v_interv_id
-  FROM public.interventions
-  WHERE student_id = 'dddddddd-0000-0000-0000-000000000001'
-    AND kind = 'attendance'
-    AND status = 'in_progress'
-  LIMIT 1;
+  v_interv_id := current_setting('test.interv_id', true)::uuid;
 
   IF v_interv_id IS NULL THEN
-    RAISE NOTICE 'SKIP 5.10: No in_progress intervention found for complete test';
-    RETURN;
+    RAISE EXCEPTION 'FAIL 5.10: fixture did not produce an intervention (test.interv_id not set)';
   END IF;
 
   BEGIN

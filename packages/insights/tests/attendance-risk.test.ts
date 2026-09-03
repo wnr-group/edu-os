@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { computeAttendanceRisk } from '../src/attendance-risk';
-import type { AttendanceRecord, AttendanceRiskInput } from '../src/types';
+import { computeAttendanceRisk, collapseDailyAttendance } from '../src/index';
+import type { AttendanceRecord, AttendanceRiskInput, RawAttendanceSessionRecord } from '../src/index';
 
 describe('ATTN_RISK_V1: computeAttendanceRisk', () => {
   // Helper to create date
@@ -131,13 +131,16 @@ describe('ATTN_RISK_V1: computeAttendanceRisk', () => {
       expect(streakFactor?.label).toContain('No streak');
     });
 
-    it('should not count excused absences in streak', () => {
-      // Pattern represents chronological order (oldest first, newest last)
+    it('ignores excused days in streak per D8 (excused is skipped, not a break)', () => {
+      // Pattern represents chronological order (oldest first, newest last).
+      // Per D8 (docs/superpowers/specs/2026-07-24-eduos-insights-algorithms.md §2),
+      // attendance_records inputs exclude 'excused' entirely, so an excused day
+      // in the middle of a run of absences does not reset the streak.
       const pattern: ('present' | 'absent' | 'excused')[] = [
         ...Array(25).fill('present'),
         'absent',
         'absent',
-        'excused', // Breaks the streak when counting backwards
+        'excused', // Ignored — does not break the streak
         'absent',
         'absent', // Most recent 2 are absent
       ];
@@ -145,7 +148,24 @@ describe('ATTN_RISK_V1: computeAttendanceRisk', () => {
       const result = computeAttendanceRisk({ records });
 
       const streakFactor = result.factors.find(f => f.key === 'streak');
-      // Streak counts backwards from most recent: absent, absent, then hits excused -> breaks
+      // Excused day is removed from the counted sequence, so all 4 surrounding
+      // absences become one contiguous streak.
+      expect(streakFactor?.value).toBe(4);
+    });
+
+    it('still breaks the streak on a present day (only excused is ignored)', () => {
+      const pattern: ('present' | 'absent' | 'excused')[] = [
+        ...Array(24).fill('present'),
+        'absent',
+        'absent',
+        'present', // Breaks the streak
+        'absent',
+        'absent',
+      ];
+      const records = createRecords(pattern);
+      const result = computeAttendanceRisk({ records });
+
+      const streakFactor = result.factors.find(f => f.key === 'streak');
       expect(streakFactor?.value).toBe(2);
     });
   });
@@ -394,6 +414,39 @@ describe('ATTN_RISK_V1: computeAttendanceRisk', () => {
     });
   });
 
+  describe('Mutation guard — band boundaries (review comment #7)', () => {
+    it('score=35 exactly → MED (kills M08: >= vs > boundary mutation)', () => {
+      // 2 Monday absences + 2 Tuesday presents → rate=0.5, drop=0, streak=0, maxWeekday=1.0
+      // score = 100*(0.40*0.5 + 0 + 0 + 0.15*1.0) = 100*0.35 = 35.0 exactly
+      // band must be MED (score >= 35), NOT LOW (would be wrong with "score > 35" mutation)
+      const records: AttendanceRecord[] = [
+        { date: new Date('2024-01-01'), status: 'absent' },   // Monday
+        { date: new Date('2024-01-02'), status: 'present' },  // Tuesday
+        { date: new Date('2024-01-08'), status: 'absent' },   // Monday
+        { date: new Date('2024-01-09'), status: 'present' },  // Tuesday
+      ];
+      const result = computeAttendanceRisk({ records });
+      expect(result.score).toBeCloseTo(35, 5);
+      expect(result.band).toBe('MED');
+    });
+
+    it('score=75 exactly → HIGH (kills M10: rate weight 0.40 vs 0.50 mutation)', () => {
+      // 5 Monday absences: rate=0, drop=0, streak=5, weekday(Mon)=5/5=1.0
+      // score = 100*(0.40*1 + 0 + 0.20*1 + 0.15*1) = 75.0 exactly
+      // With M10 (weight=0.50): 100*(0.50+0+0.20+0.15) = 85 → test catches difference
+      const records: AttendanceRecord[] = [
+        { date: new Date('2024-01-01'), status: 'absent' },  // Monday
+        { date: new Date('2024-01-08'), status: 'absent' },  // Monday
+        { date: new Date('2024-01-15'), status: 'absent' },  // Monday
+        { date: new Date('2024-01-22'), status: 'absent' },  // Monday
+        { date: new Date('2024-01-29'), status: 'absent' },  // Monday
+      ];
+      const result = computeAttendanceRisk({ records });
+      expect(result.score).toBeCloseTo(75, 5);
+      expect(result.band).toBe('HIGH');
+    });
+  });
+
   describe('Determinism', () => {
     it('should return identical results for identical inputs', () => {
       const records = createRecords([
@@ -409,6 +462,120 @@ describe('ATTN_RISK_V1: computeAttendanceRisk', () => {
       expect(result1.band).toBe(result2.band);
       expect(result1.factors).toEqual(result2.factors);
       expect(result1.recommended_action).toBe(result2.recommended_action);
+    });
+  });
+
+  describe('FN/AN session-grain collapsing (review comment #2 — FN/AN inflation)', () => {
+    // Fixed 30-day calendar, oldest first: days 1-27 present, days 28-30 absent.
+    // FULL_DAY baseline: rate=27/30=0.9, recent(16-30)=12/15=0.8, prior(1-15)=15/15=1.0,
+    // drop=0.2, streak=3 (last 3 days absent).
+    const dayStatuses: ('present' | 'absent')[] = [
+      ...Array(27).fill('present'),
+      ...Array(3).fill('absent'),
+    ];
+    const dates = dayStatuses.map((_, i) => {
+      const d = new Date('2026-01-01T00:00:00.000Z');
+      d.setUTCDate(d.getUTCDate() + i);
+      return d;
+    });
+
+    it('collapses a FULL_DAY-only school to itself (single session per day)', () => {
+      const raw: RawAttendanceSessionRecord[] = dates.map((date, i) => ({
+        date,
+        session: 'FULL_DAY',
+        status: dayStatuses[i],
+      }));
+
+      const collapsed = collapseDailyAttendance(raw);
+
+      expect(collapsed).toHaveLength(30);
+      expect(collapsed.map((r) => r.status)).toEqual(dayStatuses);
+    });
+
+    it('collapses an FN+AN school to the same daily record as the equivalent FULL_DAY school', () => {
+      // Mirror the exact same real-world attendance as two session rows per day
+      // instead of one: a present day is FN=present/AN=present; an absent day
+      // is FN=absent/AN=absent. 60 raw rows in, 30 daily records out.
+      const raw: RawAttendanceSessionRecord[] = dates.flatMap((date, i) => [
+        { date, session: 'FN' as const, status: dayStatuses[i] },
+        { date, session: 'AN' as const, status: dayStatuses[i] },
+      ]);
+      expect(raw).toHaveLength(60);
+
+      const collapsed = collapseDailyAttendance(raw);
+
+      expect(collapsed).toHaveLength(30); // three absent days do not become six
+      expect(collapsed.map((r) => r.status)).toEqual(dayStatuses);
+      expect(collapsed.map((r) => r.date.toISOString())).toEqual(
+        dates.map((d) => d.toISOString())
+      );
+    });
+
+    it('produces identical risk score/band for FULL_DAY vs FN+AN representations of the same attendance', () => {
+      const fullDayRaw: RawAttendanceSessionRecord[] = dates.map((date, i) => ({
+        date,
+        session: 'FULL_DAY',
+        status: dayStatuses[i],
+      }));
+      const fnAnRaw: RawAttendanceSessionRecord[] = dates.flatMap((date, i) => [
+        { date, session: 'FN' as const, status: dayStatuses[i] },
+        { date, session: 'AN' as const, status: dayStatuses[i] },
+      ]);
+
+      const fullDayResult = computeAttendanceRisk({
+        records: collapseDailyAttendance(fullDayRaw),
+      });
+      const fnAnResult = computeAttendanceRisk({
+        records: collapseDailyAttendance(fnAnRaw),
+      });
+
+      // Rate/weekday denominators are daily, not session-based (comments #8/#9 in review)
+      expect(fullDayResult.factors.find((f) => f.key === 'rate')?.value).toBeCloseTo(0.9, 5);
+      expect(fnAnResult.factors.find((f) => f.key === 'rate')?.value).toBeCloseTo(0.9, 5);
+
+      // 15-day drop window is actually 15 calendar days, not 15 sessions
+      expect(fullDayResult.factors.find((f) => f.key === 'drop')?.value).toBeCloseTo(0.2, 5);
+      expect(fnAnResult.factors.find((f) => f.key === 'drop')?.value).toBeCloseTo(0.2, 5);
+
+      // Streak is daily grain: 3, not 6
+      expect(fullDayResult.factors.find((f) => f.key === 'streak')?.value).toBe(3);
+      expect(fnAnResult.factors.find((f) => f.key === 'streak')?.value).toBe(3);
+
+      // The risk band must not change solely because the school stores
+      // attendance in FN/AN sessions instead of FULL_DAY.
+      expect(fullDayResult.score).toBeCloseTo(fnAnResult.score, 5);
+      expect(fullDayResult.band).toBe(fnAnResult.band);
+      expect(fullDayResult.band).toBe('LOW');
+    });
+
+    it('applies the "present if any session present" rule for a mixed FN/AN day', () => {
+      const date = new Date('2026-02-01T00:00:00.000Z');
+      const collapsed = collapseDailyAttendance([
+        { date, session: 'FN', status: 'present' },
+        { date, session: 'AN', status: 'absent' },
+      ]);
+      expect(collapsed).toHaveLength(1);
+      expect(collapsed[0].status).toBe('present');
+    });
+
+    it('applies the "absent only if every session absent" rule for a mixed FN/AN day', () => {
+      const date = new Date('2026-02-01T00:00:00.000Z');
+      const collapsed = collapseDailyAttendance([
+        { date, session: 'FN', status: 'absent' },
+        { date, session: 'AN', status: 'excused' },
+      ]);
+      expect(collapsed).toHaveLength(1);
+      // Not all sessions absent, and no session present -> falls to 'excused'
+      expect(collapsed[0].status).toBe('excused');
+    });
+
+    it('collapses an all-absent FN/AN day to absent', () => {
+      const date = new Date('2026-02-01T00:00:00.000Z');
+      const collapsed = collapseDailyAttendance([
+        { date, session: 'FN', status: 'absent' },
+        { date, session: 'AN', status: 'absent' },
+      ]);
+      expect(collapsed[0].status).toBe('absent');
     });
   });
 });

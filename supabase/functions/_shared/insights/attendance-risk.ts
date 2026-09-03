@@ -1,4 +1,62 @@
-import type { AttendanceRiskInput, Insight, InsightFactor, Band } from './types.ts';
+import type { AttendanceRecord, AttendanceRiskInput, Insight, InsightFactor, Band } from './types.ts';
+
+/**
+ * Raw per-session attendance row as stored in `attendance_records`.
+ * A student-day is represented either by one FULL_DAY row, or by up to two
+ * rows (FN and/or AN) — never mixed (enforced by the marking UI).
+ */
+export interface RawAttendanceSessionRecord {
+  date: Date;
+  session: 'FULL_DAY' | 'FN' | 'AN';
+  status: 'present' | 'absent' | 'excused';
+}
+
+/**
+ * Collapse session-grain attendance rows (FULL_DAY / FN / AN) into one
+ * day-grain AttendanceRecord per date, so ATTN_RISK_V1 — which is specified
+ * at day grain — scores FN+AN schools identically to FULL_DAY schools for
+ * equivalent real-world attendance.
+ *
+ * Rule (documented product decision — no prior FN/AN aggregation existed
+ * elsewhere in the codebase to follow, so this is the explicit choice made
+ * here, matching the day-status precedence used for review comment #2):
+ *   1. Any session 'present'        -> day is 'present'
+ *   2. Else every session 'absent'  -> day is 'absent'
+ *   3. Otherwise (all/partial excused, no present, not all absent)
+ *                                    -> day is 'excused'
+ * A FULL_DAY row is a single-session day and collapses to its own status
+ * under the same rule, so FULL_DAY and FN/AN schools share one code path.
+ */
+export function collapseDailyAttendance(
+  sessionRecords: RawAttendanceSessionRecord[]
+): AttendanceRecord[] {
+  const byDate = new Map<string, RawAttendanceSessionRecord[]>();
+  for (const r of sessionRecords) {
+    const key = r.date.toISOString().split('T')[0];
+    const list = byDate.get(key);
+    if (list) {
+      list.push(r);
+    } else {
+      byDate.set(key, [r]);
+    }
+  }
+
+  const daily: AttendanceRecord[] = [];
+  for (const sessions of byDate.values()) {
+    let status: 'present' | 'absent' | 'excused';
+    if (sessions.some((s) => s.status === 'present')) {
+      status = 'present';
+    } else if (sessions.every((s) => s.status === 'absent')) {
+      status = 'absent';
+    } else {
+      status = 'excused';
+    }
+    daily.push({ date: sessions[0].date, status });
+  }
+
+  daily.sort((a, b) => a.date.getTime() - b.date.getTime());
+  return daily;
+}
 
 /**
  * ATTN_RISK_V1: Compute attendance risk score based on 30-day window
@@ -54,13 +112,15 @@ export function computeAttendanceRisk(input: AttendanceRiskInput): Insight {
   const drop = Math.max(0, priorRate - recentRate);
 
   // Calculate current consecutive unexcused absences streak
-  // Count consecutive 'absent' status from the end (excused breaks the streak)
+  // Per D8, 'excused' records are excluded from the engine's inputs entirely, so
+  // they are skipped (not counted, not a break) when scanning backwards. Only
+  // 'present' breaks the streak.
   let streak = 0;
-  for (let i = records.length - 1; i >= 0; i--) {
-    if (records[i].status === 'absent') {
+  for (let i = countedRecords.length - 1; i >= 0; i--) {
+    if (countedRecords[i].status === 'absent') {
       streak++;
     } else {
-      break; // Any non-absent status (present or excused) breaks the streak
+      break; // 'present' breaks the streak; 'excused' was already filtered out
     }
   }
 

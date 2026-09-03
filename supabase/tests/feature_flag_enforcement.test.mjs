@@ -30,20 +30,28 @@ async function runTest() {
     // Verify results
     const passCount = notices.filter(n => n.startsWith('PASS')).length;
     const failCount = notices.filter(n => n.startsWith('FAIL')).length;
+    const skipCount = notices.filter(n => n.startsWith('SKIP')).length;
 
     if (failCount > 0) {
       console.error(`❌ ${failCount} test(s) failed`);
       return false;
     }
 
-    // Tests 5.1-5.6 always produce PASS; tests 5.7-5.10 may SKIP when no
-    // qualifying intervention exists, but 5.9 (positive control) always PASSes.
-    // Minimum is 7 when 5.9 runs; accept any count >= 6 to handle edge cases.
-    if (passCount >= 6) {
+    // The fixture (test.interv_id, carried via set_config so RLS on the
+    // intervention read can't hide it from the test itself) guarantees tests
+    // 5.1-5.10 all run deterministically — none of them may legitimately SKIP.
+    // A SKIP here means the fixture regressed, not an acceptable edge case.
+    if (skipCount > 0) {
+      console.error(`❌ ${skipCount} test(s) SKIPPED — fixture did not produce the required state`);
+      return false;
+    }
+
+    const EXPECTED_PASS_COUNT = 10; // 5.1-5.10, one PASS each
+    if (passCount === EXPECTED_PASS_COUNT) {
       console.log(`✓ ${passCount} tests passed - feature flag enforcement working correctly`);
       return true;
     } else {
-      console.error(`⚠ Expected at least 6 PASS messages, got ${passCount}`);
+      console.error(`⚠ Expected exactly ${EXPECTED_PASS_COUNT} PASS messages, got ${passCount}`);
       return false;
     }
 

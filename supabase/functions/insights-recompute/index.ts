@@ -1,10 +1,12 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
+  collapseDailyAttendance,
   computeAttendanceRisk,
   computePerformanceForecast,
   type AttendanceRecord,
   type AttendanceRiskInput,
   type PerformanceInput,
+  type RawAttendanceSessionRecord,
 } from "../_shared/insights/index.ts";
 
 interface RequestBody {
@@ -85,14 +87,24 @@ Deno.serve(async (req: Request) => {
       }, 200);
     }
 
-    // Query active student enrollments for this chunk with class_id
+    // Query active student enrollments for this chunk with class_id.
+    // Must match insights_recompute_dispatch's active-year definition exactly
+    // (is_active=true AND enrollment's academic_year.status='active') so the
+    // dispatcher's students_total/chunk count and this worker's result set
+    // agree — a mismatch here previously let stale prior-year enrollments
+    // through (academic_year_id is NOT NULL, so filtering on non-null was a
+    // no-op) and could silently skip students beyond the last chunk.
+    // student_profile_id alone is not a total order when a school has
+    // duplicate/legacy enrollment rows, so the enrollment's own primary key
+    // is used as a tiebreaker for a deterministic chunk boundary.
     const { data: enrollments, error: studentsError } = await admin
       .from("student_enrollments")
-      .select("student_profile_id, section_id, sections!inner(class_id)")
+      .select("id, student_profile_id, section_id, sections!inner(class_id), academic_years!inner(status)")
       .eq("school_id", school_id)
       .eq("is_active", true)
-      .not("academic_year_id", "is", null)
+      .eq("academic_years.status", "active")
       .order("student_profile_id")
+      .order("id")
       .range(offset, offset + limit - 1);
 
     if (studentsError) {
@@ -100,7 +112,8 @@ Deno.serve(async (req: Request) => {
       await admin
         .from("insight_runs")
         .update({ status: "failed", finished_at: new Date().toISOString() })
-        .eq("id", runId);
+        .eq("id", runId)
+        .eq("worker_id", workerId);
       return json({ error: "query_failed", details: studentsError.message }, 500);
     }
 
@@ -146,7 +159,13 @@ Deno.serve(async (req: Request) => {
 
     // Process students sequentially or with controlled concurrency
     const CONCURRENCY = 5;
+    const HEARTBEAT_EVERY = 25;
+    let processedSinceHeartbeat = 0;
+    let leaseLost = false;
+
     for (let i = 0; i < studentIds.length; i += CONCURRENCY) {
+      if (leaseLost) break;
+
       const batch = studentIds.slice(i, i + CONCURRENCY);
       await Promise.all(
         batch.map(async (studentId) => {
@@ -186,13 +205,49 @@ Deno.serve(async (req: Request) => {
           }
         })
       );
+
+      processedSinceHeartbeat += batch.length;
+
+      // Renew the lease periodically during long-running chunks so a slow
+      // chunk doesn't outlive its 300s lease and get reclaimed by another
+      // worker while this one is still processing (review comment #8).
+      if (processedSinceHeartbeat >= HEARTBEAT_EVERY) {
+        processedSinceHeartbeat = 0;
+        const { data: renewed, error: heartbeatError } = await admin.rpc("heartbeat_insight_run", {
+          p_run_id: runId,
+          p_worker_id: workerId,
+          p_lease_seconds: 300,
+        });
+
+        if (heartbeatError || !renewed) {
+          // Lease was lost (expired and reclaimed by another worker, or the
+          // run row is gone). Stop processing immediately — this worker is
+          // no longer the owner and must not go on to mark the run complete
+          // or touch counters another worker's attempt now owns.
+          console.error(
+            `Worker ${workerId} lost lease on run ${runId}; stopping (heartbeat error: ${heartbeatError?.message ?? "not renewed"})`
+          );
+          leaseLost = true;
+        }
+      }
     }
 
-    // Mark run as completed
+    if (leaseLost) {
+      return json({
+        result: "lease_lost",
+        run_id: runId,
+        message: "Worker lost its lease mid-run; another worker may have reclaimed this chunk",
+      }, 200);
+    }
+
+    // Mark run as completed — guarded by worker_id so a worker that lost its
+    // lease (and was reclaimed by another worker before reaching this point)
+    // cannot overwrite the reclaiming worker's progress or status.
     await admin
       .from("insight_runs")
       .update({ status: "completed", finished_at: new Date().toISOString() })
-      .eq("id", runId);
+      .eq("id", runId)
+      .eq("worker_id", workerId);
 
     return json({
       result: "ok",
@@ -222,23 +277,25 @@ async function processAttendanceRisk(
   startDate.setDate(startDate.getDate() - 30);
   const startDateStr = startDate.toISOString().split("T")[0];
 
-  // Fetch last 30 days of attendance records
+  // Fetch last 30 days of attendance records at session grain (FULL_DAY, or
+  // up to two rows per day for FN/AN schools) and collapse to one day-grain
+  // record per date before scoring — ATTN_RISK_V1 is specified at day grain.
   const { data: records, error } = await admin
     .from("attendance_records")
-    .select("date, status")
+    .select("date, session, status")
     .eq("student_id", studentId)
     .gte("date", startDateStr)
     .lte("date", runDate)
-    .order("date");
+    .order("date")
+    .order("session");
 
   if (error) {
     throw new Error(`Failed to fetch attendance records: ${error.message}`);
   }
 
-  // Transform records to match AttendanceRecord type
-  const attendanceRecords: AttendanceRecord[] = (records || []).map(
+  // Map database status to algorithm type, with safe default for unknown statuses
+  const sessionRecords: RawAttendanceSessionRecord[] = (records || []).map(
     (r: any) => {
-      // Map database status to algorithm type, with safe default for unknown statuses
       let status: "present" | "absent" | "excused";
       if (r.status === "absent") {
         status = "absent";
@@ -247,16 +304,19 @@ async function processAttendanceRisk(
       } else if (r.status === "present") {
         status = "present";
       } else {
-        // Unknown status - fail safely by treating as absent (conservative)
+        // Unknown status (e.g. 'late', 'half_day') - fail safely by treating as absent (conservative)
         console.warn(`Unknown attendance status: ${r.status}, treating as absent`);
         status = "absent";
       }
       return {
         date: new Date(r.date),
+        session: r.session as "FULL_DAY" | "FN" | "AN",
         status,
       };
     }
   );
+
+  const attendanceRecords: AttendanceRecord[] = collapseDailyAttendance(sessionRecords);
 
   // Call pure function
   const input: AttendanceRiskInput = {

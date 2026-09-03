@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSchoolId } from "@/lib/school";
 import { InterventionsView, type InterventionRow } from "@/components/interventions/interventions-view";
-import { FeatureDisabled } from "@/components/feature-disabled";
-import type { FeatureKey } from "@erp/shared";
+import { ModuleUnavailable } from "@/components/module-unavailable";
+import { getSchoolFeatures } from "@/lib/school-brand";
 
 export default async function TeacherInterventionsPage() {
   const supabase = await createServerSupabaseClient();
@@ -18,22 +18,10 @@ export default async function TeacherInterventionsPage() {
   }
 
   // Feature gate: Check if insights feature is enabled before loading data
-  const { data: school } = await supabase
-    .from("schools")
-    .select("features_enabled")
-    .eq("id", schoolId)
-    .single();
-
-  const schoolFeatures = (school?.features_enabled ?? {}) as Partial<Record<FeatureKey, boolean>>;
+  const schoolFeatures = await getSchoolFeatures(schoolId);
 
   if (schoolFeatures.insights !== true) {
-    return (
-      <FeatureDisabled
-        featureName="Student Interventions"
-        description="The insights feature is not currently enabled for your school. Please contact your school administrator to enable this feature."
-        dashboardHref="/teacher/dashboard"
-      />
-    );
+    return <ModuleUnavailable module="Insights & Interventions" />;
   }
 
   // Fetch interventions visible to this teacher
@@ -94,6 +82,14 @@ export default async function TeacherInterventionsPage() {
     .eq("school_id", schoolId)
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
+    // A returning student can have multiple enrollment rows (one per academic
+    // year); pick the current one deterministically, most recent first, so
+    // downstream [0] access (below) doesn't land on a stale prior-year row.
+    .order("academic_year_id", { referencedTable: "student_profiles.student_enrollments", ascending: false })
+    .eq("student_profiles.student_enrollments.is_active", true)
+    // Most recent parent notification first, matching the mobile app's
+    // `.order("sent_at", { ascending: false })` convention.
+    .order("sent_at", { referencedTable: "intervention_parent_notifications", ascending: false })
     .limit(500);
 
   if (error) {

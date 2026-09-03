@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { computePerformanceForecast } from '../src/performance-forecast';
-import type { PerformanceInput } from '../src/types';
+import { computePerformanceForecast } from '../src/index';
+import type { PerformanceInput } from '../src/index';
 
 describe('PERF_V1: computePerformanceForecast', () => {
   describe('Insufficient Data', () => {
@@ -152,49 +152,78 @@ describe('PERF_V1: computePerformanceForecast', () => {
   });
 
   describe('Remedial Class Calculation', () => {
-    it('should calculate remedial classes correctly for high risk', () => {
-      // pred = ~15, passMarkTarget = 50 (default)
-      // gap = 50 - 15 = 35
-      // remedial = ceil(35 / 5) = 7
+    it('scores [25,20,15] at exactly pred=10, HIGH band, 8 remedial classes', () => {
+      // avg=20, slope: numerator=(-1*5)+(0*0)+(1*-5)=-10, denom=2 => slope=-5
+      // pred = clamp(15 + -5, 0, 100) = 10
+      // label: pred(10) < passMarkCurrent(35) => High risk / HIGH
+      // gap = 50 - 10 = 40; remedial = max(1, ceil(40/5)) = 8
       const result = computePerformanceForecast({
         examScores: [25, 20, 15],
         passMarkCurrent: 35,
         passMarkTarget: 50,
       });
 
-      if (result.band === 'HIGH') {
-        expect(result.recommended_action).toMatch(/\d+ remedial/);
-        // Extract number from action
-        const match = result.recommended_action.match(/(\d+) remedial/);
-        if (match) {
-          const remedialClasses = parseInt(match[1]);
-          expect(remedialClasses).toBeGreaterThan(0);
-        }
-      }
+      expect(result.band).toBe('HIGH');
+      expect(result.recommended_action).toBe(
+        'Conduct 8 remedial classes in the subject.'
+      );
     });
 
-    it('should use default passMarkTarget of 50', () => {
+    it('scores [30,25,20] with default passMarkTarget=50 at pred=15, 7 remedial classes', () => {
+      // avg=25, slope=-5, pred=clamp(20-5,0,100)=15
+      // pred(15) < passMarkCurrent(35) => HIGH
+      // gap = 50 - 15 = 35; remedial = max(1, ceil(35/5)) = 7
       const result = computePerformanceForecast({
         examScores: [30, 25, 20],
       });
 
-      if (result.band === 'HIGH') {
-        // gap = 50 - pred
-        // Should recommend remedial classes
-        expect(result.recommended_action).toContain('remedial');
-      }
+      expect(result.band).toBe('HIGH');
+      expect(result.recommended_action).toBe(
+        'Conduct 7 remedial classes in the subject.'
+      );
     });
 
-    it('should use custom passMarkTarget', () => {
+    it('scores [30,25,20] with custom passMarkTarget=60 at pred=15, 9 remedial classes', () => {
+      // pred=15; gap = 60 - 15 = 45; remedial = max(1, ceil(45/5)) = 9
       const result = computePerformanceForecast({
         examScores: [30, 25, 20],
         passMarkTarget: 60,
       });
 
-      if (result.band === 'HIGH') {
-        // gap = 60 - pred (larger gap)
-        expect(result.recommended_action).toContain('remedial');
-      }
+      expect(result.band).toBe('HIGH');
+      expect(result.recommended_action).toBe(
+        'Conduct 9 remedial classes in the subject.'
+      );
+    });
+
+    it('scores [100,90,80] at pred=70, HIGH band via slope<-8, remedial minimum of 1 class (not 0)', () => {
+      // avg=90, slope: numerator=(-1*10)+(0*0)+(1*-10)=-20, denom=2 => slope=-10
+      // pred = clamp(80 + -10, 0, 100) = 70
+      // label: pred(70) is NOT < passMarkCurrent(35), but slope(-10) < -8 => High risk / HIGH
+      // gap = passMarkTarget(50) - pred(70) = -20 (negative — forecast already above target)
+      // remedial = max(1, ceil(-20/5)) = max(1, -4) = 1  <-- the Math.max(1, ...) floor under test
+      const result = computePerformanceForecast({
+        examScores: [100, 90, 80],
+        passMarkCurrent: 35,
+      });
+
+      expect(result.band).toBe('HIGH');
+      expect(result.recommended_action).toBe(
+        'Conduct 1 remedial class in the subject.'
+      );
+    });
+
+    it('uses subjectName in the recommendation when provided', () => {
+      const result = computePerformanceForecast({
+        examScores: [25, 20, 15],
+        passMarkCurrent: 35,
+        passMarkTarget: 50,
+        subjectName: 'Mathematics',
+      });
+
+      expect(result.recommended_action).toBe(
+        'Conduct 8 remedial classes in Mathematics.'
+      );
     });
   });
 
@@ -356,6 +385,52 @@ describe('PERF_V1: computePerformanceForecast', () => {
 
       expect(result.factors).toHaveLength(4);
       expect(result.band).toBeDefined();
+    });
+  });
+
+  describe('Mutation guard — rounding and boundary (review comment #7)', () => {
+    it('non-integer gap/5 uses ceil not floor: remedial=6 not 5 (kills M12)', () => {
+      // examScores=[31,28,25]: slope=-3, pred=22, gap=50-22=28
+      // ceil(28/5)=ceil(5.6)=6; floor(28/5)=floor(5.6)=5
+      const result = computePerformanceForecast({
+        examScores: [31, 28, 25],
+        passMarkTarget: 50,
+      });
+      expect(result.recommended_action).toBe('Conduct 6 remedial classes in the subject.');
+    });
+
+    it('empty string subjectName passes through ?? not ||: action ends "in ." (kills M14)', () => {
+      // ?? keeps '' (not null/undefined); || falls back to "the subject" for any falsy value
+      const result = computePerformanceForecast({
+        examScores: [31, 28, 25],
+        passMarkTarget: 50,
+        subjectName: '',
+      });
+      expect(result.recommended_action).toBe('Conduct 6 remedial classes in .');
+    });
+
+    it('pred === passMarkCurrent is NOT high risk: band=MED (kills M15)', () => {
+      // examScores=[50,45,40]: slope=-5, pred=35, passMarkCurrent=35
+      // pred < 35 → false; slope < -8 → false → Stable → MED
+      // mutation pred <= 35 → true → HIGH (wrong)
+      const result = computePerformanceForecast({
+        examScores: [50, 45, 40],
+        passMarkCurrent: 35,
+      });
+      expect(result.band).toBe('MED');
+    });
+
+    it('slope === 5 is Stable not improving: band=MED (kills M16)', () => {
+      // examScores=[55,60,65]: slope=5, pred=70
+      // slope > 5 → false → Stable → MED
+      // mutation slope >= 5 → true → LOW improving (wrong)
+      const result = computePerformanceForecast({
+        examScores: [55, 60, 65],
+        passMarkCurrent: 35,
+      });
+      expect(result.band).toBe('MED');
+      const slopeFactor = result.factors.find(f => f.key === 'slope');
+      expect(slopeFactor?.value).toBeCloseTo(5, 5);
     });
   });
 });

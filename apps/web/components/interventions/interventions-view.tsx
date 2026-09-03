@@ -17,26 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase";
-
-const RPC_ERROR_MESSAGES: Record<string, string> = {
-  not_authorized: "You are not authorized to perform this action.",
-  invalid_status_transition: "This action is not valid for the current intervention status.",
-  intervention_not_found: "Intervention not found — it may have been deleted.",
-  cannot_reassign_terminal_intervention: "Completed or dismissed interventions cannot be reassigned.",
-  student_has_no_parent: "This student has no linked parent to notify.",
-  no_valid_assignee: "No eligible staff member found to assign this intervention.",
-  invalid_assignee: "The selected assignee is not eligible for this intervention.",
-  dismissal_reason_required: "A dismissal reason is required.",
-};
-
-function rpcErrorMessage(err: unknown, fallback: string): string {
-  if (err && typeof err === "object") {
-    const msg = (err as { message?: string }).message ?? "";
-    return RPC_ERROR_MESSAGES[msg] ?? msg ?? fallback;
-  }
-  if (err instanceof Error) return err.message || fallback;
-  return fallback;
-}
+import { rpcErrorMessage } from "@erp/shared";
 
 export interface AcademicEvidenceItem {
   snapshot_id: string;

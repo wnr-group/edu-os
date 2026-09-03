@@ -1,24 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-
-const RPC_ERROR_MESSAGES: Record<string, string> = {
-  not_authorized: "You are not authorized to perform this action.",
-  invalid_status_transition: "This action is not valid for the current status.",
-  intervention_not_found: "Intervention not found.",
-  cannot_reassign_terminal_intervention: "Completed or dismissed interventions cannot be reassigned.",
-  student_has_no_parent: "This student has no linked parent to notify.",
-  no_valid_assignee: "No eligible staff member found.",
-  invalid_assignee: "The selected assignee is not eligible.",
-  dismissal_reason_required: "A dismissal reason is required.",
-};
-
-function rpcErrorMessage(err: unknown, fallback: string): string {
-  if (err && typeof err === "object") {
-    const msg = (err as { message?: string }).message ?? "";
-    return RPC_ERROR_MESSAGES[msg] ?? msg ?? fallback;
-  }
-  if (err instanceof Error) return err.message || fallback;
-  return fallback;
-}
+import { rpcErrorMessage } from "@erp/shared";
 
 import {
   View,

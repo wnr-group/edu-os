@@ -8,6 +8,7 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
+    "test": "turbo run test",
     "test:db": "for f in supabase/tests/*.test.sql; do psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f \"$f\" || exit 1; done",
     "test:db:mjs": "for f in supabase/tests/*.test.mjs; do node \"$f\" || exit 1; done",
     "test:db:all": "pnpm test:db && pnpm test:db:mjs"
@@ -24,5 +25,6 @@
     "overrides": {
       "react-native-worklets": "~0.7.0"
     }
-  }
+  },
+  "workspaces": ["apps/*", "packages/*"]
 }

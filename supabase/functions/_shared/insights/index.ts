@@ -9,8 +9,8 @@
  * - packages/insights/src/ (testing wrapper)
  */
 
-export { computeAttendanceRisk } from './attendance-risk';
-export { computePerformanceForecast } from './performance-forecast';
+export { computeAttendanceRisk, collapseDailyAttendance } from './attendance-risk.ts';
+export { computePerformanceForecast } from './performance-forecast.ts';
 
 export type {
   Band,
@@ -19,4 +19,6 @@ export type {
   AttendanceRecord,
   AttendanceRiskInput,
   PerformanceInput,
-} from './types';
+} from './types.ts';
+
+export type { RawAttendanceSessionRecord } from './attendance-risk.ts';

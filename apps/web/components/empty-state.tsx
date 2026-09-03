@@ -19,7 +19,7 @@ const VARIANT_CHIP: Record<EmptyStateVariant, string> = {
 
 export function EmptyState({ icon: Icon, title, description, action, variant = "empty" }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-white py-16 text-center animate-fade-in-up">
+    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-card py-16 text-center animate-fade-in-up">
       <div className={cn("flex h-14 w-14 items-center justify-center rounded-full", VARIANT_CHIP[variant])}>
         <Icon className="h-7 w-7" />
       </div>

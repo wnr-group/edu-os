@@ -1,20 +1,12 @@
 /**
  * @eduos/insights - Insights & Interventions V1
  *
- * Pure functions for computing risk scores and performance forecasts
- *
- * NOTE: Canonical implementation lives in supabase/functions/_shared/insights/
- * This package re-exports for testing and workspace compatibility.
+ * This package has no algorithm implementation of its own. It re-exports the
+ * canonical implementation from supabase/functions/_shared/insights/ so that
+ * unit tests exercise the exact code the insights-recompute Edge Function runs
+ * in production. Do not add algorithm logic here — edit the canonical source.
  */
 
-export { computeAttendanceRisk } from './attendance-risk';
-export { computePerformanceForecast } from './performance-forecast';
-
-export type {
-  Band,
-  Insight,
-  InsightFactor,
-  AttendanceRecord,
-  AttendanceRiskInput,
-  PerformanceInput,
-} from './types';
+export * from '../../../supabase/functions/_shared/insights/attendance-risk.ts';
+export * from '../../../supabase/functions/_shared/insights/performance-forecast.ts';
+export * from '../../../supabase/functions/_shared/insights/types.ts';
