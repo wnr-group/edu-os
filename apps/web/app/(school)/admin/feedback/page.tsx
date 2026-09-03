@@ -7,12 +7,26 @@ export default async function AdminFeedbackPage() {
   const supabase = await createServerSupabaseClient();
   const schoolId = (await getSchoolId())!;
 
-  const { data: feedback } = await supabase
+  const { data: feedbackRows } = await supabase
     .from("feedback")
-    .select("id, subject, message, status, created_at, response, from_user_id")
+    .select("id, subject, message, status, created_at, response, from_user_id, thread_id")
     .eq("school_id", schoolId)
     .in("to_role", ["school_admin", "principal"])
     .order("created_at", { ascending: false });
+
+  // Contact Management inserts one row per staff role (school_admin +
+  // principal) sharing a thread_id, so this school-wide admin+principal
+  // query always returns both siblings for the same submission. Keep one
+  // representative row per thread — the two stay content-identical anyway
+  // (resolveFeedback's sibling sweep keeps status/response/responded_by in
+  // sync across both), so either survives with no loss of information.
+  const seenThreads = new Set<string>();
+  const feedback = (feedbackRows ?? []).filter((f) => {
+    const key = f.thread_id ?? f.id;
+    if (seenThreads.has(key)) return false;
+    seenThreads.add(key);
+    return true;
+  });
 
   const fromUserIds = [...new Set((feedback ?? []).map((f) => f.from_user_id))];
 

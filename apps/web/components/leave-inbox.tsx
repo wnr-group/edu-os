@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check, X, User } from "lucide-react";
 import { createClient } from "@/lib/supabase";
+import { rpcMessage } from "@/lib/notifications";
 
 export interface LeaveRow {
   id: string;
@@ -32,15 +33,6 @@ function formatRange(from: string, to: string): string {
 function daysCount(from: string, to: string): number {
   return Math.round((new Date(to).getTime() - new Date(from).getTime()) / 86400000) + 1;
 }
-
-// approve_leave/reject_leave raise bare identifiers, not sentences — same
-// map notification-center.tsx uses for the identical RPCs, so the same
-// underlying condition reads the same way on both surfaces.
-const LEAVE_ERRORS: Record<string, string> = {
-  not_pending: "This request was already decided.",
-  not_found: "This request no longer exists.",
-  not_authorized: "You're not authorized to decide this request.",
-};
 
 export function LeaveInbox({ requests, viewerLabel }: { requests: LeaveRow[]; viewerLabel: string }) {
   const router = useRouter();
@@ -102,7 +94,7 @@ export function LeaveInbox({ requests, viewerLabel }: { requests: LeaveRow[]; vi
     const { error } = await supabase.rpc("approve_leave", { p_request_id: id });
     setBusy(false);
     if (error) {
-      toast.error(LEAVE_ERRORS[error.message] ?? "Something went wrong. Please try again.");
+      toast.error(rpcMessage(error.message));
       if (error.message === "not_pending") { await resolveLeaveNotification(id); router.refresh(); }
       return;
     }
@@ -118,7 +110,7 @@ export function LeaveInbox({ requests, viewerLabel }: { requests: LeaveRow[]; vi
     const { error } = await supabase.rpc("reject_leave", { p_request_id: id, p_reason: rejectReason || null });
     setBusy(false);
     if (error) {
-      toast.error(LEAVE_ERRORS[error.message] ?? "Something went wrong. Please try again.");
+      toast.error(rpcMessage(error.message));
       if (error.message === "not_pending") { setRejecting(false); setRejectReason(""); await resolveLeaveNotification(id); router.refresh(); }
       return;
     }

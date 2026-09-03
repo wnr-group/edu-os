@@ -1,6 +1,8 @@
--- supabase/migrations/20260825000000_approve_leave_restore_excused_backfill.sql
+-- supabase/migrations/20260903100700_approve_leave_restore_excused_backfill.sql
+-- (renumbered from 20260825000000 — see review Comment 10; content unchanged
+-- by the renumbering itself)
 --
--- Regression fix: 20260824130200_leave_approval_class_teacher_only.sql
+-- Regression fix: 20260903100400_leave_approval_class_teacher_only.sql
 -- rewrote approve_leave() to tighten authorization (class-teacher-only +
 -- super_admin), but in doing so it was built from a copy of the function
 -- that predates 20260821000001_approve_leave_excused_backfill.sql — so it
@@ -11,14 +13,15 @@
 -- created — a bare UPDATE ... WHERE date BETWEEN ... matches zero rows for
 -- an unmapped date and silently does nothing.
 --
--- 20260824130200 must not be edited (already applied/shared), so this
--- migration is the union of both: the exact authorization body from
--- 20260824130200 (untouched, byte-for-byte) plus the backfill INSERT logic
--- from 20260821000001 (adapted to run unconditionally after authorization
--- succeeds, so it also covers a super_admin approver — 20260824130200's own
--- v_section_id is only computed inside the non-super-admin authorization
--- branch, so a separate lookup, v_backfill_section_id, is used here rather
--- than reusing it).
+-- 20260903100400 (main's counterpart migration) must not be edited once
+-- shared, so this migration is the union of both: the exact authorization
+-- body from 20260903100400 (kept in sync — see review Comment 14's
+-- feature_enabled('leave') gate, added to both) plus the backfill INSERT
+-- logic from 20260821000001 (adapted to run unconditionally after
+-- authorization succeeds, so it also covers a super_admin approver —
+-- 20260903100400's own v_section_id is only computed inside the
+-- non-super-admin authorization branch, so a separate lookup,
+-- v_backfill_section_id, is used here rather than reusing it).
 
 CREATE OR REPLACE FUNCTION public.approve_leave(p_request_id uuid)
 RETURNS void
@@ -42,12 +45,13 @@ BEGIN
 
   IF v_student IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
   IF v_status <> 'pending' THEN RAISE EXCEPTION 'not_pending'; END IF;
+  IF NOT public.feature_enabled(v_school_id, 'leave') THEN RAISE EXCEPTION 'module_disabled'; END IF;
 
-  -- Authorization: same shape as 20260824130200_leave_approval_class_teacher_only.sql
-  -- (as amended by this PR's own review-comment fix) — this migration must
-  -- carry the same school_admin/principal restoration, since it redefines
-  -- approve_leave() again, later in the replay order, and would otherwise
-  -- silently revert that fix.
+  -- Authorization: same shape as 20260903100400_leave_approval_class_teacher_only.sql
+  -- (as amended by this PR's own review-comment fixes) — this migration must
+  -- carry the same school_admin/principal restoration and feature-flag gate,
+  -- since it redefines approve_leave() again, later in the replay order, and
+  -- would otherwise silently revert those fixes.
   SELECT EXISTS (
     SELECT 1 FROM public.user_roles ur WHERE ur.user_id = auth.uid() AND ur.is_active = true AND ur.role = 'super_admin'
   ) INTO v_is_super_admin;
@@ -58,7 +62,7 @@ BEGIN
   );
 
   IF NOT COALESCE(v_is_super_admin, false) AND NOT v_is_school_staff THEN
-    SELECT ay.id INTO v_year_id FROM public.academic_years ay WHERE ay.school_id = v_school_id AND ay.status = 'active';
+    SELECT ay.id INTO v_year_id FROM public.academic_years ay WHERE ay.school_id = v_school_id AND ay.status = 'active' LIMIT 1;
     SELECT se.section_id INTO v_section_id FROM public.student_enrollments se
       WHERE se.student_profile_id = v_student AND se.academic_year_id = v_year_id AND se.is_active = true;
     SELECT sa.class_teacher_id INTO v_class_teacher_id FROM public.section_assignments sa
@@ -74,7 +78,7 @@ BEGIN
   WHERE id = p_request_id;
 
   -- Backfill existing attendance rows for the leave date range to 'excused'
-  -- (present in 20260824130200; kept unchanged).
+  -- (present in 20260903100400; kept unchanged).
   UPDATE public.attendance_records
   SET status = 'excused'
   WHERE student_id = v_student
@@ -115,4 +119,5 @@ BEGIN
   END IF;
 END; $$;
 
+REVOKE EXECUTE ON FUNCTION public.approve_leave(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.approve_leave(uuid) TO authenticated;

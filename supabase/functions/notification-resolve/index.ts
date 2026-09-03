@@ -54,18 +54,60 @@ Deno.serve(async (req: Request) => {
 async function resolveLeaveRequest(admin: any, leaveId: string, callerId: string): Promise<Response> {
   const { data: lr } = await admin
     .from("leave_requests")
-    .select("id, school_id, status, decided_by")
+    .select("id, school_id, student_id, status, decided_by")
     .eq("id", leaveId)
     .maybeSingle();
   if (!lr) return json({ result: "error", reason: "not_found" }, 404);
   if (lr.status !== "approved" && lr.status !== "rejected") return json({ result: "no_op" });
   if (!lr.decided_by) return json({ result: "no_op" });
-  // entity_id is a caller-supplied claim, not a permission — same
-  // re-check-don't-trust philosophy as resolveFeedback. approve_leave/
-  // reject_leave always set decided_by = auth.uid() for the caller who just
-  // acted, so this only ever rejects someone resolving a decision that
-  // isn't theirs.
-  if (lr.decided_by !== callerId) return json({ result: "error", reason: "forbidden" }, 403);
+
+  // Mirrors approve_leave/reject_leave's own authorization exactly (super_admin,
+  // school-scoped school_admin/principal, or the class teacher of the
+  // student's active section) rather than strictly decided_by — otherwise
+  // the normal case of an admin deciding from the Leave Inbox permanently
+  // strands the class teacher's own notification card, since the teacher
+  // (who legitimately can act on it) would always fail a decided_by-only
+  // check. No GUC helpers here — this runs under the service-role client,
+  // so every check is a direct table lookup, same as resolveFeedback's.
+  let canResolve = lr.decided_by === callerId;
+  if (!canResolve) {
+    const { data: roles } = await admin
+      .from("user_roles")
+      .select("role, school_id")
+      .eq("user_id", callerId)
+      .eq("is_active", true);
+    const roleRows = (roles ?? []) as { role: string; school_id: string | null }[];
+    canResolve = roleRows.some((r) => r.role === "super_admin")
+      || roleRows.some((r) => ["school_admin", "principal"].includes(r.role) && r.school_id === lr.school_id);
+  }
+  if (!canResolve) {
+    const { data: yearRow } = await admin
+      .from("academic_years")
+      .select("id")
+      .eq("school_id", lr.school_id)
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle();
+    if (yearRow) {
+      const { data: enrollment } = await admin
+        .from("student_enrollments")
+        .select("section_id")
+        .eq("student_profile_id", lr.student_id)
+        .eq("academic_year_id", yearRow.id)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (enrollment?.section_id) {
+        const { data: assignment } = await admin
+          .from("section_assignments")
+          .select("class_teacher_id")
+          .eq("section_id", enrollment.section_id)
+          .eq("academic_year_id", yearRow.id)
+          .maybeSingle();
+        canResolve = assignment?.class_teacher_id === callerId;
+      }
+    }
+  }
+  if (!canResolve) return json({ result: "error", reason: "forbidden" }, 403);
 
   const label = await roleLabelFor(admin, lr.decided_by, lr.school_id);
   const newBody = lr.status === "approved" ? `Leave request approved by ${label}.` : `Leave request rejected by ${label}.`;
@@ -136,7 +178,7 @@ async function resolveKycDocument(admin: any, documentId: string, callerId: stri
 async function resolveFeedback(admin: any, feedbackId: string, callerId: string): Promise<Response> {
   const { data: fb } = await admin
     .from("feedback")
-    .select("id, school_id, status, response, responded_by, thread_id")
+    .select("id, school_id, from_user_id, to_user_id, status, response, responded_by, thread_id")
     .eq("id", feedbackId)
     .maybeSingle();
   if (!fb) return json({ result: "error", reason: "not_found" }, 404);
@@ -144,35 +186,61 @@ async function resolveFeedback(admin: any, feedbackId: string, callerId: string)
 
   // entity_id is a caller-supplied claim, not a permission — this is the
   // service-role client, so RLS isn't protecting this read/write at all.
-  // Require the caller to hold an active school_admin/principal role in
-  // THIS row's own school before doing anything else, same shape as
-  // feedback-notify/kyc-document-notify's own authorization checks.
+  // Legitimate actors are enumerated from the feature, not from the
+  // exploit that was originally reported here: the responder, the intended
+  // recipient (e.g. the teacher a message_teacher notification was sent
+  // to — they never wrote a response but must still be able to clear their
+  // own copy), or same-school staff.
+  const isResponder = fb.responded_by === callerId;
+  const isRecipient = fb.to_user_id === callerId;
   const { data: roles } = await admin
     .from("user_roles")
     .select("role")
     .eq("user_id", callerId)
     .eq("school_id", fb.school_id)
     .eq("is_active", true);
-  const canResolve = (roles ?? []).some((r: { role: string }) => ["school_admin", "principal"].includes(r.role));
-  if (!canResolve) return json({ result: "error", reason: "forbidden" }, 403);
+  const isStaff = (roles ?? []).some((r: { role: string }) => ["school_admin", "principal"].includes(r.role));
+  if (!isResponder && !isRecipient && !isStaff) return json({ result: "error", reason: "forbidden" }, 403);
 
   const { data: feedbackEnabled } = await admin.rpc("feature_enabled", {
     p_school_id: fb.school_id, p_key: "feedback",
   });
   if (!feedbackEnabled) return json({ result: "error", reason: "module_disabled" }, 403);
 
+  const label = await roleLabelFor(admin, fb.responded_by, fb.school_id);
+  const newBody = `Responded by ${label}.`;
+
   // Sibling rows share the same thread_id (Contact Management inserts one
   // per staff role for the same parent submission) — resolving one row
   // must propagate to its sibling(s), not just this one, so the other
   // staff member sees the same "Responded by X" outcome instead of a
-  // second, now-redundant pending item. Scoped to the caller's already-
-  // verified school so a thread_id can't be used to reach into another
-  // school's feedback rows.
+  // second, now-redundant pending item. But thread_id is client-written at
+  // insert time (nothing constrains it beyond school_id/feature flag on
+  // feedback_insert), so only the actual responder — who just proved they
+  // own this response — may trigger the sweep; a mere recipient or an
+  // uninvolved staff member resolves only their own notification row,
+  // never siblings. The sweep itself is additionally constrained to rows
+  // from the same submitter (from_user_id), so a forged thread_id can't
+  // pull in an unrelated parent's row even when the caller is the
+  // responder.
+  if (!isResponder) {
+    const { data: updated } = await admin
+      .from("notifications")
+      .update({ body: newBody, is_read: true })
+      .eq("entity_type", "feedback")
+      .eq("school_id", fb.school_id)
+      .eq("entity_id", fb.id)
+      .eq("user_id", callerId)
+      .select("id");
+    return json({ result: "ok", resolved: updated?.length ?? 0 });
+  }
+
   const threadKey = fb.thread_id ?? fb.id;
   const { data: siblings } = await admin
     .from("feedback")
     .select("id")
     .eq("school_id", fb.school_id)
+    .eq("from_user_id", fb.from_user_id)
     .or(`thread_id.eq.${threadKey},id.eq.${threadKey}`);
   const siblingIds = (siblings ?? []).map((s: { id: string }) => s.id);
   if (!siblingIds.includes(fb.id)) siblingIds.push(fb.id);
@@ -183,11 +251,9 @@ async function resolveFeedback(admin: any, feedbackId: string, callerId: string)
       .from("feedback")
       .update({ status: "responded", response: fb.response, responded_by: fb.responded_by })
       .eq("school_id", fb.school_id)
+      .eq("from_user_id", fb.from_user_id)
       .in("id", otherIds);
   }
-
-  const label = await roleLabelFor(admin, fb.responded_by, fb.school_id);
-  const newBody = `Responded by ${label}.`;
 
   const { data: updated } = await admin
     .from("notifications")

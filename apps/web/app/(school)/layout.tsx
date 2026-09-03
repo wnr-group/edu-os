@@ -264,6 +264,7 @@ const notificationsHref = NOTIFICATIONS_HREF[displayRole];
         brandColor={brandColor}
         userName={sidebarUserName}
         userRole={displayRole}
+        notificationsHref={notificationsHref}
         sectionSwitcher={
           showSectionSwitcher ? <SectionSwitcher {...sectionSwitcherProps} variant="light" /> : null
         }

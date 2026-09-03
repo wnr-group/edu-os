@@ -49,7 +49,14 @@ export default async function PlatformAdminLayout({
         frequentItems={NAV}
         notificationsHref="/platform-admin/notifications"
       />
-      <MobileNav title={PRODUCT_NAME} items={NAV} userName={userName} userRole="super_admin" showSearch={false} />
+      <MobileNav
+        title={PRODUCT_NAME}
+        items={NAV}
+        userName={userName}
+        userRole="super_admin"
+        showSearch={false}
+        notificationsHref="/platform-admin/notifications"
+      />
       <main className="flex-1 overflow-y-auto p-4 pb-24 lg:p-8 lg:pb-8">{children}</main>
     </div>
     </NotificationsProvider>

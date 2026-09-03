@@ -73,6 +73,22 @@ Deno.serve(async (req: Request) => {
   let type: string;
 
   if (fb.to_role === "teacher" && fb.to_user_id) {
+    // fb.to_user_id is a client-supplied claim, not a permission — the
+    // feedback_insert policy only constrains school_id and the feature
+    // flag, so nothing on the way in stops a client from naming an
+    // arbitrary uuid here. Confirm the named user actually holds an active
+    // teacher role in this school before fanning out a notification/push
+    // to them.
+    const { data: recipient } = await admin
+      .from("user_roles")
+      .select("user_id")
+      .eq("user_id", fb.to_user_id)
+      .eq("school_id", fb.school_id)
+      .eq("role", "teacher")
+      .eq("is_active", true)
+      .maybeSingle();
+    if (!recipient) return json({ result: "error", reason: "no_valid_recipient" }, 422);
+
     recipientIds = [fb.to_user_id];
     messageBody = `${parentName}: ${fb.subject}`;
     type = "message_teacher";

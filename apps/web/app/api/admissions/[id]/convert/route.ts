@@ -41,26 +41,33 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Invalid parent phone on file." }, { status: 400 });
   }
 
+  let studentId: string;
   try {
     const { userId } = await findOrCreateUserByPhone(adminClient, normalizedPhone, app.parent_name);
     await attachRole(adminClient, userId, app.school_id, "parent");
 
-    const { data: studentId, error: rpcErr } = await supabase.rpc("finalize_conversion", {
+    const { data, error: rpcErr } = await supabase.rpc("finalize_conversion", {
       p_app_id: appId, p_parent_profile_id: userId, p_section_id: sectionId,
       p_roll_number: rollNumber || null, p_admission_number: admissionNumber || null,
     });
     if (rpcErr) return NextResponse.json({ error: rpcErr.message }, { status: 400 });
-
-    // The event worth notifying staff about is enrollment, not enquiry
-    // creation — admin-submit no longer notifies at all, since the
-    // Admissions board already has its own enquiry-count badge and a push
-    // for every enquiry would just duplicate it.
-    await notifyEnrolled(adminClient, app.school_id, appId, app.applicant_name);
-
-    return NextResponse.json({ studentId });
+    studentId = data;
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Conversion failed" }, { status: 400 });
   }
+
+  // The enrollment already committed by this point — nothing past here may
+  // turn a successful conversion into a reported failure. Fire-and-forget,
+  // outside the try/catch above: a throw here (or a slow per-recipient push
+  // round-trip) must never surface as "Conversion failed" when the student
+  // row, parent auth user, and parent role are already in place. admin-submit
+  // itself has no notification code and never did — the event worth
+  // notifying staff about is enrollment, not enquiry creation, since the
+  // Admissions board already has its own enquiry-count badge.
+  notifyEnrolled(adminClient, app.school_id, appId, app.applicant_name)
+    .catch((e) => console.error("notifyEnrolled failed", { appId, e }));
+
+  return NextResponse.json({ studentId });
 }
 
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
@@ -70,6 +77,9 @@ async function notifyEnrolled(
   admin: SupabaseClient<any>,
   schoolId: string, applicationId: string, applicantName: string,
 ) {
+  const { data: admissionsEnabled } = await admin.rpc("feature_enabled", { p_school_id: schoolId, p_key: "admissions" });
+  if (!admissionsEnabled) return;
+
   const { data: school } = await admin.from("schools").select("name").eq("id", schoolId).maybeSingle();
   const title = school?.name ?? "School";
   const messageBody = `${applicantName} has been enrolled as a student.`;
@@ -83,19 +93,28 @@ async function notifyEnrolled(
     .eq("is_active", true)
     .or(`and(school_id.eq.${schoolId},role.in.(school_admin,principal)),role.eq.super_admin`);
 
-  for (const s of staff ?? []) {
+  const recipientIds = (staff ?? []).map((s) => s.user_id);
+  if (recipientIds.length === 0) return;
+
+  for (const id of recipientIds) {
     await admin.from("notifications").insert({
-      school_id: schoolId, user_id: s.user_id, title, body: messageBody,
+      school_id: schoolId, user_id: id, title, body: messageBody,
       type: "admission_enrolled", entity_type: "admission_application", entity_id: applicationId,
     });
+  }
 
-    const { data: recipient } = await admin.from("profiles").select("push_token").eq("id", s.user_id).maybeSingle();
-    if (recipient?.push_token) {
-      const r = await sendExpoPush(recipient.push_token, title, messageBody);
-      if (r === "device_not_registered") {
-        await admin.from("profiles").update({ push_token: null }).eq("id", s.user_id);
-      }
-    }
+  // One round-trip for every recipient's push token instead of one per
+  // recipient inside the loop — shortens the window a slow/large staff
+  // fan-out holds the request open for.
+  const { data: recipients } = await admin.from("profiles").select("id, push_token").in("id", recipientIds);
+  const staleTokenIds: string[] = [];
+  for (const r of recipients ?? []) {
+    if (!r.push_token) continue;
+    const result = await sendExpoPush(r.push_token, title, messageBody);
+    if (result === "device_not_registered") staleTokenIds.push(r.id);
+  }
+  if (staleTokenIds.length > 0) {
+    await admin.from("profiles").update({ push_token: null }).in("id", staleTokenIds);
   }
 }
 

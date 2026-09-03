@@ -36,6 +36,7 @@ BEGIN
 
   IF v_student IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
   IF v_status <> 'pending' THEN RAISE EXCEPTION 'not_pending'; END IF;
+  IF NOT public.feature_enabled(v_school_id, 'leave') THEN RAISE EXCEPTION 'module_disabled'; END IF;
 
   SELECT EXISTS (
     SELECT 1 FROM public.user_roles ur WHERE ur.user_id = auth.uid() AND ur.is_active = true AND ur.role = 'super_admin'
@@ -51,7 +52,7 @@ BEGIN
   );
 
   IF NOT COALESCE(v_is_super_admin, false) AND NOT v_is_school_staff THEN
-    SELECT ay.id INTO v_year_id FROM public.academic_years ay WHERE ay.school_id = v_school_id AND ay.status = 'active';
+    SELECT ay.id INTO v_year_id FROM public.academic_years ay WHERE ay.school_id = v_school_id AND ay.status = 'active' LIMIT 1;
     SELECT se.section_id INTO v_section_id FROM public.student_enrollments se
       WHERE se.student_profile_id = v_student AND se.academic_year_id = v_year_id AND se.is_active = true;
     SELECT sa.class_teacher_id INTO v_class_teacher_id FROM public.section_assignments sa
@@ -71,6 +72,7 @@ BEGIN
   WHERE student_id = v_student
     AND date BETWEEN v_from AND v_to;
 END; $$;
+REVOKE EXECUTE ON FUNCTION public.approve_leave(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.approve_leave(uuid) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.reject_leave(p_request_id uuid, p_reason text)
@@ -91,6 +93,7 @@ BEGIN
 
   IF v_student IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
   IF v_status <> 'pending' THEN RAISE EXCEPTION 'not_pending'; END IF;
+  IF NOT public.feature_enabled(v_school_id, 'leave') THEN RAISE EXCEPTION 'module_disabled'; END IF;
 
   SELECT EXISTS (
     SELECT 1 FROM public.user_roles ur WHERE ur.user_id = auth.uid() AND ur.is_active = true AND ur.role = 'super_admin'
@@ -102,7 +105,7 @@ BEGIN
   );
 
   IF NOT COALESCE(v_is_super_admin, false) AND NOT v_is_school_staff THEN
-    SELECT ay.id INTO v_year_id FROM public.academic_years ay WHERE ay.school_id = v_school_id AND ay.status = 'active';
+    SELECT ay.id INTO v_year_id FROM public.academic_years ay WHERE ay.school_id = v_school_id AND ay.status = 'active' LIMIT 1;
     SELECT se.section_id INTO v_section_id FROM public.student_enrollments se
       WHERE se.student_profile_id = v_student AND se.academic_year_id = v_year_id AND se.is_active = true;
     SELECT sa.class_teacher_id INTO v_class_teacher_id FROM public.section_assignments sa
@@ -117,4 +120,5 @@ BEGIN
   SET status = 'rejected', decided_by = auth.uid(), decided_at = now(), decision_note = NULLIF(btrim(p_reason), '')
   WHERE id = p_request_id;
 END; $$;
+REVOKE EXECUTE ON FUNCTION public.reject_leave(uuid, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.reject_leave(uuid, text) TO authenticated;

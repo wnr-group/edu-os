@@ -25,7 +25,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const refresh = useCallback(async () => {
-    setUnreadCount(await loadUnreadCount());
+    const res = await loadUnreadCount();
+    if (res.ok) setUnreadCount(res.count);
   }, []);
 
   const decrementBy = useCallback((n: number) => {

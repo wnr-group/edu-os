@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import {
   DropdownMenu,
@@ -16,6 +17,7 @@ import { useNotifications } from "@/lib/notifications-context";
 // by both of its neighbors, so this is a fourth trigger of the same kind,
 // not a new interaction language.
 export function NotificationBell({ centerHref }: { centerHref: string }) {
+  const router = useRouter();
   const { unreadCount, refresh, decrementBy } = useNotifications();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationRow[]>([]);
@@ -30,13 +32,24 @@ export function NotificationBell({ centerHref }: { centerHref: string }) {
     setOpen(next);
     if (next) {
       setLoading(true);
-      const rows = await loadNotifications(8);
-      setItems(rows);
+      const res = await loadNotifications(8);
+      setItems(res.ok ? res.rows : []);
       setLoading(false);
     }
   }
 
+  // An unread, actionable item (KYC, feedback, leave, ...) must not be
+  // silently marked read by a bare preview-click here — that would drop it
+  // out of the Notification Center's "Needs Action" list without anything
+  // actually being verified/responded/decided. Send the user to the full
+  // center instead, where the real action lives; only non-actionable items
+  // (nothing to do) mark themselves read on click, same as before.
   async function handleItemClick(n: NotificationRow) {
+    if (!n.is_read && categoryFor(n.type).actionable) {
+      setOpen(false);
+      router.push(centerHref);
+      return;
+    }
     if (!n.is_read) {
       const ok = await markRead([n.id]);
       if (!ok) return;

@@ -38,6 +38,13 @@ export function categoryFor(type: string): CategoryDef {
   return NOTIFICATION_CATEGORIES[type] ?? DEFAULT_CATEGORY;
 }
 
+/** Every notification `type` whose category label matches, e.g. "Feedback" -> ["feedback_contact", "message_teacher"]. Used to push the category filter into the query instead of filtering an already-fetched page. */
+export function typesForCategoryLabel(label: string): string[] {
+  return Object.entries(NOTIFICATION_CATEGORIES)
+    .filter(([, c]) => c.label === label)
+    .map(([type]) => type);
+}
+
 export function formatWhen(iso: string): string {
   const d = new Date(iso);
   const now = new Date();
@@ -51,35 +58,82 @@ export function formatWhen(iso: string): string {
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) + `, ${time}`;
 }
 
-// RLS also carries a narrow fee_reminder exception (school_admin/principal
-// can read same-school parents' fee_reminder rows, for the Fee Status
-// dashboard's own dedicated query) — so it alone no longer guarantees "only
-// my rows" for this general-purpose inbox read. Explicit user_id scoping
-// here keeps the bell/Notification Center personal regardless of what RLS
-// separately permits for that one other consumer.
-export async function loadNotifications(limit = 50): Promise<NotificationRow[]> {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
-  const { data } = await supabase
-    .from("notifications")
-    .select("id, title, body, type, is_read, created_at, entity_type, entity_id, school_id")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  return (data ?? []) as NotificationRow[];
+// Postgres RAISE EXCEPTION identifiers (not_pending, not_authorized, ...)
+// read as machine codes, not sentences — this is the one shared map every
+// surface that calls these RPCs (approve_leave/reject_leave, verify_documents/
+// reject_document, ...) translates through, so a user never sees a bare
+// identifier and the two surfaces that show these errors can't drift apart.
+export const RPC_ERRORS: Record<string, string> = {
+  not_pending: "This was already decided. Refresh to see the latest.",
+  not_authorized: "You don't have permission to act on this item.",
+  not_found: "This item no longer exists.",
+  module_disabled: "This module is switched off for your school.",
+  invalid_subject: "This record is no longer valid.",
+};
+
+export function rpcMessage(code?: string): string {
+  return (code && RPC_ERRORS[code]) || "Something went wrong. Please try again.";
 }
 
-export async function loadUnreadCount(): Promise<number> {
+export interface NotificationQueryFilters {
+  /** Exact `type` column values to include — resolve a category label via typesForCategoryLabel() first. Omit/empty for no type filter. */
+  types?: string[];
+  unreadOnly?: boolean;
+  /** A local calendar day (e.g. straight from an <input type="date">), translated to a UTC created_at range server-side — never compared via toISOString(), which is UTC and drifts a local "Today" row into the wrong bucket. */
+  localDate?: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyFilters(query: any, filters: NotificationQueryFilters) {
+  let q = query;
+  if (filters.types && filters.types.length > 0) q = q.in("type", filters.types);
+  if (filters.unreadOnly) q = q.eq("is_read", false);
+  if (filters.localDate) {
+    const start = new Date(`${filters.localDate}T00:00:00`);
+    const end = new Date(start.getTime() + 86400000);
+    q = q.gte("created_at", start.toISOString()).lt("created_at", end.toISOString());
+  }
+  return q;
+}
+
+// Filters are pushed into the query (category/date/unread) rather than
+// applied client-side over an already-fetched page — with a fixed page size
+// and client-only filters, a school past that many total notifications could
+// filter to a real match and still see "You're all caught up." Every branch
+// returns a discriminated result rather than swallowing a failed fetch into
+// an empty array: an RLS surprise or network blip must never render the same
+// as "nothing to do" for what is, for staff, an action queue.
+export async function loadNotifications(
+  limit = 100,
+  filters: NotificationQueryFilters = {}
+): Promise<{ ok: true; rows: NotificationRow[] } | { ok: false }> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return 0;
-  const { count } = await supabase
+  if (!user) return { ok: false };
+
+  const query = applyFilters(
+    supabase
+      .from("notifications")
+      .select("id, title, body, type, is_read, created_at, entity_type, entity_id, school_id")
+      .eq("user_id", user.id),
+    filters
+  );
+  const { data, error } = await query.order("created_at", { ascending: false }).limit(limit);
+  if (error) return { ok: false };
+  return { ok: true, rows: (data ?? []) as NotificationRow[] };
+}
+
+export async function loadUnreadCount(): Promise<{ ok: true; count: number } | { ok: false }> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false };
+  const { count, error } = await supabase
     .from("notifications")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id)
     .eq("is_read", false);
-  return count ?? 0;
+  if (error) return { ok: false };
+  return { ok: true, count: count ?? 0 };
 }
 
 // Returns whether the update actually persisted (a non-empty .select()
@@ -92,6 +146,23 @@ export async function markRead(ids: string[]): Promise<boolean> {
   const supabase = createClient();
   const { data } = await supabase.from("notifications").update({ is_read: true }).in("id", ids).select("id");
   return (data?.length ?? 0) === ids.length;
+}
+
+// Marks every one of the caller's own unread rows matching the given
+// filters as read — a real server-side bulk update, not a loop over
+// whatever page happens to be loaded client-side. This is what lets "Mark
+// all read" actually reach zero even when there are more unread rows than
+// the list's page size.
+export async function markAllRead(filters: NotificationQueryFilters = {}): Promise<boolean> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const query = applyFilters(
+    supabase.from("notifications").update({ is_read: true }).eq("user_id", user.id).eq("is_read", false),
+    filters
+  );
+  const { error } = await query;
+  return !error;
 }
 
 const ROLE_LABELS: Record<string, string> = {

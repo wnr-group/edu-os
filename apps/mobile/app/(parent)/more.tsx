@@ -436,8 +436,6 @@ export default function ParentMore() {
       }).select("id").single();
       if (err2) throw err2;
 
-      await supabase.from("feedback").update({ thread_id: principalRow.id }).eq("id", principalRow.id);
-
       setManagementFeedback({ subject: "", message: "" });
       setSection("menu");
       Alert.alert("Sent", "Your message has been sent to the management.");

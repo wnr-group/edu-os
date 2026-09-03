@@ -8,10 +8,13 @@ import { createClient } from "@/lib/supabase";
 import {
   loadNotifications,
   markRead,
+  markAllRead,
   categoryFor,
+  typesForCategoryLabel,
   formatWhen,
   loadKycDocumentDetail,
   loadFeedbackDetail,
+  rpcMessage,
   NOTIFICATION_CATEGORIES,
   type NotificationRow,
   type KycDocumentDetail,
@@ -39,15 +42,33 @@ function callLeaveNotify(leaveId: string) {
 // one row per recipient, so acting once must close it for every recipient,
 // not just whoever happened to click. Awaited (not fire-and-forget) because
 // the caller reloads the list right after, and needs the resolved text to
-// already be in place.
-async function resolveEntity(entityType: "kyc_document" | "feedback" | "leave_request", entityId: string): Promise<void> {
+// already be in place. Returns whether it actually succeeded — the caller
+// still needs to clear its OWN notification when it didn't (e.g. someone
+// else already resolved this entity), since the resolver's authorization
+// rules are about the entity, not about this specific row.
+async function resolveEntity(entityType: "kyc_document" | "feedback" | "leave_request", entityId: string): Promise<{ ok: boolean }> {
   const supabase = createClient();
   const { data: { session } } = await supabase.auth.getSession();
-  await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/notification-resolve`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
-    body: JSON.stringify({ entity_type: entityType, entity_id: entityId }),
-  }).catch(() => {});
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/notification-resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+      body: JSON.stringify({ entity_type: entityType, entity_id: entityId }),
+    });
+    const body = await res.json().catch(() => null);
+    return { ok: body?.result === "ok" };
+  } catch {
+    return { ok: false };
+  }
+}
+
+// Always clears the caller's OWN row, whatever the resolver decided —
+// resolveEntity can legitimately 403 (someone else already handled this
+// entity, or the caller isn't the actor the resolver recognizes for it)
+// without that meaning the caller's own card should stay stuck.
+async function resolveOrSelfHeal(entityType: "kyc_document" | "feedback" | "leave_request", entityId: string, notificationId: string): Promise<void> {
+  const res = await resolveEntity(entityType, entityId);
+  if (!res.ok) await markRead([notificationId]);
 }
 
 function dayBucket(iso: string): "Today" | "Yesterday" | "Earlier" {
@@ -64,6 +85,7 @@ export function NotificationCenter({ feedbackHref, viewerRole }: { feedbackHref:
   const { refresh, decrementBy } = useNotifications();
   const [items, setItems] = useState<NotificationRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -73,17 +95,29 @@ export function NotificationCenter({ feedbackHref, viewerRole }: { feedbackHref:
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detailCache, setDetailCache] = useState<Record<string, DetailResult<KycDocumentDetail | FeedbackDetail> | "loading">>({});
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+  // Category/date/unread filters are pushed into the query rather than
+  // applied client-side over an already-fetched page — with a fixed page
+  // size and client-only filters, a school with more history than the page
+  // size could filter to a real match and still see "You're all caught up."
+  // Re-fetches whenever a filter changes.
   async function load() {
     setLoading(true);
-    setItems(await loadNotifications(100));
+    const types = categoryFilter === "all" ? undefined : typesForCategoryLabel(categoryFilter);
+    const res = await loadNotifications(100, { types, unreadOnly, localDate: dateFilter || undefined });
+    if (res.ok) {
+      setItems(res.rows);
+      setLoadFailed(false);
+    } else {
+      setLoadFailed(true);
+    }
     setLoading(false);
     refresh();
   }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryFilter, unreadOnly, dateFilter]);
 
   // A card can go stale if the same leave request was already decided
   // elsewhere (e.g. the Leave Inbox page) before this list last refreshed —
@@ -92,8 +126,8 @@ export function NotificationCenter({ feedbackHref, viewerRole }: { feedbackHref:
   // the request itself is already settled, this view just hadn't heard yet.
   async function handleStaleLeaveDecision(n: NotificationRow) {
     if (!n.entity_id) return;
-    toast("This leave request was already decided.");
-    await resolveEntity("leave_request", n.entity_id);
+    toast(rpcMessage("not_pending"));
+    await resolveOrSelfHeal("leave_request", n.entity_id, n.id);
     setBusyId(null);
     await load();
   }
@@ -105,11 +139,11 @@ export function NotificationCenter({ feedbackHref, viewerRole }: { feedbackHref:
     const { error } = await supabase.rpc("approve_leave", { p_request_id: n.entity_id });
     if (error) {
       if (error.message === "not_pending") { await handleStaleLeaveDecision(n); return; }
-      setBusyId(null); toast.error(error.message); return;
+      setBusyId(null); toast.error(rpcMessage(error.message)); return;
     }
     toast.success("Leave approved — covered days marked Excused.");
     callLeaveNotify(n.entity_id);
-    await resolveEntity("leave_request", n.entity_id);
+    await resolveOrSelfHeal("leave_request", n.entity_id, n.id);
     setBusyId(null);
     await load();
   }
@@ -121,25 +155,34 @@ export function NotificationCenter({ feedbackHref, viewerRole }: { feedbackHref:
     const { error } = await supabase.rpc("reject_leave", { p_request_id: n.entity_id, p_reason: rejectReason || null });
     if (error) {
       if (error.message === "not_pending") { setRejectingId(null); setRejectReason(""); await handleStaleLeaveDecision(n); return; }
-      setBusyId(null); toast.error(error.message); return;
+      setBusyId(null); toast.error(rpcMessage(error.message)); return;
     }
     toast.success("Leave declined.");
     callLeaveNotify(n.entity_id);
     setRejectingId(null);
     setRejectReason("");
-    await resolveEntity("leave_request", n.entity_id);
+    await resolveOrSelfHeal("leave_request", n.entity_id, n.id);
     setBusyId(null);
     await load();
   }
 
+  // verify_documents raises 'not_pending' for a single already-handled
+  // document (matching reject_document) rather than silently no-opping, so
+  // this never reports "Document verified." on a document someone else
+  // already decided.
   async function handleVerifyDoc(n: NotificationRow) {
     if (!n.entity_id) return;
     setBusyId(n.id);
     const supabase = createClient();
     const { error } = await supabase.rpc("verify_documents", { p_ids: [n.entity_id] });
-    if (error) { setBusyId(null); toast.error(error.message); return; }
+    if (error) {
+      toast.error(rpcMessage(error.message));
+      if (error.message === "not_pending") { await resolveOrSelfHeal("kyc_document", n.entity_id, n.id); await load(); }
+      setBusyId(null);
+      return;
+    }
     toast.success("Document verified.");
-    await resolveEntity("kyc_document", n.entity_id);
+    await resolveOrSelfHeal("kyc_document", n.entity_id, n.id);
     setBusyId(null);
     await load();
   }
@@ -149,11 +192,20 @@ export function NotificationCenter({ feedbackHref, viewerRole }: { feedbackHref:
     setBusyId(n.id);
     const supabase = createClient();
     const { error } = await supabase.rpc("reject_document", { p_id: n.entity_id, p_reason: rejectReason.trim() });
-    if (error) { setBusyId(null); toast.error(error.message); return; }
+    if (error) {
+      toast.error(rpcMessage(error.message));
+      if (error.message === "not_pending") {
+        setRejectingId(null); setRejectReason("");
+        await resolveOrSelfHeal("kyc_document", n.entity_id, n.id);
+        await load();
+      }
+      setBusyId(null);
+      return;
+    }
     toast.success("Document rejected.");
     setRejectingId(null);
     setRejectReason("");
-    await resolveEntity("kyc_document", n.entity_id);
+    await resolveOrSelfHeal("kyc_document", n.entity_id, n.id);
     setBusyId(null);
     await load();
   }
@@ -210,22 +262,10 @@ export function NotificationCenter({ feedbackHref, viewerRole }: { feedbackHref:
     ),
   ];
 
-  const filtered = useMemo(
-    () =>
-      items.filter((n) => {
-        if (categoryFilter !== "all" && categoryFor(n.type).label !== categoryFilter) return false;
-        if (unreadOnly && n.is_read) return false;
-        if (dateFilter && new Date(n.created_at).toISOString().slice(0, 10) !== dateFilter) return false;
-        return true;
-      }),
-    [items, categoryFilter, unreadOnly, dateFilter]
-  );
-
-  // A card leaves "Needs Action" the moment it's acted on (or manually
-  // marked read) — is_read doubles as "handled" for actionable types,
-  // rather than tracking a separate resolved state.
-  const needsAction = filtered.filter((n) => categoryFor(n.type).actionable && !n.is_read);
-  const recent = filtered.filter((n) => !(categoryFor(n.type).actionable && !n.is_read));
+  // Filters are already applied server-side in load() — items IS the
+  // filtered set, not a page that still needs narrowing here.
+  const needsAction = items.filter((n) => categoryFor(n.type).actionable && !n.is_read);
+  const recent = items.filter((n) => !(categoryFor(n.type).actionable && !n.is_read));
 
   const recentByDay = useMemo(() => {
     const groups: Record<string, NotificationRow[]> = { Today: [], Yesterday: [], Earlier: [] };
@@ -233,18 +273,32 @@ export function NotificationCenter({ feedbackHref, viewerRole }: { feedbackHref:
     return groups;
   }, [recent]);
 
+  // A real server-side bulk update scoped to the current filters (not a
+  // loop over whatever page happens to be loaded) — this is what lets "Mark
+  // all read" actually reach zero even when there are more unread rows than
+  // the list's page size, and reloading from the server afterward means the
+  // UI can never claim success while the write silently failed.
   async function markAllVisibleRead() {
-    const ids = filtered.filter((n) => !n.is_read).map((n) => n.id);
-    if (ids.length === 0) return;
-    const ok = await markRead(ids);
-    if (!ok) { toast.error("Some notifications couldn't be marked read — try again."); }
-    setItems((prev) => prev.map((x) => (ids.includes(x.id) ? { ...x, is_read: true } : x)));
-    decrementBy(ids.length);
+    const types = categoryFilter === "all" ? undefined : typesForCategoryLabel(categoryFilter);
+    const ok = await markAllRead({ types, localDate: dateFilter || undefined });
+    if (!ok) { toast.error("Some notifications couldn't be marked read — try again."); return; }
+    await load();
   }
 
-  const unreadInView = filtered.some((n) => !n.is_read);
+  const unreadInView = items.some((n) => !n.is_read);
 
   if (loading) return <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>;
+
+  if (loadFailed) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-14 text-center">
+        <p className="text-sm font-semibold text-foreground">Couldn&apos;t load notifications.</p>
+        <button onClick={load} className="text-sm font-semibold text-primary hover:underline">
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -35,7 +35,7 @@ interface TopBarProps {
   frequentItems?: NavItem[];
   moreSections?: NavSection[];
   settingsHref?: string;
-  /** Role-scoped route to the full notification center (proxy.ts enforces every role stays under its own prefix, so this can't be a single shared path). Omit to hide the bell entirely (e.g. platform-admin domains, which have no notifications). */
+  /** Role-scoped route to the full notification center (proxy.ts enforces every role stays under its own prefix, so this can't be a single shared path). Platform-admin has its own notifications too (see platform-admin/layout.tsx). Omit only where no notification center exists for that route at all. */
   notificationsHref?: string;
 }
 

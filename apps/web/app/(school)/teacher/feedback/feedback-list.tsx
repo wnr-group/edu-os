@@ -45,18 +45,37 @@ function statusVariant(
   return "secondary";
 }
 
-// Fire-and-forget, same shape as every other *-notify caller in this app —
-// the response is already saved by the time this runs, so a notify failure
-// never blocks or reverts the "Send Response" action itself.
-function resolveFeedbackNotification(feedbackId: string) {
+// Same shape as every other *-notify caller in this app — the response is
+// already saved by the time this runs, so nothing here can revert the
+// "Send Response" action itself. Not pure fire-and-forget, though: the
+// resolver's authorization rules are about the entity (e.g. only the
+// school_admin/principal who wrote a management response, not every
+// teacher who happens to view it), so a caller it legitimately rejects
+// must still be able to clear their OWN copy of the notification — a user
+// should always be able to dismiss something addressed to them, whatever
+// the resolver decided about the underlying entity.
+async function resolveFeedbackNotification(feedbackId: string) {
   const supabase = createClient();
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/notification-resolve`, {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return;
+  let ok = false;
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/notification-resolve`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
       body: JSON.stringify({ entity_type: "feedback", entity_id: feedbackId }),
-    }).catch(() => {});
-  });
+    });
+    const body = await res.json().catch(() => null);
+    ok = body?.result === "ok";
+  } catch { /* fall through to self-heal below */ }
+  if (!ok) {
+    await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("entity_type", "feedback")
+      .eq("entity_id", feedbackId)
+      .eq("user_id", session.user.id);
+  }
 }
 
 const PAGE_SIZE = 10;

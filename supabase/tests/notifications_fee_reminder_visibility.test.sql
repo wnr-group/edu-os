@@ -17,6 +17,16 @@
 --   4. the parent can still see their own row of either type (unchanged
 --      user_id = auth.uid() branch).
 --
+-- Also covers review Comment 15 (2026-08-29 follow-up): main's original
+-- policy included super_admin, which the first fee_reminder exception
+-- silently dropped, and the reviewer's own suggested addition of principal
+-- turned out to be unintended widening (no principal-facing fee page
+-- consumes this read) — so this now also proves:
+--   5. super_admin CAN see the fee_reminder row (restored).
+--   6. principal CANNOT see the fee_reminder row (deliberately not
+--      included — fee reminders are parent-only; only school_admin's Fee
+--      Status page and super_admin need this exception).
+--
 -- Run: npx supabase db query --local -f supabase/tests/notifications_fee_reminder_visibility.test.sql
 
 BEGIN;
@@ -65,6 +75,40 @@ BEGIN
     RAISE EXCEPTION 'FAIL: cross-school admin could see another school''s fee_reminder notification, got %', v_count;
   END IF;
   RAISE NOTICE 'PASS: cross-school admin cannot see the fee_reminder notification (cross-school protection intact)';
+END $$;
+RESET ROLE;
+
+-- ── Case 5: super_admin CAN see the fee_reminder row (restored) ────────────
+SET LOCAL ROLE authenticated;
+SELECT set_config('app.role', 'super_admin', true);
+SELECT set_config('app.school_id', 'aaaaaaaa-0000-0000-0000-000000000001', true);
+SELECT set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000010"}', true);
+
+DO $$
+DECLARE v_count int;
+BEGIN
+  SELECT count(*) INTO v_count FROM public.notifications WHERE id = 'eeeeeeee-dddd-0000-0000-000000000001';
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'FAIL: super_admin could not see the fee_reminder notification, got %', v_count;
+  END IF;
+  RAISE NOTICE 'PASS: super_admin sees the fee_reminder notification';
+END $$;
+RESET ROLE;
+
+-- ── Case 6: principal CANNOT see the fee_reminder row (parents-only) ───────
+SET LOCAL ROLE authenticated;
+SELECT set_config('app.role', 'principal', true);
+SELECT set_config('app.school_id', 'aaaaaaaa-0000-0000-0000-000000000001', true);
+SELECT set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000012"}', true);
+
+DO $$
+DECLARE v_count int;
+BEGIN
+  SELECT count(*) INTO v_count FROM public.notifications WHERE id = 'eeeeeeee-dddd-0000-0000-000000000001';
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'FAIL: principal could see the fee_reminder notification, got %', v_count;
+  END IF;
+  RAISE NOTICE 'PASS: principal cannot see the fee_reminder notification (parents-only, no principal fee page needs it)';
 END $$;
 RESET ROLE;
 

@@ -1,4 +1,4 @@
--- Supersedes 20260824120000's school-scoped staff-visibility clause. That
+-- Supersedes 20260903100000's school-scoped staff-visibility clause. That
 -- fix only narrowed the leak from "every school" to "same school", but
 -- same-school admin/principal could still SELECT a notification actually
 -- addressed to someone else (e.g. a leave-requested row whose user_id is
@@ -11,6 +11,12 @@
 -- currently has no legitimate reason to (no producer targets super_admin
 -- today, and none of the "staff sees everything" cases in the reviewed
 -- workflows depend on it).
+-- Fee reminders are addressed to parents only (send-fee-reminder always
+-- sets user_id = the parent) — this exception exists solely for the
+-- school_admin Fee Status dashboard's own reminder-stats read
+-- (admin/fees/status/page.tsx), so it's scoped to school_admin (+
+-- super_admin, restored below) and not principal, who has no fee-facing
+-- page that needs it.
 DROP POLICY IF EXISTS "notifications_select" ON public.notifications;
 CREATE POLICY "notifications_select" ON public.notifications FOR SELECT
   USING (
@@ -18,6 +24,6 @@ CREATE POLICY "notifications_select" ON public.notifications FOR SELECT
     OR (
       type = 'fee_reminder'
       AND school_id = public.get_my_school_id()
-      AND public.get_my_role() IN ('school_admin', 'principal')
+      AND public.get_my_role() IN ('school_admin', 'super_admin')
     )
   );
