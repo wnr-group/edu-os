@@ -1,0 +1,196 @@
+import { redirect } from "next/navigation";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getSchoolId } from "@/lib/school";
+import { InterventionsView, type InterventionRow, type StaffOption } from "@/components/interventions/interventions-view";
+import { ModuleUnavailable } from "@/components/module-unavailable";
+import { getSchoolFeatures } from "@/lib/school-brand";
+
+export interface InterventionsPageProps {
+  currentUserRole: "school_admin" | "principal";
+}
+
+/**
+ * Shared page body for both /admin/interventions and /principal/interventions
+ * (principal/interventions/page.tsx calls this directly instead of re-exporting
+ * the admin page's default export) — the two routes previously shared identical
+ * behavior including a hardcoded "school_admin" role passed to the view even
+ * for principals, and (via the removed FeatureDisabled fallback) a hardcoded
+ * "/admin/dashboard" link (review comment #11).
+ */
+export async function InterventionsPage({ currentUserRole }: InterventionsPageProps) {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const schoolId = await getSchoolId();
+
+  if (!user || !schoolId) {
+    redirect("/login");
+  }
+
+  // Feature gate: Check if insights feature is enabled before loading data
+  const schoolFeatures = await getSchoolFeatures(schoolId);
+
+  if (schoolFeatures.insights !== true) {
+    return <ModuleUnavailable module="Insights & Interventions" />;
+  }
+
+  // Fetch school-wide interventions
+  const { data: records, error } = await supabase
+    .from("interventions")
+    .select(`
+      id,
+      student_id,
+      kind,
+      type,
+      title,
+      status,
+      severity_band,
+      due_date,
+      assigned_via,
+      assignee_id,
+      outcome_note,
+      dismissal_reason,
+      started_at,
+      completed_at,
+      dismissed_at,
+      created_at,
+      student_profiles (
+        id,
+        full_name,
+        student_enrollments (
+          roll_number,
+          sections (
+            name,
+            classes (
+              name
+            )
+          )
+        )
+      ),
+      student_risk_snapshots!interventions_source_snapshot_id_fkey (
+        factors,
+        recommended_action,
+        subjects (
+          name
+        )
+      ),
+      intervention_academic_evidence (
+        snapshot_id,
+        is_pinned,
+        student_risk_snapshots (
+          score,
+          band,
+          subjects (
+            name
+          )
+        )
+      ),
+      intervention_parent_notifications (
+        sent_at
+      )
+    `)
+    .eq("school_id", schoolId)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    // A returning student can have multiple enrollment rows (one per academic
+    // year); pick the current one deterministically, most recent first, so
+    // downstream [0] access (below) doesn't land on a stale prior-year row.
+    .order("academic_year_id", { referencedTable: "student_profiles.student_enrollments", ascending: false })
+    .eq("student_profiles.student_enrollments.is_active", true)
+    // Most recent parent notification first, matching the mobile app's
+    // `.order("sent_at", { ascending: false })` convention.
+    .order("sent_at", { referencedTable: "intervention_parent_notifications", ascending: false })
+    .limit(500);
+
+  if (error) {
+    console.error("Error fetching admin interventions:", error);
+  }
+
+  // Fetch active staff list for reassignment picker (excluding inactive teachers)
+  const { data: staffRoles } = await supabase
+    .from("user_roles")
+    .select(`
+      user_id,
+      role,
+      profiles:user_id (
+        full_name
+      )
+    `)
+    .eq("school_id", schoolId)
+    .eq("is_active", true)
+    .in("role", ["teacher", "principal", "school_admin"]);
+
+  const staffList: StaffOption[] = (staffRoles || []).map((sr: any) => ({
+    id: sr.user_id,
+    name: sr.profiles?.full_name || "Staff Member",
+    role: sr.role,
+  }));
+
+  const staffMap = new Map<string, string>(staffList.map((s) => [s.id, s.name]));
+
+  const rows: InterventionRow[] = (records || []).map((r: any) => {
+    const sp = r.student_profiles;
+    const activeEnrollment = Array.isArray(sp?.student_enrollments)
+      ? sp.student_enrollments[0]
+      : sp?.student_enrollments;
+
+    const evidenceList = (r.intervention_academic_evidence || []).map((ev: any) => ({
+      snapshot_id: ev.snapshot_id,
+      is_pinned: ev.is_pinned,
+      subject_name: ev.student_risk_snapshots?.subjects?.name || "Subject",
+      score: ev.student_risk_snapshots?.score ?? 0,
+      band: ev.student_risk_snapshots?.band ?? "MED",
+    }));
+
+    const lastNotif = Array.isArray(r.intervention_parent_notifications) && r.intervention_parent_notifications.length > 0
+      ? r.intervention_parent_notifications[0].sent_at
+      : null;
+
+    return {
+      id: r.id,
+      student_id: r.student_id,
+      student_name: sp?.full_name ?? "Student",
+      roll_number: activeEnrollment?.roll_number,
+      class_name: activeEnrollment?.sections?.classes?.name,
+      section_name: activeEnrollment?.sections?.name,
+      kind: r.kind,
+      type: r.type,
+      title: r.title,
+      status: r.status,
+      severity_band: r.severity_band,
+      due_date: r.due_date,
+      assigned_via: r.assigned_via,
+      assignee_id: r.assignee_id,
+      assignee_name: staffMap.get(r.assignee_id) || "Staff",
+      outcome_note: r.outcome_note,
+      dismissal_reason: r.dismissal_reason,
+      started_at: r.started_at,
+      completed_at: r.completed_at,
+      dismissed_at: r.dismissed_at,
+      created_at: r.created_at,
+      factors: Array.isArray(r.student_risk_snapshots?.factors) ? r.student_risk_snapshots.factors : [],
+      recommended_action: r.student_risk_snapshots?.recommended_action || r.title,
+      subject_name: r.student_risk_snapshots?.subjects?.name,
+      evidence: evidenceList,
+      last_notified_at: lastNotif,
+    };
+  });
+
+  return (
+    <InterventionsView
+      initialInterventions={rows}
+      schoolId={schoolId}
+      currentUserId={user.id}
+      currentUserRole={currentUserRole}
+      isAdmin={true}
+      staffList={staffList}
+      dbError={!!error}
+    />
+  );
+}
+
+export default function AdminInterventionsPage() {
+  return <InterventionsPage currentUserRole="school_admin" />;
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@eduos/insights",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:run": "vitest run",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0",
+    "typescript": "^5.7.0"
+  }
+}

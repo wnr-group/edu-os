@@ -53,6 +53,7 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
         { label: "Academics", href: "/admin/academics" },
         { label: "Syllabus", href: "/admin/syllabus", feature: "syllabus" },
         { label: "Report Cards", href: "/admin/report-cards", feature: "report_cards" },
+        { label: "Interventions", href: "/admin/interventions", feature: "insights" },
         { label: "Certificates", href: "/admin/certificates" },
       ],
       administration: [
@@ -79,6 +80,7 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
       { label: "Dashboard", href: "/teacher/dashboard" },
       { label: "Students", href: "/teacher/students" },
       { label: "Attendance", href: "/teacher/attendance", feature: "attendance" },
+      { label: "Interventions", href: "/teacher/interventions", feature: "insights" },
       { label: "Leave", href: "/teacher/leave", feature: "leave" },
       { label: "Homework", href: "/teacher/homework", feature: "homework" },
     ],
@@ -102,6 +104,7 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
       { label: "Dashboard", href: "/teacher/dashboard" },
       { label: "Students", href: "/teacher/students" },
       { label: "Attendance", href: "/teacher/attendance", feature: "attendance" },
+      { label: "Interventions", href: "/teacher/interventions", feature: "insights" },
       { label: "Leave", href: "/teacher/leave", feature: "leave" },
       { label: "Homework", href: "/teacher/homework", feature: "homework" },
     ],
@@ -122,7 +125,10 @@ export const NAV_CONFIG: Record<string, RoleNavConfig> = {
       { label: "Announcements", href: "/principal/announcements", feature: "announcements" },
     ],
     sections: sections({
-      academic: [{ label: "Certificates", href: "/principal/certificates" }],
+      academic: [
+        { label: "Interventions", href: "/principal/interventions", feature: "insights" },
+        { label: "Certificates", href: "/principal/certificates" },
+      ],
       administration: [
         { label: "Discipline", href: "/principal/discipline" },
         { label: "Admissions", href: "/principal/admissions", feature: "admissions" },
