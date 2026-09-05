@@ -353,6 +353,21 @@ export default function ParentMore() {
     }
   }
 
+  // Fire-and-forget, mirrors lib/leave.ts's callLeaveNotify — the feedback
+  // row is already saved by the time this runs, so a notify failure never
+  // blocks or hides the "Sent" confirmation the parent already saw.
+  async function callFeedbackNotify(feedbackId: string) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch(`${supabaseUrl}/functions/v1/feedback-notify`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ feedback_id: feedbackId }),
+      });
+    } catch { /* best-effort */ }
+  }
+
   async function submitTeacherFeedback() {
     if (!teacherFeedback.subject.trim() || !teacherFeedback.message.trim()) {
       Alert.alert("Required", "Please fill in subject and message."); return;
@@ -360,7 +375,7 @@ export default function ParentMore() {
     setSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from("feedback").insert({
+      const { data: row, error } = await supabase.from("feedback").insert({
         school_id: SCHOOL_ID,
         from_user_id: user?.id,
         to_role: "teacher",
@@ -368,11 +383,12 @@ export default function ParentMore() {
         subject: teacherFeedback.subject.trim(),
         message: teacherFeedback.message.trim(),
         status: "open",
-      });
+      }).select("id").single();
       if (error) throw error;
       setTeacherFeedback({ subject: "", message: "" });
       setSection("menu");
       Alert.alert("Sent", "Your message has been sent to the teacher.");
+      if (row) callFeedbackNotify(row.id);
     } catch {
       Alert.alert("Unable to send", "Feedback may be unavailable for your school right now.");
     } finally {
@@ -387,30 +403,44 @@ export default function ParentMore() {
     setSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from("feedback").insert([
-        {
-          school_id: SCHOOL_ID,
-          from_user_id: user?.id,
-          to_role: "principal",
-          to_user_id: null,
-          subject: managementFeedback.subject.trim(),
-          message: managementFeedback.message.trim(),
-          status: "open",
-        },
-        {
-          school_id: SCHOOL_ID,
-          from_user_id: user?.id,
-          to_role: "school_admin",
-          to_user_id: null,
-          subject: managementFeedback.subject.trim(),
-          message: managementFeedback.message.trim(),
-          status: "open",
-        },
-      ]);
-      if (error) throw error;
+      const subject = managementFeedback.subject.trim();
+      const message = managementFeedback.message.trim();
+
+      // Inserted sequentially (not as one array insert) so the second row
+      // can carry the first row's own id as a shared thread_id — that's
+      // what lets responding to either row resolve both, instead of
+      // leaving the other authorized staff member's copy looking
+      // permanently pending. Both rows end up sharing the same thread_id
+      // (the first row is updated to point at itself) for a symmetric
+      // lookup either direction.
+      const { data: principalRow, error: err1 } = await supabase.from("feedback").insert({
+        school_id: SCHOOL_ID,
+        from_user_id: user?.id,
+        to_role: "principal",
+        to_user_id: null,
+        subject,
+        message,
+        status: "open",
+      }).select("id").single();
+      if (err1) throw err1;
+
+      const { data: adminRow, error: err2 } = await supabase.from("feedback").insert({
+        school_id: SCHOOL_ID,
+        from_user_id: user?.id,
+        to_role: "school_admin",
+        to_user_id: null,
+        subject,
+        message,
+        status: "open",
+        thread_id: principalRow.id,
+      }).select("id").single();
+      if (err2) throw err2;
+
       setManagementFeedback({ subject: "", message: "" });
       setSection("menu");
       Alert.alert("Sent", "Your message has been sent to the management.");
+      callFeedbackNotify(principalRow.id);
+      callFeedbackNotify(adminRow.id);
     } catch {
       Alert.alert("Unable to send", "Feedback may be unavailable for your school right now.");
     } finally {

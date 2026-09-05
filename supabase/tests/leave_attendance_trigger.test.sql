@@ -16,6 +16,14 @@
 
 BEGIN;
 
+-- approve_leave now gates on feature_enabled(school_id, 'leave') (review
+-- Comment 14) — the seeded Demo School has it off by default, so it must be
+-- turned on for this file's scenarios. guard_features_enabled locks toggle
+-- writes to super_admin/service_role. Rolled back with everything else.
+SELECT set_config('app.role', 'super_admin', true);
+UPDATE public.schools SET features_enabled = features_enabled || '{"leave": true}'::jsonb
+WHERE id = 'aaaaaaaa-0000-0000-0000-000000000001';
+
 -- ── Scenario 1: attendance NOT yet marked when leave is approved ─────────────
 DO $$
 DECLARE
@@ -40,9 +48,9 @@ BEGIN
      CURRENT_DATE + 3, CURRENT_DATE + 4, 'sick', 'pending', 'aaaaaaaa-0000-0000-0000-000000000011')
   RETURNING id INTO v_leave_id;
 
-  PERFORM set_config('app.role', 'school_admin', true);
+  PERFORM set_config('app.role', 'teacher', true);
   PERFORM set_config('app.school_id', 'aaaaaaaa-0000-0000-0000-000000000001', true);
-  PERFORM set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000011"}', true);
+  PERFORM set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000014"}', true);
 
   PERFORM public.approve_leave(v_leave_id);
 
@@ -110,8 +118,8 @@ BEGIN
      CURRENT_DATE + 6, CURRENT_DATE + 6, 'casual', 'pending', 'aaaaaaaa-0000-0000-0000-000000000011')
   RETURNING id INTO v_leave_id;
 
-  PERFORM set_config('app.role', 'school_admin', true);
-  PERFORM set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000011"}', true);
+  PERFORM set_config('app.role', 'teacher', true);
+  PERFORM set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000014"}', true);
   PERFORM public.approve_leave(v_leave_id);
 
   SELECT status INTO v_status

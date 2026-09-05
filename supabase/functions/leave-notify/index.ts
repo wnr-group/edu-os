@@ -77,7 +77,7 @@ Deno.serve(async (req: Request) => {
 
     const title = schoolName;
     const messageBody = `${sp.full_name} — leave request for ${dateLabel} needs your approval.`;
-    return await deliver(admin, lr.school_id, assignment.class_teacher_id, lr.student_id, title, messageBody, "leave_requested");
+    return await deliver(admin, lr.school_id, assignment.class_teacher_id, lr.student_id, title, messageBody, "leave_requested", "leave_request", lr.id);
   }
 
   if (event === "decided") {
@@ -89,7 +89,7 @@ Deno.serve(async (req: Request) => {
     const messageBody = lr.status === "approved"
       ? `${sp.full_name}'s leave for ${dateLabel} was approved — marked Excused.`
       : `${sp.full_name}'s leave for ${dateLabel} was declined${lr.decision_note ? `: ${lr.decision_note}` : "."}`;
-    return await deliver(admin, lr.school_id, sp.parent_profile_id, lr.student_id, title, messageBody, "leave_decided");
+    return await deliver(admin, lr.school_id, sp.parent_profile_id, lr.student_id, title, messageBody, "leave_decided", "leave_request", lr.id);
   }
 
   return json({ error: "bad_event" }, 400);
@@ -105,9 +105,9 @@ function formatRange(from: string, to: string): string {
 async function deliver(
   admin: ReturnType<typeof createClient>,
   schoolId: string, recipientId: string, studentId: string,
-  title: string, body: string, type: string,
+  title: string, body: string, type: string, entityType: string, entityId: string,
 ): Promise<Response> {
-  await admin.from("notifications").insert({ school_id: schoolId, user_id: recipientId, student_id: studentId, title, body, type });
+  await admin.from("notifications").insert({ school_id: schoolId, user_id: recipientId, student_id: studentId, title, body, type, entity_type: entityType, entity_id: entityId });
 
   const { data: recipient } = await admin.from("profiles").select("push_token").eq("id", recipientId).maybeSingle();
   let result: "sent" | "recorded_no_app" = "recorded_no_app";

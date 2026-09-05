@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check, X, User } from "lucide-react";
 import { createClient } from "@/lib/supabase";
+import { rpcMessage } from "@/lib/notifications";
 
 export interface LeaveRow {
   id: string;
@@ -72,13 +73,33 @@ export function LeaveInbox({ requests, viewerLabel }: { requests: LeaveRow[]; vi
     });
   }
 
+  // Closes out the teacher-facing leave_requested notification this action
+  // was taken from — same shape as notification-center.tsx's resolveEntity.
+  // Awaited (unlike callLeaveNotify) so the resolve's own read of
+  // leave_requests always happens before callLeaveNotify's insert of the
+  // parent's separate leave_decided row for the same entity_id.
+  async function resolveLeaveNotification(leaveId: string): Promise<void> {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/notification-resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+      body: JSON.stringify({ entity_type: "leave_request", entity_id: leaveId }),
+    }).catch(() => {});
+  }
+
   async function handleApprove(id: string) {
     setBusy(true);
     const supabase = createClient();
     const { error } = await supabase.rpc("approve_leave", { p_request_id: id });
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(rpcMessage(error.message));
+      if (error.message === "not_pending") { await resolveLeaveNotification(id); router.refresh(); }
+      return;
+    }
     toast.success("Leave approved — covered days marked Excused.");
+    await resolveLeaveNotification(id);
     callLeaveNotify(id);
     router.refresh();
   }
@@ -88,10 +109,15 @@ export function LeaveInbox({ requests, viewerLabel }: { requests: LeaveRow[]; vi
     const supabase = createClient();
     const { error } = await supabase.rpc("reject_leave", { p_request_id: id, p_reason: rejectReason || null });
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(rpcMessage(error.message));
+      if (error.message === "not_pending") { setRejecting(false); setRejectReason(""); await resolveLeaveNotification(id); router.refresh(); }
+      return;
+    }
     toast.success("Leave declined.");
     setRejecting(false);
     setRejectReason("");
+    await resolveLeaveNotification(id);
     callLeaveNotify(id);
     router.refresh();
   }

@@ -80,6 +80,21 @@ export async function loadKycChecklist(
   return { items, error: null };
 }
 
+// Fire-and-forget, mirrors lib/leave.ts's callLeaveNotify / more.tsx's
+// callFeedbackNotify — the document is already saved by the time this
+// runs, so a notify failure never blocks or reverts the upload itself.
+async function callKycDocumentNotify(documentId: string) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    await fetch(`${supabaseUrl}/functions/v1/kyc-document-notify`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ document_id: documentId }),
+    });
+  } catch { /* best-effort */ }
+}
+
 const ALLOWED_MIME_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -119,7 +134,7 @@ export async function uploadKycDocument(
     .upload(path, bytes, { contentType: file.mimeType, upsert: false });
   if (up.error) return { error: up.error.message };
 
-  const { error: rpcErr } = await supabase.rpc("upsert_kyc_document", {
+  const { data: documentId, error: rpcErr } = await supabase.rpc("upsert_kyc_document", {
     p_subject_id: studentId,
     p_document_type_id: documentTypeId,
     p_file_path: path,
@@ -128,6 +143,8 @@ export async function uploadKycDocument(
     p_file_size: file.size,
   });
   if (rpcErr) return { error: rpcErr.message };
+
+  if (documentId) callKycDocumentNotify(documentId as string);
 
   return { error: null };
 }
