@@ -111,6 +111,8 @@ export function StudentEditForm({
       const { error: spErr } = await supabase
         .from("student_profiles")
         .update({
+          full_name: name,
+          email: email || null,
           admission_number: admission || null,
           date_of_birth: dateOfBirth || null,
           gender: gender || null,

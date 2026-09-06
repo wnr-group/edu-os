@@ -14,6 +14,7 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   invalid_assignee: "The selected assignee is not eligible for this intervention.",
   dismissal_reason_required: "A dismissal reason is required.",
   module_disabled: "Insights is switched off for this school.",
+  not_found: "Item not found — it may have been deleted.",
 };
 
 /**

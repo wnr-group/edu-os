@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, ArrowLeft } from "lucide-react";
+import { rpcErrorMessage } from "@erp/shared";
 import { createClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -34,7 +35,7 @@ export function DocumentTypeSettings({ schoolId, types }: { schoolId: string; ty
       p_is_required: newRequired, p_expires: newExpires, p_default_validity_months: newExpires ? newMonths : null,
     });
     setSaving(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(rpcErrorMessage(error, "Couldn't add document type.")); return; }
     toast.success("Document type added.");
     setAdding(false);
     setNewName("");
@@ -65,7 +66,7 @@ export function DocumentTypeSettings({ schoolId, types }: { schoolId: string; ty
       p_expires: expires,
       p_default_validity_months: months,
     });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(rpcErrorMessage(error, "Couldn't update required rule.")); return; }
     router.refresh();
   }
 
@@ -92,7 +93,7 @@ export function DocumentTypeSettings({ schoolId, types }: { schoolId: string; ty
       p_expires: nextExpires,
       p_default_validity_months: nextMonths,
     });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(rpcErrorMessage(error, "Couldn't update expiry rule.")); return; }
     toast.success(`Expiry rule updated to: ${nextExpires ? `${nextMonths} months` : "Never expires"}`);
     router.refresh();
   }
@@ -118,7 +119,7 @@ export function DocumentTypeSettings({ schoolId, types }: { schoolId: string; ty
       p_expires: true,
       p_default_validity_months: months,
     });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(rpcErrorMessage(error, "Couldn't update validity months.")); return; }
     toast.success(`Validity updated to ${months} months.`);
     router.refresh();
   }
@@ -126,7 +127,7 @@ export function DocumentTypeSettings({ schoolId, types }: { schoolId: string; ty
   async function handleToggleActive(t: DocType) {
     const supabase = createClient();
     const { error } = await supabase.rpc("set_document_type_active", { p_id: t.id, p_active: !t.is_active });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(rpcErrorMessage(error, "Couldn't update active status.")); return; }
     router.refresh();
   }
 

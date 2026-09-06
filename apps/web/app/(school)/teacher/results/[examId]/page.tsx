@@ -54,11 +54,11 @@ export default async function ExamMarksPage({
     ? `${sec.class?.name ?? ""} – Section ${sec.name}`
     : sectionId;
 
-  const [{ data: exam }, { data: subjects }, { data: students }, { data: existingResults }, { data: quizLink }] =
+  const [{ data: exam }, { data: subjects }, { data: students }, { data: existingResults }] =
     await Promise.all([
       supabase
         .from("exams")
-        .select("id, name")
+        .select("id, name, quiz_id")
         .eq("id", examId)
         .single(),
 
@@ -89,10 +89,6 @@ export default async function ExamMarksPage({
         .from("exam_results")
         .select("student_id, subject_id, marks_obtained, max_marks")
         .eq("exam_id", examId),
-
-      // Exams created by push_quiz_to_gradebook are stamped on quizzes.exam_id —
-      // used purely to badge this as quiz-sourced vs a manually created exam.
-      supabase.from("quizzes").select("id").eq("exam_id", examId).maybeSingle(),
     ]);
 
   const studentRows = (students ?? []).map((s) => {
@@ -105,6 +101,8 @@ export default async function ExamMarksPage({
     };
   }).filter((s) => s.id);
 
+  const isQuiz = Boolean((exam as unknown as { quiz_id?: string | null })?.quiz_id);
+
   return (
     <div className="space-y-6 animate-fade-in-up">
       <Link
@@ -115,12 +113,12 @@ export default async function ExamMarksPage({
         Back to Results
       </Link>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Enter Marks</h1>
           <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
             {exam?.name ?? examId}
-            <Badge variant={quizLink ? "outline" : "secondary"}>{quizLink ? "Quiz" : "Exam"}</Badge>
+            <Badge variant={isQuiz ? "outline" : "secondary"}>{isQuiz ? "Quiz" : "Exam"}</Badge>
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground/80">{sectionLabel}</p>
         </div>
