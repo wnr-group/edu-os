@@ -8,10 +8,23 @@ describe('rpcErrorMessage (review comment #5)', () => {
     );
   });
 
-  it('maps module_disabled to a friendly message', () => {
+  it('maps module_disabled to a module-neutral friendly message', () => {
+    // Reworded from an insights-specific string (PR #25 review) — this code
+    // is raised by leave/KYC/feedback RPCs too, not just insights ones.
     expect(rpcErrorMessage({ message: 'module_disabled' }, 'fallback')).toBe(
-      'Insights is switched off for this school.'
+      'This module is switched off for your school.'
     );
+  });
+
+  it('maps not_pending, not_found, and invalid_subject (added for PR #25)', () => {
+    expect(rpcErrorMessage({ message: 'not_pending' }, 'fallback')).toBe(RPC_ERROR_MESSAGES.not_pending);
+    expect(rpcErrorMessage({ message: 'not_found' }, 'fallback')).toBe(RPC_ERROR_MESSAGES.not_found);
+    expect(rpcErrorMessage({ message: 'invalid_subject' }, 'fallback')).toBe(RPC_ERROR_MESSAGES.invalid_subject);
+  });
+
+  it('maps a known code even when it arrives as a real Error/PostgrestError instance (regression: PostgrestError extends Error, so an earlier version checked `instanceof Error` before ever consulting the map)', () => {
+    expect(rpcErrorMessage(new Error('not_pending'), 'fallback')).toBe(RPC_ERROR_MESSAGES.not_pending);
+    expect(rpcErrorMessage(new Error('not_authorized'), 'fallback')).toBe(RPC_ERROR_MESSAGES.not_authorized);
   });
 
   it('falls back for an unmapped non-empty error code', () => {

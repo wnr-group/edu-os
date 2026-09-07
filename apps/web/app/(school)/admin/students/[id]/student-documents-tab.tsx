@@ -41,6 +41,20 @@ function deriveState(r: ChecklistRow): "missing" | "submitted" | "verified" | "r
   return "missing";
 }
 
+// Fire-and-forget, mirrors leave-inbox.tsx's callLeaveNotify — the document
+// is already saved by the time this runs, so a notify failure never blocks
+// or reverts the upload itself.
+function callKycDocumentNotify(documentId: string) {
+  const supabase = createClient();
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/kyc-document-notify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+      body: JSON.stringify({ document_id: documentId }),
+    }).catch(() => {});
+  });
+}
+
 export function StudentDocumentsTab({ studentId, schoolId }: { studentId: string; schoolId: string }) {
   const router = useRouter();
   const [rows, setRows] = useState<ChecklistRow[]>([]);
@@ -89,7 +103,7 @@ export function StudentDocumentsTab({ studentId, schoolId }: { studentId: string
       });
       if (upErr) throw upErr;
 
-      const { error: rpcErr } = await supabase.rpc("upsert_kyc_document", {
+      const { data: documentId, error: rpcErr } = await supabase.rpc("upsert_kyc_document", {
         p_subject_id: studentId,
         p_document_type_id: documentTypeId,
         p_file_path: path,
@@ -100,6 +114,7 @@ export function StudentDocumentsTab({ studentId, schoolId }: { studentId: string
       if (rpcErr) throw rpcErr;
 
       toast.success("Document uploaded.");
+      callKycDocumentNotify(documentId as string);
       await load();
       router.refresh();
     } catch (err) {

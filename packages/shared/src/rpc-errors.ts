@@ -13,26 +13,39 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   no_valid_assignee: "No eligible staff member found to assign this intervention.",
   invalid_assignee: "The selected assignee is not eligible for this intervention.",
   dismissal_reason_required: "A dismissal reason is required.",
-  module_disabled: "Insights is switched off for this school.",
+  // Module-neutral wording — this code is raised by RPCs across several
+  // features (leave, KYC, feedback, insights), not just this package's own.
+  module_disabled: "This module is switched off for your school.",
+  not_pending: "This was already decided. Refresh to see the latest.",
+  not_found: "This item no longer exists.",
+  invalid_subject: "This record is no longer valid.",
 };
 
 /**
  * Resolve a user-facing message for an RPC error.
  *
- * Uses `||` (not `??`) against the mapped lookup so an empty-string message
- * (`msg === ""`, which is non-nullish) still falls through to `fallback`
- * instead of rendering blank text — that gap previously also meant an
- * unmapped non-empty error code like `module_disabled` was shown to the user
- * as its raw machine-readable string instead of falling back or being mapped.
+ * The map lookup is always tried first, regardless of whether `err` is a
+ * native `Error` or a plain object — `PostgrestError` (the shape every
+ * `supabase.rpc()` failure actually arrives as) extends `Error`, so an
+ * earlier version of this function checked `err instanceof Error` before
+ * ever consulting `RPC_ERROR_MESSAGES`, which meant a real RPC error whose
+ * `.message` *was* a mapped code (`not_pending`, `not_authorized`, ...)
+ * still rendered as that raw machine-readable string. Every caller of this
+ * function passes a real `PostgrestError`/thrown RPC error, so that branch
+ * order silently defeated the whole map for its primary use case.
+ *
+ * Only once the code isn't in the map do we fall back to a native Error's
+ * own `.message` (useful for an arbitrary, non-RPC JS error) or `fallback`.
+ * Uses `||` (not `??`) so an empty-string message still falls through to
+ * `fallback` instead of rendering blank text.
  */
 export function rpcErrorMessage(err: unknown, fallback: string): string {
-  // Check instanceof Error first: a native Error is also a plain object with
-  // a .message property, so checking the generic object branch first would
-  // shadow it and always fall back instead of showing a real Error message.
+  const message = err instanceof Error
+    ? err.message
+    : err && typeof err === "object"
+      ? (err as { message?: string }).message
+      : undefined;
+  if (message && RPC_ERROR_MESSAGES[message]) return RPC_ERROR_MESSAGES[message];
   if (err instanceof Error) return err.message || fallback;
-  if (err && typeof err === "object") {
-    const msg = (err as { message?: string }).message ?? "";
-    return RPC_ERROR_MESSAGES[msg] || fallback;
-  }
   return fallback;
 }

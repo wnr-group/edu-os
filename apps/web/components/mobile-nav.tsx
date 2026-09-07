@@ -3,12 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, LayoutGrid, LayoutDashboard, GraduationCap, LogOut } from "lucide-react";
+import { Menu, X, LayoutGrid, LayoutDashboard, GraduationCap, LogOut, Bell } from "lucide-react";
 import { ICON_MAP, ROLE_LABELS, lighten } from "@/components/sidebar";
 import type { NavItem } from "@/lib/nav-config";
 import { formatSegment } from "@/components/top-bar";
 import { createClient } from "@/lib/supabase";
 import { CommandSearch } from "@/components/command-search";
+import { useNotifications } from "@/lib/notifications-context";
 
 interface MobileNavProps {
   title: string;
@@ -20,6 +21,9 @@ interface MobileNavProps {
   /** CommandSearch queries school-scoped data — set to false outside a
    * school context (e.g. Platform Admin), same as TopBar's showSearch. */
   showSearch?: boolean;
+  /** Same role-prefixed route TopBar's NotificationBell links to — omit to
+   * hide the entry entirely (e.g. platform-admin domains with no notifications). */
+  notificationsHref?: string;
 }
 
 /**
@@ -37,9 +41,12 @@ export function MobileNav({
   userRole,
   sectionSwitcher,
   showSearch = true,
+  notificationsHref,
 }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { unreadCount } = useNotifications();
+  const notificationsActive = !!notificationsHref && (pathname === notificationsHref || pathname.startsWith(notificationsHref + "/"));
 
   const segments = pathname.split("/").filter(Boolean);
   const pageTitle = segments.length > 0 ? formatSegment(segments[segments.length - 1]) : "Dashboard";
@@ -89,6 +96,33 @@ export function MobileNav({
             {sectionSwitcher}
             {sectionSwitcher && <div className="mx-4 border-t" style={{ borderColor: dividerColor }} />}
             <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-3">
+              {notificationsHref && (
+                <>
+                  <Link
+                    href={notificationsHref}
+                    onClick={() => setOpen(false)}
+                    className={"relative flex items-center gap-[14px] rounded-[14px] px-[15px] py-2.5 text-[14.5px] transition-colors " + (!notificationsActive ? "hover:bg-slate-50" : "")}
+                    style={{
+                      backgroundColor: notificationsActive ? activeBg : "transparent",
+                      color: notificationsActive ? accent : inactiveText,
+                      fontWeight: notificationsActive ? 600 : 500,
+                    }}
+                  >
+                    {notificationsActive && (
+                      <span
+                        className="absolute left-0 top-[9px] bottom-[9px] w-[3px] rounded-full"
+                        style={{ backgroundColor: accent }}
+                      />
+                    )}
+                    <Bell className="h-[21px] w-[21px] shrink-0" style={{ color: notificationsActive ? accent : inactiveIcon }} />
+                    <span className="flex-1">Notifications</span>
+                    {unreadCount > 0 && (
+                      <span className="rounded-full bg-[#FDF3E2] px-1.5 py-0.5 text-[10px] font-bold text-[#F59E0B]">{unreadCount > 9 ? "9+" : unreadCount}</span>
+                    )}
+                  </Link>
+                  <div className="my-1 border-t" style={{ borderColor: dividerColor }} />
+                </>
+              )}
               {items.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                 const Icon = ICON_MAP[item.label] ?? LayoutDashboard;

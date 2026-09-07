@@ -353,6 +353,21 @@ export default function ParentMore() {
     }
   }
 
+  // Fire-and-forget, mirrors lib/leave.ts's callLeaveNotify — the feedback
+  // row is already saved by the time this runs, so a notify failure never
+  // blocks or hides the "Sent" confirmation the parent already saw.
+  async function callFeedbackNotify(feedbackId: string) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch(`${supabaseUrl}/functions/v1/feedback-notify`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ feedback_id: feedbackId }),
+      });
+    } catch { /* best-effort */ }
+  }
+
   async function submitTeacherFeedback() {
     if (!teacherFeedback.subject.trim() || !teacherFeedback.message.trim()) {
       Alert.alert("Required", "Please fill in subject and message."); return;
@@ -360,7 +375,7 @@ export default function ParentMore() {
     setSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from("feedback").insert({
+      const { data: row, error } = await supabase.from("feedback").insert({
         school_id: SCHOOL_ID,
         from_user_id: user?.id,
         to_role: "teacher",
@@ -368,11 +383,12 @@ export default function ParentMore() {
         subject: teacherFeedback.subject.trim(),
         message: teacherFeedback.message.trim(),
         status: "open",
-      });
+      }).select("id").single();
       if (error) throw error;
       setTeacherFeedback({ subject: "", message: "" });
       setSection("menu");
       Alert.alert("Sent", "Your message has been sent to the teacher.");
+      if (row) callFeedbackNotify(row.id);
     } catch {
       Alert.alert("Unable to send", "Feedback may be unavailable for your school right now.");
     } finally {
@@ -386,31 +402,26 @@ export default function ParentMore() {
     }
     setSubmitting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from("feedback").insert([
-        {
-          school_id: SCHOOL_ID,
-          from_user_id: user?.id,
-          to_role: "principal",
-          to_user_id: null,
-          subject: managementFeedback.subject.trim(),
-          message: managementFeedback.message.trim(),
-          status: "open",
-        },
-        {
-          school_id: SCHOOL_ID,
-          from_user_id: user?.id,
-          to_role: "school_admin",
-          to_user_id: null,
-          subject: managementFeedback.subject.trim(),
-          message: managementFeedback.message.trim(),
-          status: "open",
-        },
-      ]);
+      const subject = managementFeedback.subject.trim();
+      const message = managementFeedback.message.trim();
+
+      // Server-generated thread_id (see submit_management_feedback,
+      // 20260903100900) — this RPC creates both rows in one call and
+      // assigns thread_id itself, so a client can no longer choose which
+      // rows share a thread. Responding to either resolves both.
+      const { data, error } = await supabase
+        .rpc("submit_management_feedback", { p_subject: subject, p_message: message })
+        .single();
       if (error) throw error;
+      const { principal_feedback_id: principalId, school_admin_feedback_id: adminId } = data as {
+        principal_feedback_id: string; school_admin_feedback_id: string;
+      };
+
       setManagementFeedback({ subject: "", message: "" });
       setSection("menu");
       Alert.alert("Sent", "Your message has been sent to the management.");
+      callFeedbackNotify(principalId);
+      callFeedbackNotify(adminId);
     } catch {
       Alert.alert("Unable to send", "Feedback may be unavailable for your school right now.");
     } finally {

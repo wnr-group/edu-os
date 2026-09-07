@@ -8,6 +8,7 @@ import { NAV_CONFIG, allNavItems, withBadge } from "@/lib/nav-config";
 import { fetchUnreviewedFlagGroupCount } from "@/lib/geo-attendance";
 import { fetchAdmissionEnquiryCount } from "@/lib/admissions";
 import { FeaturesProvider } from "@/lib/features-context";
+import { NotificationsProvider } from "@/lib/notifications-context";
 import type { FeatureKey } from "@erp/shared";
 import { TopBar } from "@/components/top-bar";
 import { MobileNav } from "@/components/mobile-nav";
@@ -205,6 +206,18 @@ const allItems = allNavItems(navConfig);
 const dashboardHref = navConfig.frequent[0]?.href ?? "/login";
 // Only School Admin has a Settings page today.
 const settingsHref = displayRole === "school_admin" ? "/admin/settings" : undefined;
+// Every school role gets the notification center, at its own role-prefixed
+// route — proxy.ts's route enforcement keeps each role under its own
+// prefix, so this can't be a single shared "/notifications" path.
+const NOTIFICATIONS_HREF: Record<string, string> = {
+  school_admin: "/admin/notifications",
+  principal: "/principal/notifications",
+  teacher: "/teacher/notifications",
+  // super_admin already inherits school_admin's nav/routing on a school
+  // subdomain (see navKey above) — same page, same personal-only scope.
+  super_admin: "/admin/notifications",
+};
+const notificationsHref = NOTIFICATIONS_HREF[displayRole];
 
   const EXIT_URLS: Record<string, string> = {
     school_admin: "/admin/dashboard",
@@ -222,6 +235,7 @@ const settingsHref = displayRole === "school_admin" ? "/admin/settings" : undefi
 
   return (
      <FeaturesProvider features={schoolFeatures}>
+    <NotificationsProvider>
     <div className="flex h-screen flex-col overflow-hidden bg-app-shell">
       <TopBar
         title={schoolName}
@@ -232,6 +246,7 @@ const settingsHref = displayRole === "school_admin" ? "/admin/settings" : undefi
         frequentItems={navConfig.frequent}
         moreSections={navConfig.sections}
         settingsHref={settingsHref}
+        notificationsHref={notificationsHref}
         sectionSwitcher={
           showSectionSwitcher ? (
             <SectionSwitcher {...sectionSwitcherProps} variant="light" layout="inline" />
@@ -249,6 +264,7 @@ const settingsHref = displayRole === "school_admin" ? "/admin/settings" : undefi
         brandColor={brandColor}
         userName={sidebarUserName}
         userRole={displayRole}
+        notificationsHref={notificationsHref}
         sectionSwitcher={
           showSectionSwitcher ? <SectionSwitcher {...sectionSwitcherProps} variant="light" /> : null
         }
@@ -266,6 +282,7 @@ const settingsHref = displayRole === "school_admin" ? "/admin/settings" : undefi
         {children}
       </main>
     </div>
+    </NotificationsProvider>
      </FeaturesProvider>
   );
 }
