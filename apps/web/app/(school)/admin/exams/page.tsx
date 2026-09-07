@@ -23,7 +23,7 @@ export default async function ExamsPage() {
       .order("start_date", { ascending: false }),
     supabase
       .from("exams")
-      .select("id, name, start_date, end_date, datesheet_published_at, academic_year:academic_years(name)")
+      .select("id, name, start_date, end_date, quiz_id, datesheet_published_at, academic_year:academic_years(name)")
       .eq("school_id", schoolId)
       .order("start_date", { ascending: false }),
   ]);
@@ -35,6 +35,7 @@ export default async function ExamsPage() {
     return {
       id: e.id,
       name: e.name,
+      isQuiz: Boolean((e as unknown as { quiz_id?: string | null }).quiz_id),
       academic_year: ay?.name ?? "—",
       start: e.start_date ?? "—",
       end: e.end_date ?? "—",

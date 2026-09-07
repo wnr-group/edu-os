@@ -62,7 +62,7 @@ export default async function AdminDashboard() {
   ]);
 
   const activeUserIds = new Set((activeRoles ?? []).map((r) => r.user_id));
-  const teacherCount = (teacherProfiles ?? []).filter((t) => activeUserIds.has(t.profile_id)).length;
+  const teacherCount = new Set((teacherProfiles ?? []).filter((t) => activeUserIds.has(t.profile_id)).map((t) => t.profile_id)).size;
 
  // Fee data for this academic year — due_date added so amounts can be
   // bucketed into terms below (no dedicated "term" column exists in the

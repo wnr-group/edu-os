@@ -65,11 +65,12 @@ export function StudentEditForm({
     supabase
       .from("sections")
       .select("id, name")
+      .eq("school_id", schoolId)
       .eq("class_id", classId)
       .then(({ data }) => {
         setSections(data ?? []);
       });
-  }, [classId]);
+  }, [classId, schoolId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -77,7 +78,7 @@ export function StudentEditForm({
     try {
       const supabase = createClient();
 
-      // Update name/email on profiles via the profile_id join
+      // Update name/email on profiles via secure RPC
       const { data: sp } = await supabase
         .from("student_profiles")
         .select("profile_id")
@@ -85,10 +86,11 @@ export function StudentEditForm({
         .single();
 
       if (sp?.profile_id) {
-        const { error: profileErr } = await supabase
-          .from("profiles")
-          .update({ full_name: name, email: email || undefined })
-          .eq("id", sp.profile_id);
+        const { error: profileErr } = await supabase.rpc("update_student_profile_identity", {
+          p_profile_id: sp.profile_id,
+          p_full_name: name,
+          p_email: email || null,
+        });
         if (profileErr) { toast.error(profileErr.message); return; }
       }
 
@@ -109,6 +111,8 @@ export function StudentEditForm({
       const { error: spErr } = await supabase
         .from("student_profiles")
         .update({
+          full_name: name,
+          email: email || null,
           admission_number: admission || null,
           date_of_birth: dateOfBirth || null,
           gender: gender || null,

@@ -22,31 +22,33 @@ export default async function ResultsPage() {
   }
 
   const supabase = await createServerSupabaseClient();
-  const [{ data: exams }, { data: quizLinks }] = await Promise.all([
-    supabase
-      .from("exams")
-      .select("id, name, start_date, end_date, academic_year:academic_years(name)")
-      .eq("school_id", schoolId)
-      .order("start_date", { ascending: false }),
-    // exams created by push_quiz_to_gradebook are stamped on quizzes.exam_id —
-    // used purely to badge which rows below came from a quiz, not a manually
-    // created exam.
-    supabase.from("quizzes").select("exam_id").eq("school_id", schoolId).not("exam_id", "is", null),
-  ]);
+  const { data: exams } = await supabase
+    .from("exams")
+    .select("id, name, start_date, end_date, quiz_id, quiz:quizzes!quiz_id(section_id), academic_year:academic_years(name)")
+    .eq("school_id", schoolId)
+    .order("start_date", { ascending: false });
 
-  const quizExamIds = new Set((quizLinks ?? []).map((q) => q.exam_id));
-
-  const rows = (exams ?? []).map((e) => {
-    const ay = e.academic_year as unknown as { name: string } | null;
-    return {
-      id: e.id,
-      name: e.name ?? "—",
-      isQuiz: quizExamIds.has(e.id),
-      academic_year: ay?.name ?? "—",
-      start_date: e.start_date ?? "—",
-      end_date: e.end_date ?? "—",
-    };
-  });
+  const rows = (exams ?? [])
+    .filter((e) => {
+      const q = e.quiz as unknown as { section_id?: string | null } | null;
+      // If exam is linked to a quiz from another section, hide it for this section
+      if (q?.section_id && q.section_id !== sectionId) {
+        return false;
+      }
+      return true;
+    })
+    .map((e) => {
+      const ay = e.academic_year as unknown as { name: string } | null;
+      const q = e.quiz as unknown as { section_id?: string | null } | null;
+      return {
+        id: e.id,
+        name: e.name ?? "—",
+        isQuiz: Boolean((e as unknown as { quiz_id?: string | null }).quiz_id) && (!q?.section_id || q.section_id === sectionId),
+        academic_year: ay?.name ?? "—",
+        start_date: e.start_date ?? "—",
+        end_date: e.end_date ?? "—",
+      };
+    });
 
   return (
     <div>

@@ -95,9 +95,18 @@ export async function POST(request: NextRequest) {
       }
     }
     for (const { table, data } of extraInserts) {
-      const { error: insertError } = await adminClient.from(table).insert({ ...data, profile_id: userId });
-      if (insertError && insertError.code !== "23505") {
-        return NextResponse.json({ error: `Failed to insert into ${table}: ${insertError.message}` }, { status: 500 });
+      const { data: existing } = await adminClient
+        .from(table)
+        .select("id")
+        .eq("school_id", schoolId)
+        .eq("profile_id", userId)
+        .maybeSingle();
+
+      if (!existing) {
+        const { error: insertError } = await adminClient.from(table).insert({ ...data, profile_id: userId });
+        if (insertError && insertError.code !== "23505") {
+          return NextResponse.json({ error: `Failed to insert into ${table}: ${insertError.message}` }, { status: 500 });
+        }
       }
     }
   }
