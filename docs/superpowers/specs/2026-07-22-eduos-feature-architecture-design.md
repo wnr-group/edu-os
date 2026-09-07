@@ -766,3 +766,131 @@ profiles.id — different keyspaces). Decisions (all "go with recommendation" ex
   students** (`teaches_student`; app-layer authz before signing since storage RLS has no GUCs). NO parent/student view v1.
   Verify/upload stay admin/principal. All views = 60s signed URLs. **Checklist auto-exists on student creation** (on-read ⇒
   Admissions "seed KYC checklist on convert" is a NO-OP/automatic).
+
+**D19 — Insights & Interventions (Module E) — locked product decisions.** Design grill 2026-08-24, prompted by a
+generic "Insights & Interventions" feature request that overlapped, but didn't exactly match, the already-designed
+§6 Insights Engine + `comms_outbox`. Grounded on `2026-07-24-eduos-insights-algorithms.md` (ATTN_RISK_V1, PERF_V1,
+FEE_RISK_V1 already fully specified) and the existing `insights` feature-registry key (`dependsOn: [attendance, exams,
+fees]`). **Per D7, this session stops at the decision log — Stitch UX mockups and Jira tickets are the next, separate
+steps; implementation happens in a later cycle, not this session.**
+
+- **Interventions is a genuinely new domain, not a repurposing of `comms_outbox`.** `comms_outbox` remains
+  unchanged — automated, staff-approved parent SMS/push drafts (D5: advisory, never autonomous). A new
+  `interventions` table owns a **staff-facing task lifecycle** (`PENDING → IN_PROGRESS → COMPLETED|DISMISSED`)
+  that a teacher/admin works and marks done themselves. An intervention MAY optionally create/reference a
+  `comms_outbox` draft as one of its side effects, but `comms_outbox` never becomes the intervention's lifecycle.
+- **No new risk-scoring math.** `ATTN_RISK_V1` and `PERF_V1` stay exactly as spec'd (§6.1/§6.2) — Interventions
+  *consumes* their output, it does not decompose or re-derive rules:
+  - Attendance: one composite score/band per student/day (unchanged). The snapshot's **dominant factor**
+    (drop/streak/weekday/low-rate) is the reason surfaced to staff — no separate ATTENDANCE_LOW/CRITICAL/
+    CONSECUTIVE_ABSENCE/DECLINING rule types.
+  - Academic: PERF_V1's per-subject label is unchanged. **Any single subject labelled "High risk"** is sufficient
+    to trigger an academic intervention (matches the Feature-Doc mock-up), naming the affected subject(s).
+  - **No combined cross-kind risk score.** "Multiple risk factors" is a display/sort concern only: attendance and
+    academic stay independent kinds with independent interventions; the API groups open interventions by student
+    and surfaces students with 2+ concurrently-open interventions higher (e.g. a "2 active concerns" badge). No
+    new weighted formula.
+  - **V1 kind scope = attendance + academic only.** `FEE_RISK_V1` is deferred — Fee Status (D15) already has its
+    own direct-send operational reminder workflow, a different (non-advisory) surface. `interventions.kind` is
+    designed so `'fee'` drops in later without touching lifecycle/assignment/dedup.
+- **No new `insights` table.** `student_risk_snapshots` (already spec'd) *is* the insight/evidence entity — score,
+  band, factors[], recommended_action. `interventions.source_snapshot_id` FKs to it for traceability/explainability.
+  Domain boundary: snapshot = evidence, intervention = actionable staff work item.
+- **Deduplication/idempotency:** at most **one non-terminal intervention per `(student, kind)`** at a time. Nightly
+  recompute keeps writing daily snapshots as historical evidence, but intervention creation checks for an existing
+  `PENDING`/`IN_PROGRESS` row for that student+kind first and skips creation if found — the open intervention just
+  keeps pointing at the latest qualifying snapshot. A new intervention can only be created once the prior one reaches
+  `COMPLETED` or `DISMISSED`.
+- **Trigger threshold + due date, derived server-side from the snapshot band at creation time:** `HIGH` → intervention
+  created, due **today**; `MED` → intervention created, due **+3 days**; `LOW` → no intervention created (matches the
+  existing action tables' "No action needed"). School-timezone-aware day boundaries. The system-generated original
+  due date is preserved distinctly from any later manual reschedule (audit trail). Clients never compute due dates.
+- **Assignment:** auto-assigned to the student's **homeroom class teacher** via the existing
+  `section_assignments.class_teacher_id`/`class_teacher_of`/`teaches_student` helpers (same mechanism as D16 Leave)
+  — no new routing system. Falls back to principal/school_admin if no valid class-teacher assignment exists.
+  Principal/school_admin get **school-wide visibility of all open interventions** and can reassign.
+- **`interventions.type`** is a small fixed enum derived from the existing action-table outputs (e.g.
+  `CONTACT_PARENT`, `DISCUSS_ATTENDANCE_PATTERN`, `ESCALATE_DROPOUT_RISK`, `MONITOR`, `ASSIGN_ACADEMIC_SUPPORT`)
+  plus separately-stored human-readable title/description text (e.g. "Call parent within 48 hours"). The enum
+  encodes only the *kind of action*, never thresholds/timing/student-specific detail.
+- **State-transition authorization:** the **assignee** OR **principal/school_admin** (school-scoped) may
+  start/complete/dismiss; enforced **server-side** (RLS/RPC — never client-trusted), with an explicit state machine
+  rejecting invalid transitions (e.g. `COMPLETED → PENDING` blocked, admin override does not bypass validation).
+  `DISMISSED` **requires** a non-empty reason (auditable); `COMPLETED` may optionally carry an outcome note. Every
+  transition (actor, from_status, to_status, reason/note, timestamp) is recorded to `audit_log`.
+- **Notifications:** creating/assigning (and reassigning) an intervention sends a push via the **existing**
+  `notifications` row + Expo push pipeline (same mechanism as Leave's submit→notify), fired once on
+  assignment/reassignment — **not** on every recurring nightly re-evaluation (the dedup rule already prevents
+  re-firing while an intervention stays open). Notification failure must not roll back the intervention
+  create/assign transaction. No new notification infrastructure.
+- **Feature flag:** reuses the **existing** `insights` registry key for the whole capability (snapshots read +
+  interventions/action queue) — no second flag. Consistent with D2's flat-one-boolean-per-module convention.
+- **Platforms:** **web + mobile, both, V1** (unlike KYC/Admissions' web-only precedent — this is a daily teacher
+  workflow like Leave, not an occasional admin task). Teacher: mobile `(teacher)` route group + web. Principal/
+  school_admin: web, school-wide dashboard + queue, reassignment. Web and mobile consume the **same** APIs/domain
+  contracts — all risk evaluation, lifecycle, dedup, and authorization logic is server-side; no client re-implements
+  business rules.
+- **Process (per D7):** this entry is the full product-decision log for Module E. **Next steps, not this session:**
+  Stitch UX mockups (dashboard, insight/intervention detail, action queue, on both platforms) → Jira tickets (ERP
+  project, linking this spec + the algorithms doc + the Stitch screens) → implementation in a subsequent cycle.
+  Exact table columns, RLS policy names, RPC/API signatures, and mobile/web screen layouts are execution details
+  for that next cycle, not locked here.
+
+**D20 — Insights & Interventions: parent-app experience.** Design grill 2026-08-24 (same day as D19), prompted by
+whether/how the parent app should surface school-initiated interventions. Grounded on an Explore pass of the
+**real** parent app and comms mechanisms (not just spec docs) — see full investigation summary below.
+
+- **Repository evidence that reframed the question:** `comms_outbox` (referenced in §6.6 and D19) **does not exist
+  anywhere in the codebase** — no migration, no edge function, no app code, only the two spec docs. The parent app
+  (`apps/mobile/app/(parent)/`) has 5 tabs (Home/Attendance/Academics/Fees/More) with **no existing "concerns/
+  alerts/support" surface** — the closest analogue is **Discipline Records** under More (incident+severity,
+  read-only). Two live, already-proven staff→parent notify mechanisms exist, **neither uses `comms_outbox`**: (1)
+  `leave-notify` edge function — staff decision → `notifications` insert → direct Expo push, fired immediately,
+  no approval queue (the staff decision **is** the approval); (2) the `discipline_records` `BEFORE INSERT` trigger
+  (`20260819000000_discipline_parent_notify.sql`) — same `notifications`-insert pattern, explicitly documented
+  in-migration as "the same mechanism homework/leave/attendance notifications already use — no new app code, no
+  new edge function, no new UI." Parents already see raw attendance % and exam marks/rank today, but **no risk-band/
+  score concept reaches them anywhere** — `student_risk_snapshots`/`interventions` are purely internal constructs.
+- **Core principle (locked, drives everything below):** an **intervention** (internal: risk detected → staff task →
+  staff records outcome) and a **parent-facing notification** (staff explicitly decided the parent should know/act)
+  are **separate entities with separate lifecycles** — never conflated. Completing/dismissing an intervention never
+  auto-exposes it to a parent; notifying a parent never creates or mutates an intervention.
+- **No `comms_outbox` in V1.** It is not structurally required — the explicit staff action of clicking "Notify
+  Parent" already provides the human-approval gate that `comms_outbox`'s draft/queue design exists to enforce (same
+  reasoning as `leave-notify`'s immediate, unqueued fire on the `decided` event). Building `comms_outbox`'s
+  template-bank/dedupe/approval-queue machinery is deferred until a feature that structurally needs it (the true
+  automatic nightly insights-comms engine, §6.6) is actually built — Interventions does not need it.
+- **Parent notify mechanism: reuse the proven pattern, not a new system.** A **"Notify Parent" action** on the
+  intervention (available to the assignee, or principal/school_admin) inserts directly into the **existing**
+  `notifications` table + Expo push, following the `leave-notify`/discipline-trigger pattern exactly — no new
+  table. The message is **template-rendered, parent-safe text only** — e.g. "Your child's recent attendance
+  requires attention. Please contact the school/teacher." **Never** includes: risk scores, LOW/MED/HIGH bands, rule
+  names (`ATTN_RISK_V1`/`PERF_V1`), raw factors, staff-only notes, intervention status/lifecycle, dismissal reasons,
+  or internal assignment info.
+- **Trigger is always explicit, never automatic.** Not fired on intervention creation, not fired on assignment, and
+  **not fired on completion** — parent notification stays a distinct, always-manual staff action, matching the core
+  principle above (a teacher may complete an intervention without ever contacting the parent, or contact the parent
+  without exposing any internal detail).
+- **Failure isolation:** a notify/push failure must not roll back or invalidate the intervention itself (same
+  pattern as D19's assignment-push failure handling) — the intervention remains a valid internal record regardless
+  of parent-notification delivery outcome.
+- **Auditability:** the notify action is linked to its source intervention (FK/reference) and recorded in
+  `audit_log` (actor, intervention_id, timestamp) for traceability, without the parent-facing `notifications` row
+  itself carrying any internal fields.
+- **RLS:** no new parent-facing policy needed on `interventions`/`student_risk_snapshots` — parents are simply never
+  granted a read grant on those tables. The `notifications` table already has parent-scoped RLS via the existing
+  `parent_profile_id = auth.uid()` pattern; that's the only parent-facing surface touched.
+- **No new parent tab/screen in V1.** The notify message is just a normal row in the existing `notifications` table,
+  surfaced through the **existing More → Notifications screen** — identical to how Leave and Discipline notify
+  parents today. Zero new parent-app UX. A future dedicated "Support & Updates"-style surface is explicitly **not
+  ruled out** but deferred until a product requirement demonstrates parents need a filtered/persistent view beyond
+  the general Notifications list — and if built later, it would read from a **separate parent-safe read model**,
+  never the raw `interventions`/`student_risk_snapshots` tables directly.
+- **Locked V1 shape:** Teacher/Admin → internal Action Queue + Intervention lifecycle (per D19) → optional explicit
+  "Notify Parent" action → existing `notifications` + Expo push → parent sees it in existing More → Notifications.
+  No `comms_outbox`, no new parent tab, no direct parent access to interventions or risk snapshots.
+- **Process (per D7):** as with D19, this entry is the product-decision log only. Stitch UX needs exactly one
+  addition beyond D19's scope — a "Notify Parent" affordance + confirmation state on the teacher/admin intervention
+  detail screen (web+mobile) — and **no new parent-app mockups**, since More → Notifications already exists.
+  Exact notification `type` value, resend/duplicate-prevention granularity, and template copy per intervention type
+  are execution details for the Jira/implementation cycle, not locked here.

@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
-import { useTheme } from "../../lib/theme";
+import { useTheme, useFeature } from "../../lib/theme";
 import { useTeacherContext } from "../../lib/teacherContext";
 import { Skeleton, SkeletonCard } from "../../components/Skeleton";
 
@@ -20,12 +20,15 @@ interface DashboardData {
   totalStudents: number;
   hwDueSoon: number;
   homeroomAttendanceDone: boolean;
+  openInterventions: number;
+  highRiskInterventions: number;
 }
 
 export default function TeacherDashboard() {
   const theme = useTheme();
   const router = useRouter();
   const { sections, userId, schoolId, ready } = useTeacherContext();
+  const insightsEnabled = useFeature("insights");
 
   const [data, setData] = useState<DashboardData | null>(null);
   const [todayPeriods, setTodayPeriods] = useState<TodayPeriod[]>([]);
@@ -40,7 +43,7 @@ export default function TeacherDashboard() {
   useEffect(() => {
     if (!ready || !userId) return;
     loadDashboard();
-  }, [ready, userId, sections.length]);
+  }, [ready, userId, sections.length, insightsEnabled]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -118,11 +121,32 @@ export default function TeacherDashboard() {
       .gte("due_date", today)
       .lte("due_date", nextWeek.toISOString().split("T")[0]);
 
+    // Open interventions count (only query if insights feature is enabled)
+    let openInterventionsCount = 0;
+    let highRiskCount = 0;
+
+    if (insightsEnabled) {
+      const openRes = await supabase
+        .from("interventions")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["pending", "in_progress"]);
+      openInterventionsCount = openRes.count ?? 0;
+
+      const highRes = await supabase
+        .from("interventions")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["pending", "in_progress"])
+        .eq("severity_band", "HIGH");
+      highRiskCount = highRes.count ?? 0;
+    }
+
     setData({
       name,
       totalStudents: totalStudentsRes.count ?? 0,
       hwDueSoon: hwRes.count ?? 0,
       homeroomAttendanceDone,
+      openInterventions: openInterventionsCount,
+      highRiskInterventions: highRiskCount,
     });
     setLoading(false);
   }
@@ -152,6 +176,63 @@ export default function TeacherDashboard() {
           </Text>
         </View>
 
+        {/* ── Student Interventions Banner ─────────────────────────── */}
+        {!loading && insightsEnabled && (data?.openInterventions ?? 0) > 0 && (
+          <TouchableOpacity
+            onPress={() => router.push("/(teacher)/interventions" as any)}
+            activeOpacity={0.8}
+            style={{
+              marginHorizontal: 20,
+              marginTop: 16,
+              backgroundColor: (data?.highRiskInterventions ?? 0) > 0 ? "#EF444415" : theme.primary + "15",
+              borderRadius: 14,
+              padding: 14,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+              borderWidth: 1,
+              borderColor: (data?.highRiskInterventions ?? 0) > 0 ? "#EF444430" : theme.primary + "30",
+            }}
+          >
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                backgroundColor: (data?.highRiskInterventions ?? 0) > 0 ? "#EF4444" : theme.primary,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name="sparkles" size={20} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontFamily: "Inter_600SemiBold",
+                    color: (data?.highRiskInterventions ?? 0) > 0 ? "#EF4444" : theme.primary,
+                  }}
+                >
+                  Student Support Action Items
+                </Text>
+                {(data?.highRiskInterventions ?? 0) > 0 && (
+                  <View style={{ backgroundColor: "#EF4444", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 10 }}>
+                    <Text style={{ fontSize: 10, fontFamily: "Inter_700Bold", color: "#fff" }}>
+                      {data?.highRiskInterventions} HIGH
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary, marginTop: 2 }}>
+                {data?.openInterventions} student{data?.openInterventions === 1 ? "" : "s"} need attention · Tap to review
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+          </TouchableOpacity>
+        )}
+
         {/* ── Needs-action banner (homeroom attendance only) ───────── */}
         {!loading && data && !data.homeroomAttendanceDone && homeroom && (
           <TouchableOpacity
@@ -159,7 +240,7 @@ export default function TeacherDashboard() {
             activeOpacity={0.8}
             style={{
               marginHorizontal: 20,
-              marginTop: 16,
+              marginTop: 12,
               backgroundColor: "#EF444418",
               borderRadius: 14,
               padding: 14,
@@ -188,6 +269,7 @@ export default function TeacherDashboard() {
         {/* ── Cross-section summary ───────────────────────────────── */}
         {!loading && (
           <View style={{ flexDirection: "row", gap: 12, paddingHorizontal: 20, marginTop: 20 }}>
+            {/* Students tile — always visible */}
             <View style={{ flex: 1, backgroundColor: theme.surface, borderRadius: 16, padding: 16, gap: 4 }}>
               <Text style={{ fontSize: 28, fontFamily: "Inter_700Bold", color: theme.textPrimary }}>
                 {data?.totalStudents ?? 0}
@@ -195,11 +277,27 @@ export default function TeacherDashboard() {
               <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary }}>
                 Students across
               </Text>
-              <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: theme.primary }}>
-                {sections.length} {sections.length === 1 ? "section" : "sections"}
+              <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary }}>
+                {sections.length} section{sections.length === 1 ? "" : "s"}
               </Text>
             </View>
             <View style={{ flex: 1, gap: 12 }}>
+              {/* Insights intervention tile — only when module is enabled */}
+              {insightsEnabled && (
+                <TouchableOpacity
+                  onPress={() => router.push("/(teacher)/interventions" as any)}
+                  activeOpacity={0.8}
+                  style={{ flex: 1, backgroundColor: theme.surface, borderRadius: 16, padding: 14, flexDirection: "row", alignItems: "center", gap: 10 }}
+                >
+                  <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: theme.primary + "18", alignItems: "center", justifyContent: "center" }}>
+                    <Ionicons name="sparkles-outline" size={16} color={theme.primary} />
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 18, fontFamily: "Inter_700Bold", color: theme.textPrimary }}>{data?.openInterventions ?? 0}</Text>
+                    <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: theme.textSecondary }}>Interventions</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
               <View style={{ flex: 1, backgroundColor: theme.surface, borderRadius: 16, padding: 14, flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: "#10B98118", alignItems: "center", justifyContent: "center" }}>
                   <Ionicons name="calendar-outline" size={16} color="#10B981" />

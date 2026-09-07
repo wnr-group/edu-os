@@ -14,3 +14,24 @@ export const otpSchema = z.object({
 
 export type PhoneInput = z.infer<typeof phoneSchema>;
 export type OtpInput = z.infer<typeof otpSchema>;
+
+export const interventionDismissSchema = z.object({
+  dismissal_reason: z.string().min(1, "Dismissal reason is required"),
+});
+
+export const interventionCompleteSchema = z.object({
+  outcome_note: z.string().optional(),
+});
+
+export const interventionReassignSchema = z.object({
+  new_assignee_id: z.string().uuid("Invalid assignee ID"),
+});
+
+export const interventionNotifyParentSchema = z.object({
+  client_request_id: z.string().uuid("Invalid client request ID"),
+});
+
+export type InterventionDismissInput = z.infer<typeof interventionDismissSchema>;
+export type InterventionCompleteInput = z.infer<typeof interventionCompleteSchema>;
+export type InterventionReassignInput = z.infer<typeof interventionReassignSchema>;
+export type InterventionNotifyParentInput = z.infer<typeof interventionNotifyParentSchema>;

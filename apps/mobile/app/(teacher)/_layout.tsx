@@ -36,6 +36,7 @@ export default function TeacherLayout() {
       />
       <Tabs.Screen name="profile" options={{ title: "Profile", tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? "person" : "person-outline"} size={22} color={color} /> }} />
       <Tabs.Screen name="homework" options={{ href: null }} />
+      <Tabs.Screen name="interventions" options={{ href: null }} />
     </Tabs>
     </TeacherContextProvider>
   );

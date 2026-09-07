@@ -1,0 +1,17 @@
+-- Migration: 20260902000003_remove_demo_school_feature_flag_migrations.sql
+--
+-- Finding #6: The demo-school feature flag configuration was incorrectly
+-- placed in data migrations (20260824000003, 20260824152500).  Those
+-- migrations ran BEFORE seed.sql, so the UPDATEs matched 0 rows on a
+-- fresh `supabase db reset`.
+--
+-- The feature flags are now set directly in seed.sql alongside the school
+-- INSERT, which is the correct place for fixture data.
+--
+-- This migration is a no-op against a live database where the earlier
+-- migrations already set the flags (the UPDATE is idempotent via jsonb ||).
+-- Against a fresh reset, seed.sql now provides the correct initial state.
+--
+-- No schema changes are made here; this file documents the fix for review.
+
+-- (intentionally empty — the fix is in seed.sql)

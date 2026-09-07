@@ -24,3 +24,6 @@ package-lock.json
 
 # Supabase Studio SQL Editor scratch queries — often written against real data
 supabase/snippets/
+
+# Personal skill-tool lockfile (fusion-github-review-resolution etc.) — local dev tooling, not app config
+skills-lock.json

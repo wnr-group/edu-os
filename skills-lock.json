@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "fusion-github-review-resolution": {
+      "source": "equinor/fusion-skills",
+      "sourceType": "github",
+      "skillPath": "skills/.experimental/fusion-github-review-resolution/SKILL.md",
+      "computedHash": "a596e81283a93230d22701fd02721997ed361bde38937eebf7dde45e5ff99a22"
+    }
+  }
+}
