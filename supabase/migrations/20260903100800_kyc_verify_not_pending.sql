@@ -59,4 +59,5 @@ BEGIN
     VALUES (v_school_id, auth.uid(), public.get_my_role(), 'kyc_verify', 'kyc_documents', v_id, '{}'::jsonb);
   END LOOP;
 END; $$;
+REVOKE EXECUTE ON FUNCTION public.verify_documents(uuid[]) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.verify_documents(uuid[]) TO authenticated;

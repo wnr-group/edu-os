@@ -5,6 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Check, X, FileCheck, FileX, MessageSquare, BellOff, ChevronDown } from "lucide-react";
 import { createClient } from "@/lib/supabase";
+import { rpcErrorMessage } from "@erp/shared";
 import {
   loadNotifications,
   markRead,
@@ -14,7 +15,6 @@ import {
   formatWhen,
   loadKycDocumentDetail,
   loadFeedbackDetail,
-  rpcMessage,
   NOTIFICATION_CATEGORIES,
   type NotificationRow,
   type KycDocumentDetail,
@@ -126,7 +126,7 @@ export function NotificationCenter({ feedbackHref, viewerRole }: { feedbackHref:
   // the request itself is already settled, this view just hadn't heard yet.
   async function handleStaleLeaveDecision(n: NotificationRow) {
     if (!n.entity_id) return;
-    toast(rpcMessage("not_pending"));
+    toast(rpcErrorMessage({ message: "not_pending" }, "This was already decided."));
     await resolveOrSelfHeal("leave_request", n.entity_id, n.id);
     setBusyId(null);
     await load();
@@ -139,7 +139,7 @@ export function NotificationCenter({ feedbackHref, viewerRole }: { feedbackHref:
     const { error } = await supabase.rpc("approve_leave", { p_request_id: n.entity_id });
     if (error) {
       if (error.message === "not_pending") { await handleStaleLeaveDecision(n); return; }
-      setBusyId(null); toast.error(rpcMessage(error.message)); return;
+      setBusyId(null); toast.error(rpcErrorMessage(error, "Something went wrong. Please try again.")); return;
     }
     toast.success("Leave approved — covered days marked Excused.");
     callLeaveNotify(n.entity_id);
@@ -155,7 +155,7 @@ export function NotificationCenter({ feedbackHref, viewerRole }: { feedbackHref:
     const { error } = await supabase.rpc("reject_leave", { p_request_id: n.entity_id, p_reason: rejectReason || null });
     if (error) {
       if (error.message === "not_pending") { setRejectingId(null); setRejectReason(""); await handleStaleLeaveDecision(n); return; }
-      setBusyId(null); toast.error(rpcMessage(error.message)); return;
+      setBusyId(null); toast.error(rpcErrorMessage(error, "Something went wrong. Please try again.")); return;
     }
     toast.success("Leave declined.");
     callLeaveNotify(n.entity_id);
@@ -176,7 +176,7 @@ export function NotificationCenter({ feedbackHref, viewerRole }: { feedbackHref:
     const supabase = createClient();
     const { error } = await supabase.rpc("verify_documents", { p_ids: [n.entity_id] });
     if (error) {
-      toast.error(rpcMessage(error.message));
+      toast.error(rpcErrorMessage(error, "Something went wrong. Please try again."));
       if (error.message === "not_pending") { await resolveOrSelfHeal("kyc_document", n.entity_id, n.id); await load(); }
       setBusyId(null);
       return;
@@ -193,7 +193,7 @@ export function NotificationCenter({ feedbackHref, viewerRole }: { feedbackHref:
     const supabase = createClient();
     const { error } = await supabase.rpc("reject_document", { p_id: n.entity_id, p_reason: rejectReason.trim() });
     if (error) {
-      toast.error(rpcMessage(error.message));
+      toast.error(rpcErrorMessage(error, "Something went wrong. Please try again."));
       if (error.message === "not_pending") {
         setRejectingId(null); setRejectReason("");
         await resolveOrSelfHeal("kyc_document", n.entity_id, n.id);

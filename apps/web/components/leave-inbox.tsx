@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check, X, User } from "lucide-react";
 import { createClient } from "@/lib/supabase";
-import { rpcMessage } from "@/lib/notifications";
+import { rpcErrorMessage } from "@erp/shared";
 
 export interface LeaveRow {
   id: string;
@@ -94,7 +94,7 @@ export function LeaveInbox({ requests, viewerLabel }: { requests: LeaveRow[]; vi
     const { error } = await supabase.rpc("approve_leave", { p_request_id: id });
     setBusy(false);
     if (error) {
-      toast.error(rpcMessage(error.message));
+      toast.error(rpcErrorMessage(error, "Something went wrong. Please try again."));
       if (error.message === "not_pending") { await resolveLeaveNotification(id); router.refresh(); }
       return;
     }
@@ -110,7 +110,7 @@ export function LeaveInbox({ requests, viewerLabel }: { requests: LeaveRow[]; vi
     const { error } = await supabase.rpc("reject_leave", { p_request_id: id, p_reason: rejectReason || null });
     setBusy(false);
     if (error) {
-      toast.error(rpcMessage(error.message));
+      toast.error(rpcErrorMessage(error, "Something went wrong. Please try again."));
       if (error.message === "not_pending") { setRejecting(false); setRejectReason(""); await resolveLeaveNotification(id); router.refresh(); }
       return;
     }

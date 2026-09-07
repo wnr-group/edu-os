@@ -45,6 +45,11 @@ export function typesForCategoryLabel(label: string): string[] {
     .map(([type]) => type);
 }
 
+/** Every actionable type across the app (leave_requested, kyc_document_submitted, feedback_contact, message_teacher) — is_read doubles as "handled" for these, so a bulk read-marking action must never sweep them up while they're still unread/unhandled. */
+export const ACTIONABLE_TYPES: string[] = Object.entries(NOTIFICATION_CATEGORIES)
+  .filter(([, c]) => c.actionable)
+  .map(([type]) => type);
+
 export function formatWhen(iso: string): string {
   const d = new Date(iso);
   const now = new Date();
@@ -56,23 +61,6 @@ export function formatWhen(iso: string): string {
   if (sameDay) return time;
   if (isYesterday) return `Yesterday, ${time}`;
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) + `, ${time}`;
-}
-
-// Postgres RAISE EXCEPTION identifiers (not_pending, not_authorized, ...)
-// read as machine codes, not sentences — this is the one shared map every
-// surface that calls these RPCs (approve_leave/reject_leave, verify_documents/
-// reject_document, ...) translates through, so a user never sees a bare
-// identifier and the two surfaces that show these errors can't drift apart.
-export const RPC_ERRORS: Record<string, string> = {
-  not_pending: "This was already decided. Refresh to see the latest.",
-  not_authorized: "You don't have permission to act on this item.",
-  not_found: "This item no longer exists.",
-  module_disabled: "This module is switched off for your school.",
-  invalid_subject: "This record is no longer valid.",
-};
-
-export function rpcMessage(code?: string): string {
-  return (code && RPC_ERRORS[code]) || "Something went wrong. Please try again.";
 }
 
 export interface NotificationQueryFilters {
@@ -153,14 +141,24 @@ export async function markRead(ids: string[]): Promise<boolean> {
 // whatever page happens to be loaded client-side. This is what lets "Mark
 // all read" actually reach zero even when there are more unread rows than
 // the list's page size.
+//
+// Actionable types are always excluded, regardless of the filters passed
+// in: is_read doubles as "handled" for actionable rows (Needs Action is
+// `actionable && !is_read`), so widening this from "the ~100 rows on
+// screen" to "everything matching" made it possible for one click to
+// silently dismiss pending leave approvals / KYC verifications / feedback
+// items the caller never even scrolled to. This action only ever clears
+// informational rows; an actionable item can only leave Needs Action by
+// actually being acted on (or explicitly resolved).
 export async function markAllRead(filters: NotificationQueryFilters = {}): Promise<boolean> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
-  const query = applyFilters(
-    supabase.from("notifications").update({ is_read: true }).eq("user_id", user.id).eq("is_read", false),
-    filters
-  );
+  let query = supabase.from("notifications").update({ is_read: true }).eq("user_id", user.id).eq("is_read", false);
+  if (ACTIONABLE_TYPES.length > 0) {
+    query = query.not("type", "in", `(${ACTIONABLE_TYPES.join(",")})`);
+  }
+  query = applyFilters(query, filters);
   const { error } = await query;
   return !error;
 }

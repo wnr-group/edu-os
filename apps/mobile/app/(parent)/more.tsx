@@ -402,45 +402,26 @@ export default function ParentMore() {
     }
     setSubmitting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       const subject = managementFeedback.subject.trim();
       const message = managementFeedback.message.trim();
 
-      // Inserted sequentially (not as one array insert) so the second row
-      // can carry the first row's own id as a shared thread_id — that's
-      // what lets responding to either row resolve both, instead of
-      // leaving the other authorized staff member's copy looking
-      // permanently pending. Both rows end up sharing the same thread_id
-      // (the first row is updated to point at itself) for a symmetric
-      // lookup either direction.
-      const { data: principalRow, error: err1 } = await supabase.from("feedback").insert({
-        school_id: SCHOOL_ID,
-        from_user_id: user?.id,
-        to_role: "principal",
-        to_user_id: null,
-        subject,
-        message,
-        status: "open",
-      }).select("id").single();
-      if (err1) throw err1;
-
-      const { data: adminRow, error: err2 } = await supabase.from("feedback").insert({
-        school_id: SCHOOL_ID,
-        from_user_id: user?.id,
-        to_role: "school_admin",
-        to_user_id: null,
-        subject,
-        message,
-        status: "open",
-        thread_id: principalRow.id,
-      }).select("id").single();
-      if (err2) throw err2;
+      // Server-generated thread_id (see submit_management_feedback,
+      // 20260903100900) — this RPC creates both rows in one call and
+      // assigns thread_id itself, so a client can no longer choose which
+      // rows share a thread. Responding to either resolves both.
+      const { data, error } = await supabase
+        .rpc("submit_management_feedback", { p_subject: subject, p_message: message })
+        .single();
+      if (error) throw error;
+      const { principal_feedback_id: principalId, school_admin_feedback_id: adminId } = data as {
+        principal_feedback_id: string; school_admin_feedback_id: string;
+      };
 
       setManagementFeedback({ subject: "", message: "" });
       setSection("menu");
       Alert.alert("Sent", "Your message has been sent to the management.");
-      callFeedbackNotify(principalRow.id);
-      callFeedbackNotify(adminRow.id);
+      callFeedbackNotify(principalId);
+      callFeedbackNotify(adminId);
     } catch {
       Alert.alert("Unable to send", "Feedback may be unavailable for your school right now.");
     } finally {
